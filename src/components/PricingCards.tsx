@@ -32,7 +32,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
         <ul className="space-y-3 mb-8">
           {features.map((feature, index) => (
             <li key={index} className="text-white text-opacity-90 flex items-start">
-              <span className="mr-2">✨</span>
+              <span className="mr-2">•</span>
               <span>{feature}</span>
             </li>
           ))}
