@@ -13,7 +13,7 @@ export function Navbar({ onLoginClick }: NavbarProps) {
         <div className="flex h-16 items-center justify-between">
           
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center"><a href='#'>
             <Image
               src="/fm-logo.png"
               alt="Fitout Manager Logo"
@@ -21,7 +21,7 @@ export function Navbar({ onLoginClick }: NavbarProps) {
               height={40}
               priority
               className="object-contain"
-            />
+            /></a>
           </div>
 
           {/* Right side */}
