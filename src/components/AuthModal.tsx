@@ -46,7 +46,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         console.log('Attempting login with:', { email, type: activeTab });
         
         // Use environment variable or fallback
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-4lax2qt7n-rj-turingans-projects.vercel.app/';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app/';
         
         const response = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
