@@ -157,7 +157,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className={`flex-1 pb-3 text-center transition-colors ${
                   activeTab === 'user'
                     ? 'border-b-2 border-black text-black font-semibold'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-black-500 hover:text-black-700'
                 }`}
               >
                 User
@@ -170,7 +170,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className={`flex-1 pb-3 text-center transition-colors ${
                   activeTab === 'admin'
                     ? 'border-b-2 border-black text-black font-semibold'
-                    : 'text-gray-500 hover:text-gray-700'
+                    : 'text-black-500 hover:text-black-700'
                 }`}
               >
                 Admin
