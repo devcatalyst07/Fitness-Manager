@@ -14,10 +14,11 @@ export default function AdminSidebar() {
     { icon: FileText, label: 'Documents', href: '/admin/documents' },
   ];
 
-  const handleNavClick = (href) => {
-    setPathname(href);
-    setIsOpen(false);
-  };
+const handleNavClick = (href: string) => {
+  setPathname(href);
+  setIsOpen(false);
+};
+
 
   return (
     <>
