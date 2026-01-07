@@ -20,7 +20,13 @@ import {
 import { useRouter } from 'next/navigation';
 
 // ==================== AdminSidebar ====================
-function AdminSidebar({ pathname, setPathname }: any) {
+function AdminSidebar({
+  pathname,
+  setPathname,
+}: {
+  pathname: string;
+  setPathname: React.Dispatch<React.SetStateAction<string>>;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -67,7 +73,7 @@ function AdminSidebar({ pathname, setPathname }: any) {
         {/* Logo */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'space-x-3'}`}>
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">FM</span>
             </div>
             {!isCollapsed && (
@@ -107,7 +113,7 @@ function AdminSidebar({ pathname, setPathname }: any) {
                     : 'text-gray-600 hover:bg-gray-50 hover:text-black'
                 }`}
               >
-                <Icon size={20} className="flex-shrink-0" />
+                <Icon size={20} />
                 {!isCollapsed && <span>{item.label}</span>}
               </button>
             );
@@ -120,7 +126,7 @@ function AdminSidebar({ pathname, setPathname }: any) {
               isCollapsed ? 'justify-center' : 'space-x-3'
             }`}
           >
-            <Settings size={20} className="flex-shrink-0" />
+            <Settings size={20} />
             {!isCollapsed && <span>Settings</span>}
           </button>
         </nav>
@@ -145,10 +151,8 @@ function AdminHeader() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const name = localStorage.getItem('userName') || 'Admin';
-      setUserName(name);
-    }
+    const name = localStorage.getItem('userName') || 'Admin';
+    setUserName(name);
   }, []);
 
   useEffect(() => {
@@ -162,10 +166,8 @@ function AdminHeader() {
   }, []);
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.clear();
-      router.push('/');
-    }
+    localStorage.clear();
+    router.push('/');
   };
 
   return (
@@ -184,18 +186,15 @@ function AdminHeader() {
 
       {/* Right: Greeting, Notifications, Profile */}
       <div className="flex items-center space-x-4">
-        {/* Greeting */}
         <div className="hidden sm:block text-gray-700 text-sm font-medium whitespace-nowrap">
           <strong>{`Welcome, ${userName}. You are now signed in.`}</strong>
         </div>
 
-        {/* Notifications */}
         <button className="p-2 hover:bg-gray-100 rounded-lg relative">
           <Bell size={20} />
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
 
-        {/* Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -219,7 +218,6 @@ function AdminHeader() {
         </div>
       </div>
 
-      {/* Mobile Greeting below header */}
       <div className="sm:hidden absolute right-4 top-16 text-gray-700 text-sm font-medium">
         <strong>{`Welcome, ${userName}.`}</strong>
       </div>
@@ -228,27 +226,36 @@ function AdminHeader() {
 }
 
 // ==================== DashboardCard ====================
-function DashboardCard({ title, value, change, changeType }: any) {
-  const changeColor = {
+type ChangeType = 'positive' | 'negative' | 'neutral';
+
+interface DashboardCardProps {
+  title: string;
+  value: string | number;
+  change: string | number;
+  changeType: ChangeType;
+}
+
+function DashboardCard({ title, value, change, changeType }: DashboardCardProps) {
+  const changeColor: Record<ChangeType, string> = {
     positive: 'text-green-600',
     negative: 'text-red-600',
     neutral: 'text-gray-600',
-  }[changeType];
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h3 className="text-sm font-medium text-gray-600 mb-2">{title}</h3>
       <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
-      <p className={`text-sm ${changeColor}`}>{change}</p>
+      <p className={`text-sm ${changeColor[changeType]}`}>{change}</p>
     </div>
   );
 }
 
-// ==================== AdminDashboard (Main Page) ====================
+// ==================== AdminDashboard ====================
 export default function AdminDashboard() {
   const router = useRouter();
   const [pathname, setPathname] = useState('/admin/dashboard');
-  const [isVerified, setIsVerified] = useState(false); // prevents flash
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -256,13 +263,12 @@ export default function AdminDashboard() {
 
     if (!token || role !== 'admin') {
       localStorage.clear();
-      router.replace('/'); // redirect immediately
+      router.replace('/');
     } else {
-      setIsVerified(true); // only render if admin
+      setIsVerified(true);
     }
   }, [router]);
 
-  // prevent dashboard flash
   if (!isVerified) return null;
 
   return (
