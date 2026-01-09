@@ -1,10 +1,22 @@
+'use client';
+
 import React, { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Home, FolderKanban, DollarSign, BarChart3, FileText, Settings, ChevronLeft, Menu, X } from 'lucide-react';
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  pathname?: string;
+  setPathname?: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export function AdminSidebar({ pathname: propPathname, setPathname }: AdminSidebarProps) {
+  const router = useRouter();
+  const currentPathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [pathname, setPathname] = useState('/admin/dashboard');
+
+  // Use prop pathname if provided, otherwise use Next.js pathname
+  const activePath = propPathname || currentPathname;
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
@@ -14,11 +26,13 @@ export default function AdminSidebar() {
     { icon: FileText, label: 'Documents', href: '/admin/documents' },
   ];
 
-const handleNavClick = (href: string) => {
-  setPathname(href);
-  setIsOpen(false);
-};
-
+  const handleNavClick = (href: string) => {
+    if (setPathname) {
+      setPathname(href);
+    }
+    setIsOpen(false);
+    router.push(href); // Actually navigate to the page
+  };
 
   return (
     <>
@@ -77,7 +91,7 @@ const handleNavClick = (href: string) => {
         <nav className="flex-1 py-4 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = activePath === item.href;
             return (
               <button
                 key={item.href}
@@ -123,9 +137,8 @@ const handleNavClick = (href: string) => {
           </div>
         )}
       </div>
-
-      {/* Spacer for main content on desktop */}
-      <div className={`hidden lg:block ${isCollapsed ? 'w-20' : 'w-64'} transition-all duration-300`} />
     </>
   );
 }
+
+export default AdminSidebar;

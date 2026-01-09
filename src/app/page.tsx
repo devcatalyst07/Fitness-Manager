@@ -1,15 +1,87 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { AuthModal } from '../components/AuthModal';
 import { PricingCard } from '../components/PricingCards';
 
 type ModalType = 'login' | 'register' | null;
 
+// Loading Spinner Component
+const FitoutLoadingSpinner = () => {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        {/* Animated Logo */}
+        <div className="relative">
+          {/* Spinning ring */}
+          <div 
+            className="absolute inset-0 rounded-2xl border-4 border-blue-200" 
+            style={{ 
+              width: '80px', 
+              height: '80px',
+              borderTopColor: '#2563eb',
+              animation: 'spin 1s linear infinite'
+            }}
+          />
+          
+          {/* Logo container with pulse */}
+          <div 
+            className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center"
+            style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
+          >
+            <span className="text-white font-bold text-2xl">FM</span>
+          </div>
+        </div>
+
+        {/* Brand text */}
+        <div className="text-center">
+          <div className="font-bold text-black text-xl">FITOUT</div>
+          <div className="font-bold text-black text-base">MANAGER</div>
+        </div>
+
+        {/* Loading text with dots animation */}
+        <div className="flex items-center gap-1 text-gray-600">
+          <span>Loading</span>
+          <span className="flex gap-0.5">
+            <span style={{ animation: 'bounce 1s infinite', animationDelay: '0ms' }}>.</span>
+            <span style={{ animation: 'bounce 1s infinite', animationDelay: '150ms' }}>.</span>
+            <span style={{ animation: 'bounce 1s infinite', animationDelay: '300ms' }}>.</span>
+          </span>
+        </div>
+      </div>
+      
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .5; }
+        }
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<ModalType>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Show loading spinner on page load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500); // Show spinner for 1.5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleLoginClick = () => {
     setModalType('login');
@@ -29,6 +101,11 @@ export default function Home() {
     setIsModalOpen(false);
     setTimeout(() => setModalType(null), 300);
   };
+
+  // Show loading spinner
+  if (isLoading) {
+    return <FitoutLoadingSpinner />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -155,13 +232,17 @@ export default function Home() {
         onSwitchToRegister={handleSwitchToRegister}
       />
 
+
       {/* Footer */}
-      <footer className="bg-gray-100 border-t border-gray-200 py-6 mt-16">
+      <footer className="bg-gray-100 border-t border-gray-200 py-4 sm:py-6 mt-1 sm:mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center text-gray-600">
-            
-            <span className="text-sm sm:text-base">
-              <span className="font-semibold text-gray-700 mr-5">Fitout Manager</span> <span className='ml-5 mr-5'>|</span> <span className='ml-5'> © 2026. All Rights Reserved. </span>
+          <div className="flex flex-col sm:flex-row items-center justify-center text-gray-600 gap-1 sm:gap-0">
+            <span className="text-sm sm:text-base text-center">
+              <span className="font-semibold text-gray-700">Fitout Manager</span>
+              <span className="hidden sm:inline mx-3 sm:mx-5">|</span>
+            </span>
+            <span className="text-xs sm:text-sm text-center">
+              © 2026. All Rights Reserved.
             </span>
           </div>
         </div>
