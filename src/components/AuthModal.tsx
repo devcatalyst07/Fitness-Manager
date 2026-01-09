@@ -12,6 +12,8 @@ interface AuthModalProps {
   onSwitchToRegister: () => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
@@ -20,9 +22,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<LoginType>('user');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [subscriptionType, setSubscriptionType] = useState('Starter');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -34,20 +38,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     try {
       if (modalType === 'register') {
+        // Registration (Users only)
+        if (!name || !email || !password) {
+          setError('All fields are required');
+          setLoading(false);
+          return;
+        }
+
         if (password !== confirmPassword) {
           setError('Passwords do not match');
           setLoading(false);
           return;
         }
-        console.log('Registration:', { email, password });
+
+        const response = await fetch(`${API_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+            subscriptionType,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.message || 'Registration failed');
+          setLoading(false);
+          return;
+        }
+
+        // Store token and redirect
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userName', data.name);
+        localStorage.setItem('userEmail', email);
+
+        router.push('/user/dashboard');
         onClose();
       } else {
         // Login
-        console.log('Attempting login with:', { email, type: activeTab });
-        
-        // Use environment variable or fallback
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
-        
         const response = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
           headers: {
@@ -60,50 +94,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           }),
         });
 
-        console.log('Response status:', response.status);
-
-        // Try to parse response
-        let data;
-        try {
-          data = await response.json();
-          console.log('Response data:', data);
-        } catch (parseError) {
-          console.error('Failed to parse response:', parseError);
-          setError('Server error. Please check if the API is running.');
-          setLoading(false);
-          return;
-        }
+        const data = await response.json();
 
         if (!response.ok) {
-          console.error('Login failed:', data);
-          setError(data.message || 'Invalid credentials. Please try again');
-          setLoading(false);
-          return;
-        }
-
-        // Verify the role matches the selected tab
-        if (data.role !== activeTab) {
-          console.error('Role mismatch:', { expected: activeTab, got: data.role });
-          setError('Invalid credentials. Please try again');
-          setLoading(false);
-          return;
-        }
-
-        // Store token and user info - use try-catch for localStorage
-        console.log('Login successful, storing data...');
-        try {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('userRole', data.role);
-            localStorage.setItem('userName', data.name);
-            localStorage.setItem('userEmail', email);
+          if (response.status === 403) {
+            setError('Invalid credentials. Please try again.');
+          } else {
+            setError(data.message || 'Login failed');
           }
-        } catch (storageError) {
-          console.error('Failed to save to localStorage:', storageError);
+          setLoading(false);
+          return;
         }
 
-        // Redirect based on role
-        console.log('Redirecting to dashboard...');
+        if (data.role !== activeTab) {
+          setError('Invalid credentials. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userName', data.name);
+        localStorage.setItem('userEmail', email);
+
         if (data.role === 'admin') {
           router.push('/admin/dashboard');
         } else {
@@ -114,16 +127,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError('Unable to connect to server. Please check your connection.');
+      setError('Unable to connect to server. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const resetForm = () => {
+    setName('');
     setEmail('');
     setPassword('');
     setConfirmPassword('');
+    setSubscriptionType('Starter');
     setError('');
   };
 
@@ -157,7 +172,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className={`flex-1 pb-3 text-center transition-colors ${
                   activeTab === 'user'
                     ? 'border-b-2 border-black text-black font-semibold'
-                    : 'text-black-500 hover:text-black-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 User
@@ -170,7 +185,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className={`flex-1 pb-3 text-center transition-colors ${
                   activeTab === 'admin'
                     ? 'border-b-2 border-black text-black font-semibold'
-                    : 'text-black-500 hover:text-black-700'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 Admin
@@ -185,6 +200,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           <div className="space-y-4">
+            {modalType === 'register' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-black transition-colors"
+                  placeholder="Your full name"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -211,17 +241,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
 
             {modalType === 'register' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-black transition-colors"
-                />
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-black transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subscription Type
+                  </label>
+                  <select
+                    value={subscriptionType}
+                    onChange={(e) => setSubscriptionType(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-black transition-colors"
+                  >
+                    <option value="Starter">Starter - 3 seats ($29/mo)</option>
+                    <option value="Team">Team - 10 seats ($99/mo)</option>
+                    <option value="Enterprise">Enterprise - Unlimited</option>
+                  </select>
+                </div>
+              </>
             )}
 
             <button
@@ -246,7 +293,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {modalType === 'login' && activeTab === 'admin' && (
             <div className="mt-4 text-center text-xs text-gray-500">
-              Admin credentials required
+              Admin credentials required (no registration available)
             </div>
           )}
         </div>
