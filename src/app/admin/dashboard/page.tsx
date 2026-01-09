@@ -29,10 +29,21 @@ interface ChartDataPoint {
   count: number;
 }
 
+interface ProjectStats {
+  totalProjects: number;
+  activeProjects: number;
+  completedProjects: number;
+  planningProjects: number;
+  budgetUsedPercentage: number;
+  projectsThisMonth: number;
+  activeChange: number;
+}
+
 interface DashboardStats {
   totalUsers: number;
   chartData: ChartDataPoint[];
   users: UserData[];
+  projectStats: ProjectStats;
 }
 
 type ChangeType = 'positive' | 'negative' | 'neutral';
@@ -315,11 +326,24 @@ export default function AdminDashboard() {
     return stats.chartData.filter(point => new Date(point.date) >= daysAgo);
   };
 
- if (!isVerified || loading) {
-  return <FitoutLoadingSpinner />;
-}
+  if (!isVerified || loading) {
+    return <FitoutLoadingSpinner />;
+  }
 
   const filteredChartData = getFilteredChartData();
+  const projectStats = stats?.projectStats;
+
+  // Calculate change indicators
+  const getChangeType = (value: number): ChangeType => {
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+    return 'neutral';
+  };
+
+  const formatChange = (value: number, prefix: string = '') => {
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${value} ${prefix}`;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -331,10 +355,30 @@ export default function AdminDashboard() {
         
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          <DashboardCard title="Total Projects" value="0" change="+0 from last month" changeType="neutral" />
-          <DashboardCard title="Active Tasks" value="0" change="+0 from last week" changeType="neutral" />
-          <DashboardCard title="Budget Used" value="0%" change="+0% from last month" changeType="neutral" />
-          <DashboardCard title="Open RFQs" value="0" change="0 from last week" changeType="neutral" />
+          <DashboardCard 
+            title="Total Projects" 
+            value={projectStats?.totalProjects || 0} 
+            change={formatChange(projectStats?.projectsThisMonth || 0, 'from last month')} 
+            changeType={getChangeType(projectStats?.projectsThisMonth || 0)} 
+          />
+          <DashboardCard 
+            title="Active Tasks" 
+            value={projectStats?.activeProjects || 0} 
+            change={formatChange(projectStats?.activeChange || 0, 'from last week')} 
+            changeType={getChangeType(projectStats?.activeChange || 0)} 
+          />
+          <DashboardCard 
+            title="Budget Used" 
+            value={`${projectStats?.budgetUsedPercentage || 0}%`} 
+            change={`${projectStats?.budgetUsedPercentage || 0}% of total budget`} 
+            changeType="neutral" 
+          />
+          <DashboardCard 
+            title="Planning Projects" 
+            value={projectStats?.planningProjects || 0} 
+            change={`${projectStats?.completedProjects || 0} completed`} 
+            changeType="neutral" 
+          />
         </div>
 
         {/* New Users Chart */}
