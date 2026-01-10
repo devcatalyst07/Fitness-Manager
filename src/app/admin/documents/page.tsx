@@ -255,7 +255,7 @@ export default function AdminDocuments() {
         {/* Stats Cards - Matching Dashboard */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-sm font-medium text-gray-600 mb-2">Total Documents</h3>
+            <h3 className="text-sm font-medium text-gray-600 mb-2">Total Assets</h3>
             <p className="text-3xl font-bold text-gray-900 mb-2">{stats.totalDocuments}</p>
             <p className="text-sm text-gray-500">Across all projects</p>
           </div>
@@ -299,7 +299,7 @@ export default function AdminDocuments() {
         {/* Document Library */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Document Library</h2>
+            <h2 className="text-xl font-semibold text-gray-900">File Repository</h2>
           </div>
 
           {filteredFolders.length === 0 ? (
