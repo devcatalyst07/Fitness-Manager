@@ -1,5 +1,5 @@
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-4lax2qt7n-rj-turingans-projects.vercel.app/';
+  process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
 export async function fetchWithAuth<T = any>(
   endpoint: string,

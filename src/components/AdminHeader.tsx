@@ -1,81 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Bell, Settings, ChevronDown } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Bell, User, LogOut, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export const AdminHeader: React.FC = () => {
   const router = useRouter();
   const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const name = localStorage.getItem('userName') || 'Admin User';
-    const email = localStorage.getItem('userEmail') || 'admin@fitoutmanager.com';
+    const name = localStorage.getItem('userName') || 'Admin';
     setUserName(name);
-    setUserEmail(email);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
+    localStorage.clear();
     router.push('/');
   };
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 fixed top-0 right-0 left-64 z-10">
-      <div className="h-full px-6 flex items-center justify-between">
-        {/* Title */}
-        <h1 className="text-xl font-semibold text-gray-800">Fitout Manager</h1>
+    <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white border-b border-gray-200 z-20 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="flex-auto max-w-xs sm:ml-0 ml-12 mt-2 sm:mt-0">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
 
-        {/* Right Section */}
-        <div className="flex items-center space-x-6">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search projects, templates, vendors..."
-              className="pl-10 pr-4 py-2 w-96 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 text-sm"
-            />
-            <kbd className="absolute right-3 top-1/2 transform -translate-y-1/2 px-2 py-1 bg-gray-100 border border-gray-200 rounded text-xs text-gray-500">
-              ⌘K
-            </kbd>
-          </div>
+      <div className="flex items-center space-x-4">
+        <div className="hidden sm:block text-gray-700 text-sm font-medium whitespace-nowrap">
+          <strong>{`Welcome, ${userName}. You are now signed in.`}</strong>
+        </div>
 
-          {/* Icons */}
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Bell size={20} className="text-gray-600" />
+        <button className="p-2 hover:bg-gray-100 rounded-lg relative">
+          <Bell size={20} />
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+        </button>
+
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <User size={20} />
+            <ChevronDown size={16} className={`${dropdownOpen ? 'rotate-180' : ''} transition-transform`} />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Settings size={20} className="text-gray-600" />
-          </button>
 
-          {/* User Profile */}
-          <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors group relative">
-            <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-              {userName.charAt(0)}
-            </div>
-            <div className="text-left">
-              <div className="text-sm font-semibold text-gray-800">
-                Signed in as {userName} (Admin)
-              </div>
-              <div className="text-xs text-gray-500">tenant: acme</div>
-            </div>
-            <ChevronDown size={16} className="text-gray-600" />
-            
-            {/* Dropdown */}
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center space-x-2"
               >
-                Logout
+                <LogOut size={16} />
+                <span>Logout</span>
               </button>
             </div>
-          </div>
+          )}
         </div>
+      </div>
+
+      <div className="sm:hidden absolute right-4 top-16 text-gray-700 text-sm font-medium">
+        <strong>{`Welcome, ${userName}.`}</strong>
       </div>
     </header>
   );
 };
+
+export default AdminHeader;
