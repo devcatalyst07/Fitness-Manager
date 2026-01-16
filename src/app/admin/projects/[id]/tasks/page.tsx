@@ -447,7 +447,7 @@ export default function ProjectTasksPage() {
                       >
                         <option value="Backlog">Backlog</option>
                         <option value="In Progress">In Progress</option>
-                        <option value="Blocked">Blocked</option>
+                        <option value="Blocked">Overdue</option>
                         <option value="Done">Done</option>
                       </select>
                     </div>
