@@ -2,7 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Plus, List, LayoutGrid, X, Calendar, Flag, Users, FileText, Clock } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  List,
+  LayoutGrid,
+  X,
+  Calendar,
+  Flag,
+  Users,
+  FileText,
+  Clock,
+} from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
@@ -114,7 +125,7 @@ export default function ProjectTasksPage() {
         `${API_URL}/api/projects/${params.id}/tasks`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       if (response.ok) {
         const data = await response.json();
@@ -134,7 +145,7 @@ export default function ProjectTasksPage() {
         `${API_URL}/api/projects/${params.id}/team`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       if (response.ok) {
         const data = await response.json();
@@ -148,12 +159,9 @@ export default function ProjectTasksPage() {
   const fetchComments = async (taskId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/tasks/${taskId}/comments`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const response = await fetch(`${API_URL}/api/tasks/${taskId}/comments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setComments(data);
@@ -219,7 +227,7 @@ export default function ProjectTasksPage() {
 
     return uploadedFiles;
   };
-  
+
   // add comment handler
   const handleAddComment = async () => {
     if (!selectedTask || (!newComment.trim() && selectedFiles.length === 0))
@@ -301,7 +309,7 @@ export default function ProjectTasksPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -351,7 +359,7 @@ export default function ProjectTasksPage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(selectedTask),
-        }
+        },
       );
 
       if (response.ok) {
@@ -380,7 +388,7 @@ export default function ProjectTasksPage() {
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -423,7 +431,7 @@ export default function ProjectTasksPage() {
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t) => t.status === "Done").length;
   const inProgressTasks = tasks.filter(
-    (t) => t.status === "In Progress"
+    (t) => t.status === "In Progress",
   ).length;
   const blockedTasks = tasks.filter((t) => t.status === "Blocked").length;
   const completionRate =
