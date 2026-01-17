@@ -38,6 +38,8 @@ export default function ProjectTasksPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectName, setProjectName] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [selectedAssignees, setSelectedAssignees] = useState<
     { email: string; name: string }[]
@@ -148,10 +150,10 @@ export default function ProjectTasksPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/tasks/${taskId}/comments`,
+        `${API_URL}/api/tasks/${taskId}/comments`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       if (response.ok) {
         const data = await response.json();
@@ -165,10 +167,10 @@ export default function ProjectTasksPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/tasks/${taskId}/activity-logs`,
+        `${API_URL}/api/tasks/${taskId}/activity-logs`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       if (response.ok) {
         const data = await response.json();
@@ -179,13 +181,63 @@ export default function ProjectTasksPage() {
     }
   };
 
+  // file upload handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setSelectedFiles([...selectedFiles, ...Array.from(files)]);
+    }
+  };
+
+  const uploadFiles = async (files: File[]) => {
+    const uploadedFiles = [];
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          uploadedFiles.push(data.file);
+        } else {
+          console.error("Failed to upload:", file.name);
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+      }
+    }
+
+    return uploadedFiles;
+  };
+  
+  // add comment handler
   const handleAddComment = async () => {
-    if (!selectedTask || !newComment.trim()) return;
+    if (!selectedTask || (!newComment.trim() && selectedFiles.length === 0))
+      return;
+
+    setUploadingFiles(true);
 
     try {
+      // Upload files first
+      let attachments: any[] = [];
+      if (selectedFiles.length > 0) {
+        attachments = await uploadFiles(selectedFiles);
+      }
+
+      // Then create comment with attachments
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/tasks/${selectedTask._id}/comments`,
+        `${API_URL}/api/tasks/${selectedTask._id}/comments`,
         {
           method: "POST",
           headers: {
@@ -194,15 +246,16 @@ export default function ProjectTasksPage() {
           },
           body: JSON.stringify({
             comment: newComment,
-            attachments: [],
+            attachments: attachments,
           }),
-        }
+        },
       );
 
       if (response.ok) {
         await fetchComments(selectedTask._id);
         await fetchActivityLogs(selectedTask._id);
         setNewComment("");
+        setSelectedFiles([]);
       } else {
         const error = await response.json();
         alert(error.message || "Failed to add comment");
@@ -210,6 +263,8 @@ export default function ProjectTasksPage() {
     } catch (error) {
       console.error("Add comment error:", error);
       alert("Failed to add comment");
+    } finally {
+      setUploadingFiles(false);
     }
   };
 
@@ -632,7 +687,7 @@ export default function ProjectTasksPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setOpenDropdown(
-                                openDropdown === task._id ? null : task._id
+                                openDropdown === task._id ? null : task._id,
                               );
                             }}
                             className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded"
@@ -849,23 +904,23 @@ export default function ProjectTasksPage() {
                     <select
                       onChange={(e) => {
                         const selectedMember = teamMembers.find(
-                          (member) => member.userId.email === e.target.value
+                          (member) => member.userId.email === e.target.value,
                         );
 
                         if (selectedMember) {
                           const hasActiveTask = checkMemberHasActiveTask(
-                            selectedMember.userId.email
+                            selectedMember.userId.email,
                           );
 
                           if (hasActiveTask) {
                             alert(
-                              `⚠️ ${selectedMember.userId.name} already has an active task!`
+                              `⚠️ ${selectedMember.userId.name} already has an active task!`,
                             );
                             return;
                           }
 
                           const alreadyAdded = selectedAssignees.some(
-                            (a) => a.email === selectedMember.userId.email
+                            (a) => a.email === selectedMember.userId.email,
                           );
 
                           if (alreadyAdded) {
@@ -921,7 +976,7 @@ export default function ProjectTasksPage() {
                                 type="button"
                                 onClick={() => {
                                   const updated = selectedAssignees.filter(
-                                    (_, i) => i !== index
+                                    (_, i) => i !== index,
                                   );
                                   setSelectedAssignees(updated);
                                   setFormData({
@@ -1161,12 +1216,12 @@ export default function ProjectTasksPage() {
                       <select
                         onChange={(e) => {
                           const selectedMember = teamMembers.find(
-                            (member) => member.userId.email === e.target.value
+                            (member) => member.userId.email === e.target.value,
                           );
 
                           if (selectedMember) {
                             const alreadyAssigned = selectedTask.assignees.some(
-                              (a) => a.email === selectedMember.userId.email
+                              (a) => a.email === selectedMember.userId.email,
                             );
 
                             if (alreadyAssigned) {
@@ -1225,7 +1280,7 @@ export default function ProjectTasksPage() {
                               <button
                                 onClick={() => {
                                   const updated = selectedTask.assignees.filter(
-                                    (_, i) => i !== idx
+                                    (_, i) => i !== idx,
                                   );
                                   setSelectedTask({
                                     ...selectedTask,
@@ -1371,9 +1426,35 @@ export default function ProjectTasksPage() {
                                 </p>
                               </div>
                             </div>
-                            <p className="text-gray-700">{comment.comment}</p>
-                          </div>
-                        ))
+                            <p className="text-gray-700 mb-2">
+                              {comment.comment}
+                            </p>
+                          {/* File Attachments */}
+                          {comment.attachments && comment.attachments.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <p className="text-xs font-medium text-gray-600 mb-2">
+                                Attachments ({comment.attachments.length}):
+                              </p>
+                              <div className="space-y-1">
+                                {comment.attachments.map((file: any, idx: number) => (
+                                  <a
+                                    key={idx}
+                                    href={file.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span className="truncate">{file.fileName}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
                       )}
                     </div>
 
@@ -1389,12 +1470,92 @@ export default function ProjectTasksPage() {
                         rows={3}
                         className="w-full px-4 py-2 border rounded-lg mb-3"
                       />
+
+                      {/* File Upload */}
+                      <div className="mb-3">
+                        <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                          <svg
+                            className="w-5 h-5 text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                            />
+                          </svg>
+                          <span className="text-sm text-gray-600">
+                            Attach files (images, PDFs, documents)
+                          </span>
+                          <input
+                            type="file"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            accept="image/*,.pdf,.doc,.docx"
+                            multiple
+                          />
+                        </label>
+                      </div>
+
+                      {/* Selected Files Preview */}
+                      {selectedFiles.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                          <p className="text-sm font-medium text-gray-700">
+                            Selected Files ({selectedFiles.length}):
+                          </p>
+                          {selectedFiles.map((file, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                            >
+                              <div className="flex items-center gap-2">
+                                <svg
+                                  className="w-4 h-4 text-gray-500"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                <span className="text-sm text-gray-700">
+                                  {file.name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  ({(file.size / 1024).toFixed(1)} KB)
+                                </span>
+                              </div>
+                              <button
+                                onClick={() =>
+                                  setSelectedFiles(
+                                    selectedFiles.filter((_, i) => i !== idx),
+                                  )
+                                }
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       <button
                         onClick={handleAddComment}
-                        disabled={!newComment.trim()}
+                        disabled={
+                          (!newComment.trim() && selectedFiles.length === 0) ||
+                          uploadingFiles
+                        }
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
-                        Post Comment
+                        {uploadingFiles ? "Uploading..." : "Post Comment"}
                       </button>
                     </div>
                   </div>
@@ -1420,10 +1581,10 @@ export default function ProjectTasksPage() {
                                 log.action === "created"
                                   ? "bg-green-100 text-green-600"
                                   : log.action === "status_changed"
-                                  ? "bg-blue-100 text-blue-600"
-                                  : log.action === "commented"
-                                  ? "bg-purple-100 text-purple-600"
-                                  : "bg-gray-100 text-gray-600"
+                                    ? "bg-blue-100 text-blue-600"
+                                    : log.action === "commented"
+                                      ? "bg-purple-100 text-purple-600"
+                                      : "bg-gray-100 text-gray-600"
                               }`}
                             >
                               {log.action === "created" && "✓"}
