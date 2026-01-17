@@ -356,7 +356,7 @@ export default function ProjectBudgetPage() {
           </div>
         )}
 
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-6 text-black">
           <button
             onClick={expandAll}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
