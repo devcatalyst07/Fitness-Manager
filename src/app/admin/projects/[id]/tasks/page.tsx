@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Plus, List, LayoutGrid, X } from "lucide-react";
+import { ArrowLeft, Plus, List, LayoutGrid, X, Calendar, Flag, Users, FileText, Clock } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
-import { log } from "console";
+import TaskCreateModal from "@/components/TaskCreateModal";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -78,7 +78,6 @@ export default function ProjectTasksPage() {
     }
   }, [params.id, router]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -128,7 +127,6 @@ export default function ProjectTasksPage() {
     }
   };
 
-  // new function to fetch team members
   const fetchTeamMembers = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -146,6 +144,7 @@ export default function ProjectTasksPage() {
       console.error("Error fetching team members:", error);
     }
   };
+
   const fetchComments = async (taskId: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -163,6 +162,7 @@ export default function ProjectTasksPage() {
       console.error("Error fetching comments:", error);
     }
   };
+
   const fetchActivityLogs = async (taskId: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -268,7 +268,6 @@ export default function ProjectTasksPage() {
     }
   };
 
-  // check if yung member has  active tasks
   const checkMemberHasActiveTask = (memberEmail: string) => {
     return tasks.some((task) => {
       if (task.assignees && task.assignees.length > 0) {
@@ -277,7 +276,6 @@ export default function ProjectTasksPage() {
           task.status !== "Done"
         );
       }
-      // Check old format (single assignee) -  para lang to sa old format baka kasi magka error
       if (task.assigneeEmail) {
         return task.assigneeEmail === memberEmail && task.status !== "Done";
       }
@@ -290,8 +288,6 @@ export default function ProjectTasksPage() {
       alert("Please fill in title and select at least one assignee");
       return;
     }
-
-    console.log("Form Data being sent:", JSON.stringify(formData, null, 2));
 
     setSaving(true);
     try {
@@ -322,8 +318,8 @@ export default function ProjectTasksPage() {
         setFormData({
           title: "",
           description: "",
-          status: "Backlog",
-          priority: "Medium",
+          status: "",
+          priority: "",
           assignees: [],
           startDate: "",
           dueDate: "",
@@ -331,9 +327,6 @@ export default function ProjectTasksPage() {
         });
         setSelectedAssignees([]);
         alert("Task created successfully!");
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to create task");
       }
     } catch (error) {
       console.error("Create task error:", error);
@@ -420,11 +413,6 @@ export default function ProjectTasksPage() {
       month: "short",
       day: "numeric",
     });
-  };
-
-  const formatDateForInput = (dateString?: string) => {
-    if (!dateString) return "";
-    return new Date(dateString).toISOString().split("T")[0];
   };
 
   const getTasksByStatus = (status: string) =>
@@ -650,7 +638,6 @@ export default function ProjectTasksPage() {
                               </span>
                             ))
                           ) : task.assigneeName ? (
-                            /* Old format: single assignee */
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">
                               {task.assigneeName}
                             </span>
@@ -731,18 +718,7 @@ export default function ProjectTasksPage() {
                               >
                                 View Details
                               </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTask(task);
-                                  setActiveTab("details");
-                                  setIsDetailModalOpen(true);
-                                  setOpenDropdown(null);
-                                }}
-                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                              >
-                                Edit
-                              </button>
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1127,90 +1103,128 @@ export default function ProjectTasksPage() {
               {/* Tab Content */}
               <div className="flex-1 overflow-y-auto p-6">
                 {/* ========== DETAILS TAB ========== */}
-                {activeTab === "details" && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Title
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedTask.title}
-                        onChange={(e) =>
-                          setSelectedTask({
-                            ...selectedTask,
-                            title: e.target.value,
-                          })
+            {activeTab === "details" && (
+              <div className="space-y-6">
+                {/* Title */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <FileText size={16} className="text-gray-500" />
+                    Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedTask.title}
+                    onChange={(e) =>
+                      setSelectedTask({
+                        ...selectedTask,
+                        title: e.target.value,
+                      })
+                    }
+                    placeholder="Enter task title..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <FileText size={16} className="text-gray-500" />
+                    Description
+                  </label>
+                  <textarea
+                    value={selectedTask.description || ""}
+                    onChange={(e) =>
+                      setSelectedTask({
+                        ...selectedTask,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={4}
+                    placeholder="Provide task details and requirements..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                  />
+                </div>
+
+                {/* Status & Priority */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                      <Flag size={16} className="text-gray-500" />
+                      Status
+                    </label>
+                    <select
+                      value={selectedTask.status}
+                      onChange={(e) =>
+                        setSelectedTask({
+                          ...selectedTask,
+                          status: e.target.value as any,
+                        })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                    >
+                      <option value="Backlog">📋 Backlog</option>
+                      <option value="In Progress">🔄 In Progress</option>
+                      <option value="Blocked">⚠️ Blocked</option>
+                      <option value="Done">✅ Done</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                      <Flag size={16} className="text-gray-500" />
+                      Priority
+                    </label>
+                    <select
+                      value={selectedTask.priority}
+                      onChange={(e) =>
+                        setSelectedTask({
+                          ...selectedTask,
+                          priority: e.target.value as any,
+                        })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                    >
+                      <option value="Low">🟢 Low</option>
+                      <option value="Medium">🟡 Medium</option>
+                      <option value="High">🟠 High</option>
+                      <option value="Critical">🔴 Critical</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Assignees */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <Users size={16} className="text-gray-500" />
+                    Assignees ({selectedTask.assignees?.length || 0})
+                  </label>
+
+                  <select
+                    onChange={(e) => {
+                      const selectedMember = teamMembers.find(
+                        (member) => member.userId.email === e.target.value
+                      );
+
+                      if (selectedMember) {
+                        const alreadyAssigned = selectedTask.assignees.some(
+                          (a) => a.email === selectedMember.userId.email
+                        );
+
+                        if (alreadyAssigned) {
+                          alert("This member is already assigned!");
+                          return;
                         }
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Description
-                      </label>
-                      <textarea
-                        value={selectedTask.description || ""}
-                        onChange={(e) =>
-                          setSelectedTask({
-                            ...selectedTask,
-                            description: e.target.value,
-                          })
-                        }
-                        rows={3}
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
+                        const newAssignee = {
+                          email: selectedMember.userId.email,
+                          name: selectedMember.userId.name,
+                        };
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Status
-                        </label>
-                        <select
-                          value={selectedTask.status}
-                          onChange={(e) =>
-                            setSelectedTask({
-                              ...selectedTask,
-                              status: e.target.value as any,
-                            })
-                          }
-                          className="w-full px-4 py-2 border rounded-lg"
-                        >
-                          <option value="Backlog">Backlog</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Blocked">Blocked</option>
-                          <option value="Done">Done</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Priority
-                        </label>
-                        <select
-                          value={selectedTask.priority}
-                          onChange={(e) =>
-                            setSelectedTask({
-                              ...selectedTask,
-                              priority: e.target.value as any,
-                            })
-                          }
-                          className="w-full px-4 py-2 border rounded-lg"
-                        >
-                          <option value="Low">Low</option>
-                          <option value="Medium">Medium</option>
-                          <option value="High">High</option>
-                          <option value="Critical">Critical</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Assignees - Editable */}
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Assignees ({selectedTask.assignees?.length || 0})
-                      </label>
+                        setSelectedTask({
+                          ...selectedTask,
+                          assignees: [...selectedTask.assignees, newAssignee],
+                        });
+                      }
 
                       {/* Add assignee dropdown */}
                       <select
@@ -1292,114 +1306,127 @@ export default function ProjectTasksPage() {
                                 <X size={18} />
                               </button>
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-500">
-                            No assignees yet
-                          </p>
-                        )}
+                            <span className="text-sm font-medium text-gray-900">
+                              {assignee.name}
+                            </span>
+                            <button
+                              onClick={() => {
+                                const updated = selectedTask.assignees.filter(
+                                  (_, i) => i !== idx
+                                );
+                                setSelectedTask({
+                                  ...selectedTask,
+                                  assignees: updated,
+                                });
+                              }}
+                              className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                      <Users size={14} />
+                      No assignees yet
+                    </p>
+                  )}
+                </div>
 
-                    {/* Date & Time Pickers */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Start Date & Time
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={
-                            selectedTask.startDate
-                              ? new Date(selectedTask.startDate)
-                                  .toISOString()
-                                  .slice(0, 16)
-                              : ""
-                          }
-                          onChange={(e) =>
-                            setSelectedTask({
-                              ...selectedTask,
-                              startDate: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-2 border rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Due Date & Time
-                        </label>
-                        <input
-                          type="datetime-local"
-                          value={
-                            selectedTask.dueDate
-                              ? new Date(selectedTask.dueDate)
-                                  .toISOString()
-                                  .slice(0, 16)
-                              : ""
-                          }
-                          onChange={(e) =>
-                            setSelectedTask({
-                              ...selectedTask,
-                              dueDate: e.target.value,
-                            })
-                          }
-                          className="w-full px-4 py-2 border rounded-lg"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Estimate Hours - COMMENTED OUT */}
-                    {/* <div>
-              <label className="block text-sm font-medium mb-1">
-                Estimate Hours
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={selectedTask.estimateHours || 0}
-                onChange={(e) =>
-                  setSelectedTask({
-                    ...selectedTask,
-                    estimateHours: parseInt(e.target.value) || 0,
-                  })
-                }
-                className="w-full px-4 py-2 border rounded-lg"
-              />
-            </div> */}
-
-                    {/* Progress */}
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Progress (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={selectedTask.progress}
-                        onChange={(e) =>
-                          setSelectedTask({
-                            ...selectedTask,
-                            progress: parseInt(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${selectedTask.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-sm">
-                          {selectedTask.progress}%
-                        </span>
-                      </div>
-                    </div>
+                {/* Dates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                      <Calendar size={16} className="text-gray-500" />
+                      Start Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={
+                        selectedTask.startDate
+                          ? new Date(selectedTask.startDate).toISOString().slice(0, 16)
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setSelectedTask({
+                          ...selectedTask,
+                          startDate: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
                   </div>
-                )}
+
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                      <Calendar size={16} className="text-gray-500" />
+                      Due Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={
+                        selectedTask.dueDate
+                          ? new Date(selectedTask.dueDate).toISOString().slice(0, 16)
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setSelectedTask({
+                          ...selectedTask,
+                          dueDate: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <Clock size={16} className="text-gray-500" />
+                    Progress: {selectedTask.progress}%
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={selectedTask.progress}
+                      onChange={(e) =>
+                        setSelectedTask({
+                          ...selectedTask,
+                          progress: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={selectedTask.progress}
+                      onChange={(e) =>
+                        setSelectedTask({
+                          ...selectedTask,
+                          progress: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="mt-3 bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div
+                      className=" from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${selectedTask.progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
 
                 {/* ========== COMMENTS TAB ========== */}
                 {activeTab === "comments" && (
@@ -1577,7 +1604,7 @@ export default function ProjectTasksPage() {
                           >
                             {/* Icon based on action */}
                             <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
                                 log.action === "created"
                                   ? "bg-green-100 text-green-600"
                                   : log.action === "status_changed"

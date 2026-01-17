@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, FileDown, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
+import { ArrowLeft, FileDown, ChevronDown, ChevronUp, Plus, X, Edit } from 'lucide-react';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
@@ -15,7 +15,7 @@ interface BudgetItem {
   vendor: string;
   quantity: number;
   unitCost: number;
-  committedStatus: 'Normal' | 'Approved' | 'Submitted';
+  committedStatus: 'Paid' | 'Invoiced' | 'Committed' | 'Planned';
   category: string;
 }
 
@@ -30,7 +30,8 @@ interface CategoryData {
 interface BudgetStats {
   totalBudget: number;
   totalCommitted: number;
-  remaining: number;
+  eac: number;
+  variance: number;
   percentUsed: number;
 }
 
@@ -44,12 +45,14 @@ export default function ProjectBudgetPage() {
   const [stats, setStats] = useState<BudgetStats | null>(null);
   const [projectName, setProjectName] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<BudgetItem | null>(null);
   const [formData, setFormData] = useState({
     description: '',
     vendor: '',
     quantity: 1,
     unitCost: 0,
-    committedStatus: 'Normal',
+    committedStatus: 'Planned',
     category: 'Design'
   });
   const [saving, setSaving] = useState(false);
@@ -149,7 +152,7 @@ export default function ProjectBudgetPage() {
           vendor: '',
           quantity: 1,
           unitCost: 0,
-          committedStatus: 'Normal',
+          committedStatus: 'Planned',
           category: 'Design'
         });
         alert('Budget item created successfully!');
@@ -160,6 +163,44 @@ export default function ProjectBudgetPage() {
     } catch (error) {
       console.error('Create budget item error:', error);
       alert('Failed to create budget item');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditItem = (item: BudgetItem) => {
+    setSelectedItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateBudgetItem = async () => {
+    if (!selectedItem) return;
+
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/projects/${params.id}/budget/${selectedItem._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(selectedItem),
+      });
+
+      if (response.ok) {
+        await fetchBudget();
+        await fetchStats();
+        setIsEditModalOpen(false);
+        setSelectedItem(null);
+        alert('Budget item updated successfully!');
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to update budget item');
+      }
+    } catch (error) {
+      console.error('Update budget item error:', error);
+      alert('Failed to update budget item');
     } finally {
       setSaving(false);
     }
@@ -202,10 +243,14 @@ export default function ProjectBudgetPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Approved':
+      case 'Paid':
         return 'bg-green-100 text-green-700';
-      case 'Submitted':
+      case 'Invoiced':
         return 'bg-blue-100 text-blue-700';
+      case 'Committed':
+        return 'bg-orange-100 text-orange-700';
+      case 'Planned':
+        return 'bg-gray-100 text-gray-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -291,12 +336,22 @@ export default function ProjectBudgetPage() {
               <p className="text-3xl font-bold text-green-700">{formatCurrency(stats.totalCommitted)}</p>
             </div>
             <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">%Used</h3>
-              <p className="text-3xl font-bold text-orange-700">{stats.percentUsed.toFixed(1)}%</p>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">EAC</h3>
+              <p className="text-3xl font-bold text-orange-700">{formatCurrency(stats.eac)}</p>
+              <p className="text-xs text-gray-600 mt-1">Estimated at Completion</p>
             </div>
-            <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Remaining</h3>
-              <p className="text-3xl font-bold text-purple-700">{formatCurrency(stats.remaining)}</p>
+            <div className={`border-2 rounded-lg p-6 ${
+              stats.variance < 0 ? 'bg-red-50 border-red-200' : 'bg-purple-50 border-purple-200'
+            }`}>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">Variance</h3>
+              <p className={`text-3xl font-bold ${
+                stats.variance < 0 ? 'text-red-700' : 'text-purple-700'
+              }`}>
+                {formatCurrency(stats.variance)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                {stats.variance < 0 ? 'Over Budget' : 'Under Budget'}
+              </p>
             </div>
           </div>
         )}
@@ -380,12 +435,21 @@ export default function ProjectBudgetPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() => handleDeleteBudgetItem(item._id)}
-                              className="text-red-600 hover:text-red-800 text-sm"
-                            >
-                              Delete
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleEditItem(item)}
+                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                              >
+                                <Edit size={14} />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBudgetItem(item._id)}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -483,9 +547,10 @@ export default function ProjectBudgetPage() {
                       onChange={(e) => setFormData({ ...formData, committedStatus: e.target.value as any })}
                       className="w-full px-4 py-2 border rounded-lg"
                     >
-                      <option value="Normal">Normal</option>
-                      <option value="Submitted">Submitted</option>
-                      <option value="Approved">Approved</option>
+                      <option value="Planned">Planned</option>
+                      <option value="Committed">Committed</option>
+                      <option value="Invoiced">Invoiced</option>
+                      <option value="Paid">Paid</option>
                     </select>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-lg">
@@ -502,6 +567,110 @@ export default function ProjectBudgetPage() {
                   </button>
                   <button onClick={handleCreateBudgetItem} disabled={saving} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg">
                     {saving ? 'Adding...' : 'Add Item'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {isEditModalOpen && selectedItem && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white w-full max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold">Edit Budget Item</h2>
+                  <button onClick={() => { setIsEditModalOpen(false); setSelectedItem(null); }} className="text-gray-400 hover:text-black">
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Category *</label>
+                    <select
+                      value={selectedItem.category}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, category: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="Design">Design</option>
+                      <option value="Approvals">Approvals</option>
+                      <option value="Construction">Construction</option>
+                      <option value="Joinery">Joinery</option>
+                      <option value="MEP">MEP</option>
+                      <option value="Fixtures">Fixtures</option>
+                      <option value="Contingency">Contingency</option>
+                      <option value="Misc">Misc</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description *</label>
+                    <input
+                      type="text"
+                      value={selectedItem.description}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, description: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Vendor *</label>
+                    <input
+                      type="text"
+                      value={selectedItem.vendor}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, vendor: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Quantity</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={selectedItem.quantity}
+                        onChange={(e) => setSelectedItem({ ...selectedItem, quantity: parseInt(e.target.value) || 1 })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Unit Cost ($)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={selectedItem.unitCost}
+                        onChange={(e) => setSelectedItem({ ...selectedItem, unitCost: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <select
+                      value={selectedItem.committedStatus}
+                      onChange={(e) => setSelectedItem({ ...selectedItem, committedStatus: e.target.value as any })}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    >
+                      <option value="Planned">Planned</option>
+                      <option value="Committed">Committed</option>
+                      <option value="Invoiced">Invoiced</option>
+                      <option value="Paid">Paid</option>
+                    </select>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium">Total Cost:</span>
+                      <span className="font-bold">{formatCurrency(selectedItem.quantity * selectedItem.unitCost)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button onClick={() => { setIsEditModalOpen(false); setSelectedItem(null); }} className="flex-1 px-4 py-3 border rounded-lg">
+                    Cancel
+                  </button>
+                  <button onClick={handleUpdateBudgetItem} disabled={saving} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg">
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>
