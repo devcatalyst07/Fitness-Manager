@@ -18,6 +18,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import TaskCreateModal from "@/components/TaskCreateModal";
+import { TimelineContainer } from "@/components/TimelineComponents";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -43,7 +44,9 @@ export default function ProjectTasksPage() {
   const [pathname, setPathname] = useState("/admin/projects");
   const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "board">("list");
+  const [viewMode, setViewMode] = useState<"list" | "board" | "timeline">(
+    "list",
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -506,6 +509,15 @@ export default function ProjectTasksPage() {
               <LayoutGrid size={18} />
               <span>Board</span>
             </button>
+            <button
+              onClick={() => setViewMode("timeline")}
+              className={`px-4 py-2 rounded flex items-center gap-2 ${
+                viewMode === "timeline" ? "bg-gray-100" : "text-gray-600"
+              }`}
+            >
+              <Calendar size={18} />
+              <span>Timeline</span>
+            </button>
           </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -747,7 +759,7 @@ export default function ProjectTasksPage() {
               </table>
             </div>
           </div>
-        ) : (
+        ) : viewMode === "board" ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {["Backlog", "In Progress", "Blocked", "Done"].map((status) => (
               <div key={status} className="bg-gray-100 rounded-lg p-4">
@@ -791,270 +803,32 @@ export default function ProjectTasksPage() {
               </div>
             ))}
           </div>
-        )}
+        ) : viewMode === "timeline" ? (
+          <TimelineContainer
+            tasks={tasks}
+            onTaskClick={(task) => {
+              setSelectedTask(task);
+              setActiveTab("details");
+              setIsDetailModalOpen(true);
+              fetchComments(task._id);
+              fetchActivityLogs(task._id);
+            }}
+          />
+        ) : null}
 
         {/* Create Modal */}
-        {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white w-full max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
-              <div className="p-8 text-black">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold">Create New Task</h2>
-                  <button
-                    onClick={() => setIsCreateModalOpen(false)}
-                    className="text-gray-400 hover:text-black"
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Title *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          description: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Status
-                      </label>
-                      <select
-                        value={formData.status}
-                        onChange={(e) =>
-                          setFormData({ ...formData, status: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg"
-                      >
-                        <option value="" disabled>
-                          -- Choose Status --
-                        </option>
-                        <option value="Backlog">Backlog</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Blocked">Blocked</option>
-                        <option value="Done">Done</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Priority
-                      </label>
-                      <select
-                        value={formData.priority}
-                        onChange={(e) =>
-                          setFormData({ ...formData, priority: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg"
-                      >
-                        <option value="" disabled>
-                          -- Choose --
-                        </option>
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Assignees * (Multiple Selection)
-                    </label>
-                    {/* Dropdown to add assignees */}
-                    <select
-                      onChange={(e) => {
-                        const selectedMember = teamMembers.find(
-                          (member) => member.userId.email === e.target.value,
-                        );
-
-                        if (selectedMember) {
-                          const hasActiveTask = checkMemberHasActiveTask(
-                            selectedMember.userId.email,
-                          );
-
-                          if (hasActiveTask) {
-                            alert(
-                              `⚠️ ${selectedMember.userId.name} already has an active task!`,
-                            );
-                            return;
-                          }
-
-                          const alreadyAdded = selectedAssignees.some(
-                            (a) => a.email === selectedMember.userId.email,
-                          );
-
-                          if (alreadyAdded) {
-                            alert("This member is already added!");
-                            return;
-                          }
-
-                          const newAssignee = {
-                            email: selectedMember.userId.email,
-                            name: selectedMember.userId.name,
-                          };
-
-                          const updatedAssignees = [
-                            ...selectedAssignees,
-                            newAssignee,
-                          ];
-
-                          setSelectedAssignees(updatedAssignees);
-                          setFormData({
-                            ...formData,
-                            assignees: updatedAssignees,
-                          });
-                        }
-
-                        e.target.value = "";
-                      }}
-                      className="w-full px-4 py-2 border rounded-lg"
-                    >
-                      <option value="">-- Add Team Member --</option>
-                      {teamMembers
-                        .filter((member) => member.status === "active")
-                        .map((member) => (
-                          <option key={member._id} value={member.userId.email}>
-                            {member.userId.name}
-                          </option>
-                        ))}
-                    </select>
-
-                    {/* Display selected assignees */}
-                    {selectedAssignees.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-sm font-medium text-gray-700">
-                          Selected Assignees ({selectedAssignees.length}):
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedAssignees.map((assignee, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-sm"
-                            >
-                              <span>{assignee.name}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = selectedAssignees.filter(
-                                    (_, i) => i !== index,
-                                  );
-                                  setSelectedAssignees(updated);
-                                  setFormData({
-                                    ...formData,
-                                    assignees: updated,
-                                  });
-                                }}
-                                className="text-blue-900 hover:text-blue-700"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedAssignees.length === 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        No assignees selected yet
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Date Started
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            startDate: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Due Date
-                      </label>
-                      <input
-                        type="date"
-                        value={formData.dueDate}
-                        onChange={(e) =>
-                          setFormData({ ...formData, dueDate: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border rounded-lg"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      Progress (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.progress}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          progress: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full px-4 py-2 border rounded-lg"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => setIsCreateModalOpen(false)}
-                    className="flex-1 px-4 py-3 border rounded-lg"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateTask}
-                    disabled={saving}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg"
-                  >
-                    {saving ? "Creating..." : "Create Task"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
+        <TaskCreateModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          formData={formData}
+          setFormData={setFormData}
+          selectedAssignees={selectedAssignees}
+          setSelectedAssignees={setSelectedAssignees}
+          teamMembers={teamMembers}
+          onSubmit={handleCreateTask}
+          saving={saving}
+          checkMemberHasActiveTask={checkMemberHasActiveTask}
+        />
         {/* Detail Modal - 3 TABS */}
         {isDetailModalOpen && selectedTask && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
