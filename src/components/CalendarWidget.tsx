@@ -58,7 +58,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
         `${API_URL}/api/projects/${projectId}/events`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
+        }
       );
 
       if (response.ok) {
@@ -67,7 +67,8 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
           .filter((e: CalendarEvent) => new Date(e.startDate) >= new Date())
           .sort(
             (a: CalendarEvent, b: CalendarEvent) =>
-              new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+              new Date(a.startDate).getTime() -
+              new Date(b.startDate).getTime()
           )
           .slice(0, 5);
         setEvents(upcomingEvents);
@@ -92,7 +93,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
             ...formData,
             endDate: formData.startDate,
           }),
-        },
+        }
       );
 
       if (response.ok) {
@@ -121,13 +122,13 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-1">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <CalendarIcon size={28} />
             Company Calendar
           </h1>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-gray-700 px-3 py-1.5 bg-gray-100 rounded-lg">
               <Clock size={16} />
               <span className="font-medium">{timezone}</span>
@@ -141,13 +142,14 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
             </button>
           </div>
         </div>
+
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
           <MapPin size={14} />
           <span>{city} • Using organization default calendar</span>
         </div>
 
-        <div className="flex items-start gap-6">
-          <div className="text-sm text-gray-700">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <div className="text-sm text-gray-700 w-full md:w-auto">
             <div className="font-semibold">
               {format(currentDateTime, "MM/dd/yyyy")} |{" "}
               {format(currentDateTime, "EEEE")}
@@ -157,7 +159,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
             </div>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             <h4 className="font-semibold text-sm text-gray-900 mb-2">
               Upcoming Events
             </h4>
@@ -253,7 +255,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 <button
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"

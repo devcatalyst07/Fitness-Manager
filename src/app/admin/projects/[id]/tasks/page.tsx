@@ -75,157 +75,155 @@ export default function ProjectTasksPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <AdminSidebar />
 
-      <div className="flex-1 ml-64">
-        <AdminHeader />
+      <AdminHeader />
 
-        <main className="p-8 pt-24">
-          {/* Back Button with Project Name */}
-          <div className="mb-4">
-            <button
-              onClick={() => router.push(`/admin/projects/${params.id}`)}
-              className="text-gray-600 hover:text-black flex items-center gap-2 transition-colors"
-            >
-              <ArrowLeft size={20} />
-              <span>{projectName || "Back to Project"}</span>
-            </button>
+      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+        {/* Back Button with Project Name */}
+        <div className="mb-4">
+          <button
+            onClick={() => router.push(`/admin/projects/${params.id}`)}
+            className="text-gray-600 hover:text-black flex items-center gap-2 transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span>{projectName || "Back to Project"}</span>
+          </button>
+        </div>
+
+        {/* Page Title */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            Tasks
+          </h1>
+          <p className="text-sm text-gray-600">
+            Track and manage all project tasks
+          </p>
+        </div>
+
+        {/* Project Navigation Tabs */}
+        <div className="mb-6 border-b border-gray-200">
+          <div className="flex gap-6">
+            {["Overview", "Tasks", "Budget", "Documents", "Team"].map(
+              (tab) => (
+                <button
+                  key={tab}
+                  className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                    tab === "Tasks"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => {
+                    if (tab === "Overview")
+                      router.push(`/admin/projects/${params.id}`);
+                    if (tab === "Budget")
+                      router.push(`/admin/projects/${params.id}/budget`);
+                    if (tab === "Documents")
+                      router.push(`/admin/projects/${params.id}/documents`);
+                    if (tab === "Team")
+                      router.push(`/admin/projects/${params.id}/team`);
+                  }}
+                >
+                  {tab}
+                </button>
+              ),
+            )}
           </div>
+        </div>
 
-          {/* Page Title */}
-          <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-              Tasks
-            </h1>
-            <p className="text-sm text-gray-600">
-              Track and manage all project tasks
-            </p>
-          </div>
-
-          {/* Project Navigation Tabs */}
-          <div className="mb-6 border-b border-gray-200">
-            <div className="flex gap-6">
-              {["Overview", "Tasks", "Budget", "Documents", "Team"].map(
-                (tab) => (
-                  <button
-                    key={tab}
-                    className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                      tab === "Tasks"
-                        ? "border-black text-black"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                    onClick={() => {
-                      if (tab === "Overview")
-                        router.push(`/admin/projects/${params.id}`);
-                      if (tab === "Budget")
-                        router.push(`/admin/projects/${params.id}/budget`);
-                      if (tab === "Documents")
-                        router.push(`/admin/projects/${params.id}/documents`);
-                      if (tab === "Team")
-                        router.push(`/admin/projects/${params.id}/team`);
-                    }}
-                  >
-                    {tab}
-                  </button>
-                ),
-              )}
-            </div>
-          </div>
-
-          {/* Create Task Button */}
-          <div className="flex justify-end mb-6">
-            <button
-              onClick={() => {
-                resetForm();
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={20} />
-              <span>Create Task</span>
-            </button>
-          </div>
-
-          {/* Stats */}
-          <TaskStats tasks={tasks} />
-
-          {/* View Toggle */}
-          <TaskViewToggle viewMode={viewMode} onViewChange={setViewMode} />
-
-          {/* Views */}
-          {viewMode === "list" && (
-            <TaskListView
-              tasks={tasks}
-              onTaskClick={openTaskDetails}
-              onEdit={(task) => {
-                setSelectedTask(task);
-                setIsDetailModalOpen(true);
-                setIsEditing(true);
-              }}
-              onDelete={deleteTask}
-              openDropdown={openDropdown}
-              setOpenDropdown={setOpenDropdown}
-            />
-          )}
-
-          {viewMode === "board" && (
-            <TaskBoardView
-              tasks={tasks}
-              onTaskClick={openTaskDetails}
-              onStatusChange={changeTaskStatus}
-            />
-          )}
-
-          {viewMode === "timeline" && (
-            <TimelineContainer tasks={tasks} onTaskClick={openTaskDetails} />
-          )}
-
-          {/* Create Modal */}
-          <TaskCreateModal
-            isOpen={isCreateModalOpen}
-            onClose={() => {
-              setIsCreateModalOpen(false);
+        {/* Create Task Button */}
+        <div className="flex justify-end mb-6">
+          <button
+            onClick={() => {
               resetForm();
+              setIsCreateModalOpen(true);
             }}
-            formData={formData}
-            setFormData={setFormData}
-            selectedAssignees={selectedAssignees}
-            setSelectedAssignees={setSelectedAssignees}
-            teamMembers={teamMembers}
-            onSubmit={createTask}
-            saving={saving}
-            checkMemberHasActiveTask={checkMemberHasActiveTask}
-          />
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={20} />
+            <span>Create Task</span>
+          </button>
+        </div>
 
-          {/* Detail/Edit Modal */}
-          <TaskDetailModal
-            isOpen={isDetailModalOpen}
-            onClose={() => {
-              setIsDetailModalOpen(false);
-              setSelectedTask(null);
-              setIsEditing(false);
+        {/* Stats */}
+        <TaskStats tasks={tasks} />
+
+        {/* View Toggle */}
+        <TaskViewToggle viewMode={viewMode} onViewChange={setViewMode} />
+
+        {/* Views */}
+        {viewMode === "list" && (
+          <TaskListView
+            tasks={tasks}
+            onTaskClick={openTaskDetails}
+            onEdit={(task) => {
+              setSelectedTask(task);
+              setIsDetailModalOpen(true);
+              setIsEditing(true);
             }}
-            task={selectedTask}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            comments={comments}
-            activityLogs={activityLogs}
-            newComment={newComment}
-            setNewComment={setNewComment}
-            onAddComment={addComment}
-            onUpdateTask={updateTask}
-            teamMembers={teamMembers}
-            isEditing={isEditing}
-            setIsEditing={setIsEditing}
-            selectedFiles={selectedFiles}
-            onFileSelect={handleFileSelect}
-            onRemoveFile={(index) => {
-              setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
-            }}
+            onDelete={deleteTask}
+            openDropdown={openDropdown}
+            setOpenDropdown={setOpenDropdown}
           />
-        </main>
-      </div>
+        )}
+
+        {viewMode === "board" && (
+          <TaskBoardView
+            tasks={tasks}
+            onTaskClick={openTaskDetails}
+            onStatusChange={changeTaskStatus}
+          />
+        )}
+
+        {viewMode === "timeline" && (
+          <TimelineContainer tasks={tasks} onTaskClick={openTaskDetails} />
+        )}
+
+        {/* Create Modal */}
+        <TaskCreateModal
+          isOpen={isCreateModalOpen}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            resetForm();
+          }}
+          formData={formData}
+          setFormData={setFormData}
+          selectedAssignees={selectedAssignees}
+          setSelectedAssignees={setSelectedAssignees}
+          teamMembers={teamMembers}
+          onSubmit={createTask}
+          saving={saving}
+          checkMemberHasActiveTask={checkMemberHasActiveTask}
+        />
+
+        {/* Detail/Edit Modal */}
+        <TaskDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedTask(null);
+            setIsEditing(false);
+          }}
+          task={selectedTask}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          comments={comments}
+          activityLogs={activityLogs}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          onAddComment={addComment}
+          onUpdateTask={updateTask}
+          teamMembers={teamMembers}
+          isEditing={isEditing}
+          setIsEditing={setIsEditing}
+          selectedFiles={selectedFiles}
+          onFileSelect={handleFileSelect}
+          onRemoveFile={(index) => {
+            setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+          }}
+        />
+      </main>
     </div>
   );
 }

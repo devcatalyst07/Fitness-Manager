@@ -24,11 +24,11 @@ export function ActivityItem({
 }: ActivityItemProps) {
   const getActivityIcon = (activityType: string, activityAction: string) => {
     // Budget activities
-    if (activityType === "budget") return "💰";
+    if (activityType === "budget") return "🔔";
 
     // Task activities
     if (activityType === "task") {
-      if (activityAction === "task_completed") return "✅";
+      if (activityAction === "task_completed") return "🔔";
       return "📋";
     }
 

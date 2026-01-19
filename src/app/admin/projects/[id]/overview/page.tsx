@@ -34,8 +34,8 @@ export default function ProjectOverviewPage() {
   const [stats, setStats] = useState<any>(null);
   const [insights, setInsights] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
-    const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
-    const [deadlineDays, setDeadlineDays] = useState(7);
+  const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
+  const [deadlineDays, setDeadlineDays] = useState(7);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -91,8 +91,7 @@ export default function ProjectOverviewPage() {
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
-      };
-
+  };
 
   const fetchInsights = async () => {
     try {
@@ -130,7 +129,7 @@ export default function ProjectOverviewPage() {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`, // ← Use state
+        `${API_URL}/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (response.ok) {
