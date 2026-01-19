@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft,
-  Calendar,
   TrendingUp,
   CheckCircle2,
   Users,
@@ -20,6 +19,7 @@ import {
 import { InsightsContainer } from "@/components/InsightsComponents";
 import { DeadlinesContainer } from "@/components/DeadlineComponents";
 import { ActivityContainer } from "@/components/ActivityComponents";
+import CalendarWidget from "@/components/CalendarWidget";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -197,23 +197,8 @@ export default function ProjectOverviewPage() {
         </div>
 
         {/* Calendar Widget */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar size={20} />
-                Standard Business Calendar
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                📍 New York • Using organization default calendar
-              </p>
-            </div>
-            <div className="text-sm text-gray-600">⏰ America/New_York</div>
-          </div>
-          <p className="text-xs text-gray-500">
-            Calendar Precedence: Project → Brand → Tenant Default (Currently
-            using tenant default)
-          </p>
+        <div className="mb-6">
+          <CalendarWidget projectId={params.id as string} />
         </div>
 
         {/* Stats Grid */}
