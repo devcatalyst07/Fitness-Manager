@@ -6,10 +6,8 @@ import AdminSidebar from '@/components/AdminSidebar';
 import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
 import AdminHeader from '@/components/AdminHeader';
 import BrandManagement from '@/components/BrandManagement';
-import ActiveTasksList from '@/components/ActiveTasksList';
-import BudgetTasksList from '@/components/BudgetTasksList';
 
-// Types
+// ==================== Types ====================
 interface ProjectStats {
   totalProjects: number;
   activeProjects: number;
@@ -18,59 +16,6 @@ interface ProjectStats {
   budgetUsedPercentage: number;
   projectsThisMonth: number;
   activeChange: number;
-}
-
-interface Task {
-  _id: string;
-  title: string;
-  status: string;
-  priority: string;
-  dueDate?: string;
-  assignees: { name: string; email: string }[];
-  projectId: {
-    _id: string;
-    projectName: string;
-    brand: string;
-  };
-}
-
-interface BudgetItem {
-  _id: string;
-  description: string;
-  vendor: string;
-  quantity: number;
-  unitCost: number;
-  committedStatus: string;
-  category: string;
-  projectId: {
-    _id: string;
-    projectName: string;
-    brand: string;
-  };
-}
-
-interface ProjectAnalytic {
-  projectId: string;
-  projectName: string;
-  brand: string;
-  taskStatusData: { status: string; count: number }[];
-  budgetStatusData: { status: string; amount: number }[];
-  totalTasks: number;
-  completedTasks: number;
-  totalBudget: number;
-  totalSpent: number;
-}
-
-interface BrandAnalytic {
-  brandId: string;
-  brandName: string;
-  projectCount: number;
-  taskStatusData: { status: string; count: number }[];
-  budgetStatusData: { status: string; amount: number }[];
-  totalTasks: number;
-  completedTasks: number;
-  totalBudget: number;
-  totalSpent: number;
 }
 
 interface Brand {
@@ -87,16 +32,13 @@ interface Brand {
 
 interface DashboardStats {
   projectStats: ProjectStats;
-  activeTasks: Task[];
-  budgetTasks: BudgetItem[];
-  projectAnalytics: ProjectAnalytic[];
-  brandAnalytics: BrandAnalytic[];
 }
 
 type ChangeType = 'positive' | 'negative' | 'neutral';
 
 // API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
 // ==================== DashboardCard ====================
 interface DashboardCardProps {
@@ -106,7 +48,12 @@ interface DashboardCardProps {
   changeType: ChangeType;
 }
 
-function DashboardCard({ title, value, change, changeType }: DashboardCardProps) {
+function DashboardCard({
+  title,
+  value,
+  change,
+  changeType,
+}: DashboardCardProps) {
   const changeColor: Record<ChangeType, string> = {
     positive: 'text-green-600',
     negative: 'text-red-600',
@@ -150,7 +97,7 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/admin/dashboard/stats`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -159,7 +106,7 @@ export default function AdminDashboard() {
       }
 
       const data = await response.json();
-      setStats(data);
+      setStats({ projectStats: data.projectStats });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -172,7 +119,7 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/brands/all`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -191,16 +138,16 @@ export default function AdminDashboard() {
 
   const projectStats = stats?.projectStats;
 
-  // Calculate change indicators
+  // Helpers
   const getChangeType = (value: number): ChangeType => {
     if (value > 0) return 'positive';
     if (value < 0) return 'negative';
     return 'neutral';
   };
 
-  const formatChange = (value: number, prefix: string = '') => {
+  const formatChange = (value: number, suffix = '') => {
     const sign = value > 0 ? '+' : '';
-    return `${sign}${value} ${prefix}`;
+    return `${sign}${value} ${suffix}`;
   };
 
   return (
@@ -209,49 +156,52 @@ export default function AdminDashboard() {
       <AdminHeader />
 
       <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Dashboard</h1>
-        
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">
+          Dashboard
+        </h1>
+
         {/* Dashboard Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          <DashboardCard 
-            title="Total Projects" 
-            value={projectStats?.totalProjects || 0} 
-            change={formatChange(projectStats?.projectsThisMonth || 0, 'from last month')} 
-            changeType={getChangeType(projectStats?.projectsThisMonth || 0)} 
+          <DashboardCard
+            title="Total Projects"
+            value={projectStats?.totalProjects || 0}
+            change={formatChange(
+              projectStats?.projectsThisMonth || 0,
+              'from last month'
+            )}
+            changeType={getChangeType(
+              projectStats?.projectsThisMonth || 0
+            )}
           />
-          <DashboardCard 
-            title="Active Tasks" 
-            value={projectStats?.activeProjects || 0} 
-            change={formatChange(projectStats?.activeChange || 0, 'from last week')} 
-            changeType={getChangeType(projectStats?.activeChange || 0)} 
+
+          <DashboardCard
+            title="Active Tasks"
+            value={projectStats?.activeProjects || 0}
+            change={formatChange(
+              projectStats?.activeChange || 0,
+              'from last week'
+            )}
+            changeType={getChangeType(projectStats?.activeChange || 0)}
           />
-          <DashboardCard 
-            title="Budget Used" 
-            value={`${projectStats?.budgetUsedPercentage || 0}%`} 
-            change={`${projectStats?.budgetUsedPercentage || 0}% of total budget`} 
-            changeType="neutral" 
+
+          <DashboardCard
+            title="Budget Used"
+            value={`${projectStats?.budgetUsedPercentage || 0}%`}
+            change={`${projectStats?.budgetUsedPercentage || 0}% of total budget`}
+            changeType="neutral"
           />
-          <DashboardCard 
-            title="Planning Projects" 
-            value={projectStats?.planningProjects || 0} 
-            change={`${projectStats?.completedProjects || 0} completed`} 
-            changeType="neutral" 
+
+          <DashboardCard
+            title="Planning Projects"
+            value={projectStats?.planningProjects || 0}
+            change={`${projectStats?.completedProjects || 0} completed`}
+            changeType="neutral"
           />
         </div>
 
         {/* Brand Management */}
         <div className="mb-8">
           <BrandManagement brands={brands} onRefresh={fetchBrands} />
-        </div>
-
-        {/* Active Tasks List */}
-        <div className="mb-8">
-          <ActiveTasksList tasks={stats?.activeTasks || []} />
-        </div>
-
-        {/* Budget Tasks List */}
-        <div className="mb-8">
-          <BudgetTasksList budgetItems={stats?.budgetTasks || []} />
         </div>
       </main>
     </div>
