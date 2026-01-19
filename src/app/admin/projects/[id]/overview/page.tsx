@@ -8,14 +8,11 @@ import {
   CheckCircle2,
   Users,
   AlertCircle,
-  RefreshCw,
 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
-import {
-  StatsCard,
-} from "@/components/OverviewComponents";
+import { StatsCard } from "@/components/OverviewComponents";
 import { InsightsContainer } from "@/components/InsightsComponents";
 import { DeadlinesContainer } from "@/components/DeadlineComponents";
 import { ActivityContainer } from "@/components/ActivityComponents";
@@ -168,8 +165,8 @@ export default function ProjectOverviewPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-6 border-b border-gray-200">
-          <div className="flex gap-6">
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto">
+          <div className="flex gap-6 whitespace-nowrap">
             {["Overview", "Tasks", "Budget", "Documents", "Team"].map((tab) => (
               <button
                 key={tab}
@@ -202,7 +199,7 @@ export default function ProjectOverviewPage() {
 
         {/* Stats Grid */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatsCard
               title="Budget Utilisation"
               value={`${stats.budgetUtilization.toFixed(1)}%`}
@@ -251,26 +248,26 @@ export default function ProjectOverviewPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => router.push(`/admin/projects/${params.id}/budget`)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
           >
-             View Budget
+            View Budget
           </button>
           <button
             onClick={() => router.push(`/admin/projects/${params.id}/tasks`)}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
           >
-             View Tasks
+            View Tasks
           </button>
           <button
             onClick={() =>
               router.push(`/admin/projects/${params.id}/approvals`)
             }
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
           >
-             View Approvals
+            View Approvals
           </button>
         </div>
       </main>

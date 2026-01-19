@@ -25,7 +25,7 @@ export default function ProjectTasksPage() {
 
   // View Mode State
   const [viewMode, setViewMode] = useState<"list" | "board" | "timeline">(
-    "list",
+    "list"
   );
   const [isEditing, setIsEditing] = useState(false);
 
@@ -103,8 +103,8 @@ export default function ProjectTasksPage() {
         </div>
 
         {/* Project Navigation Tabs */}
-        <div className="mb-6 border-b border-gray-200">
-          <div className="flex gap-6">
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto">
+          <div className="flex gap-6 whitespace-nowrap">
             {["Overview", "Tasks", "Budget", "Documents", "Team"].map(
               (tab) => (
                 <button
@@ -127,7 +127,7 @@ export default function ProjectTasksPage() {
                 >
                   {tab}
                 </button>
-              ),
+              )
             )}
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function ProjectTasksPage() {
               resetForm();
               setIsCreateModalOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={20} />
             <span>Create Task</span>

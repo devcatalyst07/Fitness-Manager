@@ -24,21 +24,12 @@ export function ActivityItem({
 }: ActivityItemProps) {
   const getActivityIcon = (activityType: string, activityAction: string) => {
     // Budget activities
-<<<<<<< HEAD
-    if (activityType === "budget") return "🔔";
-
-    // Task activities
-    if (activityType === "task") {
-      if (activityAction === "task_completed") return "🔔";
-      return "📋";
-=======
     if (activityType === "budget") return "";
 
     // Task activities
     if (activityType === "task") {
       if (activityAction === "task_completed") return "";
       return "";
->>>>>>> 46e120a604905e787c7812fc57e92f5da3479611
     }
 
     // Approval activities
