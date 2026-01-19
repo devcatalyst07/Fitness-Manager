@@ -28,7 +28,6 @@ export default function TaskListView({
   if (tasks.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-        <div className="text-6xl mb-4">📋</div>
         <h3 className="text-xl font-semibold text-gray-900 mb-2">
           No tasks yet
         </h3>
@@ -63,7 +62,7 @@ export default function TaskListView({
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Progress
               </th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
                 Actions
               </th>
             </tr>
@@ -156,9 +155,10 @@ export default function TaskListView({
                 </td>
 
                 {/* Actions */}
-                <td className="px-6 py-4 text-right">
-                  <div className="relative dropdown-menu">
+                <td className="px-6 py-4 text-right w-24">
+                  <div className="dropdown-menu">
                     <button
+                      id={`menu-button-${task._id}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setOpenDropdown(
@@ -171,16 +171,30 @@ export default function TaskListView({
                     </button>
 
                     {openDropdown === task._id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <div
+                        className="fixed bg-white rounded-lg shadow-xl border border-gray-200 z-50 w-48"
+                        style={{
+                          top: `${
+                            (document
+                              .getElementById(`menu-button-${task._id}`)
+                              ?.getBoundingClientRect()?.bottom || 0) + 8
+                          }px`,
+                          left: `${
+                            (document
+                              .getElementById(`menu-button-${task._id}`)
+                              ?.getBoundingClientRect()?.right || 0) - 192
+                          }px`,
+                        }}
+                      >
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onTaskClick(task);
                             setOpenDropdown(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                          className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
                         >
-                           View Details
+                          View Details
                         </button>
                         {/* {onEdit && (
                           <button
@@ -191,7 +205,7 @@ export default function TaskListView({
                             }}
                             className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                           >
-                             Edit
+                            Edit
                           </button>
                         )} */}
                         {onDelete && (
@@ -207,9 +221,9 @@ export default function TaskListView({
                               }
                               setOpenDropdown(null);
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
                           >
-                             Delete
+                            Delete
                           </button>
                         )}
                       </div>

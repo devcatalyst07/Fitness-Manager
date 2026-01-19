@@ -302,25 +302,13 @@ export function useTaskManagement(projectId: string) {
 
         if (response.ok) {
           const data = await response.json();
-
-          // Backend returns: { message, file: { fileName, fileUrl, fileType, fileSize, publicId } }
-          const uploadedFile = {
-            url: data.file.fileUrl, // Use fileUrl from backend
-            name: data.file.fileName, // Use fileName from backend
-            originalName: data.file.fileName,
-            type: data.file.fileType,
-            size: data.file.fileSize,
-            publicId: data.file.publicId,
-          };
-
-          uploadedFiles.push(uploadedFile);
+          // Push the entire file object from backend (exactly like old code)
+          uploadedFiles.push(data.file);
         } else {
           console.error("Failed to upload:", file.name);
-          alert(`Failed to upload: ${file.name}`);
         }
       } catch (error) {
         console.error("Upload error:", error);
-        alert(`Upload error: ${file.name}`);
       }
     }
 

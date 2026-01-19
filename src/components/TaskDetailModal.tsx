@@ -75,12 +75,9 @@ export default function TaskDetailModal({
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-5">
+        <div className="bg-white border-b border-gray-200 px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <FileText className="text-white" size={20} />
-              </div>
               <div className="flex-1">
                 {isEditing ? (
                   <input
@@ -89,14 +86,14 @@ export default function TaskDetailModal({
                     onChange={(e) =>
                       setEditedTask({ ...editedTask, title: e.target.value })
                     }
-                    className="text-xl font-semibold bg-white/10 text-white px-3 py-1 rounded border border-white/20 w-full"
+                    className="text-xl font-semibold text-gray-900 px-3 py-1 rounded border border-gray-300 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
-                  <h2 className="text-xl font-semibold text-white">
+                  <h2 className="text-xl font-semibold text-gray-900">
                     {task.title}
                   </h2>
                 )}
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-2">
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(currentTask.status || task.status)}`}
                   >
@@ -115,14 +112,14 @@ export default function TaskDetailModal({
               {!isEditing && setIsEditing && (
                 <button
                   onClick={handleEdit}
-                  className="text-white/80 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-all text-sm font-medium"
+                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-all text-sm font-medium"
                 >
-                  ✏️ Edit
+                  Edit
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all"
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-all"
               >
                 <X size={24} />
               </button>
@@ -141,7 +138,7 @@ export default function TaskDetailModal({
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              📋 Details
+              Details
             </button>
             <button
               onClick={() => setActiveTab("comments")}
@@ -151,7 +148,7 @@ export default function TaskDetailModal({
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              💬 Comments ({comments.length})
+              Comments ({comments.length})
             </button>
             <button
               onClick={() => setActiveTab("activity")}
@@ -161,7 +158,7 @@ export default function TaskDetailModal({
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              📊 Activity ({activityLogs.length})
+              Activity ({activityLogs.length})
             </button>
           </div>
         </div>
@@ -213,10 +210,10 @@ export default function TaskDetailModal({
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Backlog">📋 Backlog</option>
-                      <option value="In Progress">🔄 In Progress</option>
-                      <option value="Blocked">⚠️ Blocked</option>
-                      <option value="Done">✅ Done</option>
+                      <option value="Backlog">Backlog</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Blocked">Blocked</option>
+                      <option value="Done">Done</option>
                     </select>
                   ) : (
                     <p className="text-gray-700 bg-gray-50 p-3 rounded-xl">
@@ -323,25 +320,123 @@ export default function TaskDetailModal({
                   <Users size={16} />
                   Assignees
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {task.assignees && task.assignees.length > 0 ? (
-                    task.assignees.map((assignee, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
-                      >
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                          {getInitials(assignee.name)}
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {assignee.name}
-                        </span>
+
+                {isEditing ? (
+                  <div>
+                    {/* Add assignee dropdown */}
+                    <select
+                      onChange={(e) => {
+                        const selectedMember = teamMembers?.find(
+                          (member) => member.userId.email === e.target.value,
+                        );
+
+                        if (selectedMember) {
+                          const currentAssignees =
+                            editedTask.assignees || task.assignees || [];
+                          const alreadyAssigned = currentAssignees.some(
+                            (a) => a.email === selectedMember.userId.email,
+                          );
+
+                          if (alreadyAssigned) {
+                            alert("This member is already assigned!");
+                            return;
+                          }
+
+                          const newAssignee = {
+                            email: selectedMember.userId.email,
+                            name: selectedMember.userId.name,
+                          };
+
+                          setEditedTask({
+                            ...editedTask,
+                            assignees: [...currentAssignees, newAssignee],
+                          });
+                        }
+
+                        e.target.value = "";
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                    >
+                      <option value="">+ Add team member</option>
+                      {teamMembers
+                        ?.filter((member) => member.status === "active")
+                        .map((member) => (
+                          <option key={member._id} value={member.userId.email}>
+                            {member.userId.name}
+                          </option>
+                        ))}
+                    </select>
+
+                    {/* Display assignees with remove button */}
+                    {(editedTask.assignees || task.assignees) &&
+                    (editedTask.assignees || task.assignees).length > 0 ? (
+                      <div className="space-y-2">
+                        {(editedTask.assignees || task.assignees).map(
+                          (assignee, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                                  {getInitials(assignee.name)}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {assignee.name}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {assignee.email}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const currentAssignees =
+                                    editedTask.assignees || task.assignees;
+                                  const updated = currentAssignees.filter(
+                                    (_, i) => i !== idx,
+                                  );
+                                  setEditedTask({
+                                    ...editedTask,
+                                    assignees: updated,
+                                  });
+                                }}
+                                className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
+                              >
+                                <X size={18} />
+                              </button>
+                            </div>
+                          ),
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-sm">No assignees</p>
-                  )}
-                </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 py-4">
+                        No team members assigned yet
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {task.assignees && task.assignees.length > 0 ? (
+                      task.assignees.map((assignee, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
+                        >
+                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                            {getInitials(assignee.name)}
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {assignee.name}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 text-sm">No assignees</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Progress */}
@@ -475,7 +570,6 @@ export default function TaskDetailModal({
               <div className="space-y-4">
                 {comments.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
-                    <div className="text-4xl mb-2">💬</div>
                     <p>No comments yet. Be the first to comment!</p>
                   </div>
                 ) : (
@@ -501,48 +595,32 @@ export default function TaskDetailModal({
                         {/* File Attachments */}
                         {(comment as any).attachments &&
                           (comment as any).attachments.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {(comment as any).attachments.map(
-                                (attachment: any, idx: number) => {
-                                  // Handle different attachment formats
-                                  let fileUrl = "";
-                                  let fileName = "View File";
-
-                                  if (typeof attachment === "string") {
-                                    // If attachment is just a URL string
-                                    fileUrl = attachment;
-                                  } else if (typeof attachment === "object") {
-                                    // Backend returns: { fileName, fileUrl, fileType, fileSize, publicId }
-                                    fileUrl =
-                                      attachment.fileUrl ||
-                                      attachment.url ||
-                                      "";
-                                    fileName =
-                                      attachment.fileName ||
-                                      attachment.name ||
-                                      attachment.originalName ||
-                                      "View File";
-                                  }
-
-                                  return (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <p className="text-xs font-medium text-gray-600 mb-2">
+                                Attachments (
+                                {(comment as any).attachments.length}):
+                              </p>
+                              <div className="space-y-1">
+                                {(comment as any).attachments.map(
+                                  (file: any, idx: number) => (
                                     <a
                                       key={idx}
-                                      href={fileUrl}
+                                      href={file.fileUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors text-sm"
+                                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
                                     >
                                       <FileText
                                         size={16}
-                                        className="text-blue-600"
+                                        className="flex-shrink-0"
                                       />
-                                      <span className="text-blue-600 hover:underline truncate max-w-[200px]">
-                                        {fileName}
+                                      <span className="truncate">
+                                        {file.fileName}
                                       </span>
                                     </a>
-                                  );
-                                },
-                              )}
+                                  ),
+                                )}
+                              </div>
                             </div>
                           )}
                       </div>
@@ -557,7 +635,6 @@ export default function TaskDetailModal({
             <div className="space-y-3">
               {activityLogs.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
-                  <div className="text-4xl mb-2">📊</div>
                   <p>No activity yet</p>
                 </div>
               ) : (

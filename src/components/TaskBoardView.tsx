@@ -18,11 +18,11 @@ export default function TaskBoardView({
   onTaskClick,
   onStatusChange,
 }: TaskBoardViewProps) {
-  const columns: { status: TaskStatus; title: string; emoji: string }[] = [
-    { status: "Backlog", title: "Backlog", emoji: "📋" },
-    { status: "In Progress", title: "In Progress", emoji: "🔄" },
-    { status: "Blocked", title: "Blocked", emoji: "⚠️" },
-    { status: "Done", title: "Done", emoji: "✅" },
+  const columns: { status: TaskStatus; title: string}[] = [
+    { status: "Backlog", title: "Backlog"},
+    { status: "In Progress", title: "In Progress"},
+    { status: "Blocked", title: "Blocked"},
+    { status: "Done", title: "Done"},
   ];
 
   const getTasksByStatus = (status: TaskStatus): Task[] => {
@@ -68,7 +68,7 @@ export default function TaskBoardView({
             <div className="p-4 border-b border-gray-300 bg-white rounded-t-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{column.emoji}</span>
+                  <span className="text-xl"></span>
                   <h3 className="font-semibold text-gray-900">
                     {column.title}
                   </h3>
@@ -162,7 +162,7 @@ export default function TaskBoardView({
                       {/* Due Date */}
                       {task.dueDate && (
                         <span className="text-xs text-gray-500">
-                          📅 {formatDate(task.dueDate)}
+                           {formatDate(task.dueDate)}
                         </span>
                       )}
                     </div>

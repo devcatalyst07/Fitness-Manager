@@ -15,7 +15,6 @@ export default function TaskStats({ tasks }: TaskStatsProps) {
       <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-          <span className="text-2xl"></span>
         </div>
         <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
         <p className="text-xs text-gray-500 mt-1">All tasks in project</p>
@@ -25,7 +24,6 @@ export default function TaskStats({ tasks }: TaskStatsProps) {
       <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-gray-600">In Progress</p>
-          <span className="text-2xl"></span>
         </div>
         <p className="text-3xl font-bold text-blue-600">{stats.inProgress}</p>
         <p className="text-xs text-gray-500 mt-1">Currently being worked on</p>
@@ -35,7 +33,6 @@ export default function TaskStats({ tasks }: TaskStatsProps) {
       <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-gray-600">Blocked</p>
-          <span className="text-2xl"></span>
         </div>
         <p className="text-3xl font-bold text-red-600">{stats.blocked}</p>
         <p className="text-xs text-gray-500 mt-1">Requires attention</p>
@@ -45,7 +42,6 @@ export default function TaskStats({ tasks }: TaskStatsProps) {
       <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-gray-600">Completed</p>
-          <span className="text-2xl"></span>
         </div>
         <p className="text-3xl font-bold text-green-600">{stats.done}</p>
         <p className="text-xs text-gray-500 mt-1">Successfully finished</p>
@@ -55,7 +51,6 @@ export default function TaskStats({ tasks }: TaskStatsProps) {
       <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-gray-600">Completion</p>
-          <span className="text-2xl"></span>
         </div>
         <p className="text-3xl font-bold text-purple-600">
           {stats.completionRate}%
