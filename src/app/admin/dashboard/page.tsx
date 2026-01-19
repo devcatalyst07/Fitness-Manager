@@ -8,8 +8,6 @@ import AdminHeader from '@/components/AdminHeader';
 import BrandManagement from '@/components/BrandManagement';
 import ActiveTasksList from '@/components/ActiveTasksList';
 import BudgetTasksList from '@/components/BudgetTasksList';
-import ProjectAnalyticsCharts from '@/components/ProjectAnalyticsCharts';
-import BrandAnalyticsCharts from '@/components/BrandAnalyticsCharts';
 
 // Types
 interface ProjectStats {
@@ -254,16 +252,6 @@ export default function AdminDashboard() {
         {/* Budget Tasks List */}
         <div className="mb-8">
           <BudgetTasksList budgetItems={stats?.budgetTasks || []} />
-        </div>
-
-        {/* Project Analytics Charts */}
-        <div className="mb-8">
-          <ProjectAnalyticsCharts projectAnalytics={stats?.projectAnalytics || []} />
-        </div>
-
-        {/* Brand Analytics Charts */}
-        <div className="mb-8">
-          <BrandAnalyticsCharts brandAnalytics={stats?.brandAnalytics || []} />
         </div>
       </main>
     </div>
