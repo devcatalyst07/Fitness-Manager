@@ -24,22 +24,22 @@ export function ActivityItem({
 }: ActivityItemProps) {
   const getActivityIcon = (activityType: string, activityAction: string) => {
     // Budget activities
-    if (activityType === "budget") return "💰";
+    if (activityType === "budget") return "";
 
     // Task activities
     if (activityType === "task") {
-      if (activityAction === "task_completed") return "✅";
-      return "📋";
+      if (activityAction === "task_completed") return "";
+      return "";
     }
 
     // Approval activities
     if (activityType === "approval") return "🟠";
 
     // Team activities
-    if (activityType === "team") return "👥";
+    if (activityType === "team") return "";
 
     // Document activities
-    if (activityType === "document") return "📄";
+    if (activityType === "document") return "";
 
     // System activities
     if (activityType === "system") {
@@ -48,7 +48,7 @@ export function ActivityItem({
       return "🔵";
     }
 
-    return "📌";
+    return "";
   };
 
   const getActivityColor = (activityType: string, activityAction: string) => {
@@ -133,7 +133,7 @@ export function ActivityContainer({
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
-          ⚡ Recent Activity
+         Recent Activity
         </h3>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -153,12 +153,12 @@ export function ActivityContainer({
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
-        ⚡ Recent Activity
+         Recent Activity
       </h3>
 
       {activities.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p className="text-4xl mb-2">🔔</p>
+          <p className="text-4xl mb-2"></p>
           <p className="font-medium">No recent activity</p>
           <p className="text-sm mt-1">Project activity will appear here</p>
         </div>

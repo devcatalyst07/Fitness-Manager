@@ -60,24 +60,24 @@ export function InsightCard({
     }
   };
 
-  const getIcon = () => {
-    switch (type) {
-      case "action":
-        return "⚡";
-      case "warning":
-        return "⚠️";
-      case "info":
-        return "ℹ️";
-      default:
-        return "📌";
-    }
-  };
+  // const getIcon = () => {
+  //   switch (type) {
+  //     case "action":
+  //       return "⚡";
+  //     case "warning":
+  //       return "⚠️";
+  //     case "info":
+  //       return "ℹ️";
+  //     default:
+  //       return "📌";
+  //   }
+  // };
 
   return (
     <div className={`border rounded-lg p-4 ${getPriorityColor()}`}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">{getIcon()}</span>
+          <span className="text-2xl"></span>
           <div>
             <p className="font-semibold text-gray-900">{title}</p>
             <p className="text-sm text-gray-700 mt-1">{description}</p>
