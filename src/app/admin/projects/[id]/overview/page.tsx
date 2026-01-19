@@ -257,13 +257,13 @@ export default function ProjectOverviewPage() {
             onClick={() => router.push(`/admin/projects/${params.id}/budget`)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
-            📊 View Budget
+             View Budget
           </button>
           <button
             onClick={() => router.push(`/admin/projects/${params.id}/tasks`)}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
           >
-            ✅ View Tasks
+             View Tasks
           </button>
           <button
             onClick={() =>
@@ -271,7 +271,7 @@ export default function ProjectOverviewPage() {
             }
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
           >
-            👥 View Approvals
+             View Approvals
           </button>
         </div>
       </main>

@@ -56,20 +56,20 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
   const config = getSeverityConfig();
   const Icon = config.icon;
 
-  const getCategoryEmoji = () => {
-    switch (insight.category) {
-      case "tasks":
-        return "📋";
-      case "budget":
-        return "💰";
-      case "team":
-        return "👥";
-      case "approvals":
-        return "✓";
-      default:
-        return "💡";
-    }
-  };
+  // const getCategoryEmoji = () => {
+  //   switch (insight.category) {
+  //     case "tasks":
+  //       return "📋";
+  //     case "budget":
+  //       return "💰";
+  //     case "team":
+  //       return "👥";
+  //     case "approvals":
+  //       return "✓";
+  //     default:
+  //       return "💡";
+  //   }
+  // };
 
   return (
     <div
@@ -83,7 +83,7 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{getCategoryEmoji()}</span>
+              <span className="text-lg"></span>
               <h4 className="font-semibold text-gray-900">{insight.title}</h4>
               {insight.count > 0 && (
                 <span
@@ -97,7 +97,7 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
             <p className="text-sm text-gray-700 mb-2">{insight.description}</p>
 
             <p className={`text-xs italic ${config.textColor} mb-3`}>
-              💡 {insight.recommendation}
+             {insight.recommendation}
             </p>
 
             <button
@@ -139,7 +139,7 @@ export function InsightsContainer({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            💡 Project Insights
+             Project Insights
           </h3>
           {insights.length > 0 && (
             <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ export function InsightsContainer({
           onClick={onRefresh}
           className="text-sm text-gray-600 hover:text-black flex items-center gap-1"
         >
-          🔄 Refresh
+           Refresh
         </button>
       </div>
 

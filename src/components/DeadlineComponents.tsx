@@ -133,7 +133,7 @@ export function DeadlinesContainer({
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-          📅 Upcoming Deadlines
+           Upcoming Deadlines
         </h3>
         <DeadlineFilter
           currentDays={currentDays}
