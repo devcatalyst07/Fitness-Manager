@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
@@ -9,10 +9,17 @@ interface CreateProjectModalProps {
   onSuccess: () => void;
 }
 
+interface Brand {
+  _id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
   const [formData, setFormData] = useState({
     projectName: '',
-    brand: 'Westfield Group',
+    brand: '',
     scope: 'Fitout',
     workflow: 'Standard',
     projectCode: '',
@@ -24,6 +31,38 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchBrands();
+    }
+  }, [isOpen]);
+
+  const fetchBrands = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/brands`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBrands(data);
+        // Set first brand as default if available
+        if (data.length > 0 && !formData.brand) {
+          setFormData(prev => ({ ...prev, brand: data[0].name }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching brands:', error);
+    } finally {
+      setLoadingBrands(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -33,6 +72,12 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
 
     if (!formData.projectName) {
       setError('Project name is required');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.brand) {
+      setError('Brand is required');
       setLoading(false);
       return;
     }
@@ -63,7 +108,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       onClose();
       setFormData({
         projectName: '',
-        brand: 'Westfield Group',
+        brand: '',
         scope: 'Fitout',
         workflow: 'Standard',
         projectCode: '',
@@ -124,15 +169,28 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Brand <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="Westfield Group">Westfield Group</option>
-                <option value="Scentre Group">Scentre Group</option>
-                <option value="Unibail-Rodamco-Westfield">Unibail-Rodamco-Westfield</option>
-              </select>
+              {loadingBrands ? (
+                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-500">
+                  Loading brands...
+                </div>
+              ) : brands.length === 0 ? (
+                <div className="w-full px-4 py-2 border border-red-300 rounded-lg text-red-600 bg-red-50">
+                  No brands available. Please create a brand first in the Dashboard.
+                </div>
+              ) : (
+                <select
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Brand --</option>
+                  {brands.map((brand) => (
+                    <option key={brand._id} value={brand.name}>
+                      {brand.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -253,7 +311,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || brands.length === 0}
               className="flex-1 px-4 py-3 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Creating...' : 'Create Project'}
