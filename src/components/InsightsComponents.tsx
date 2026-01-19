@@ -171,7 +171,7 @@ export function InsightsContainer({
 
       {insights.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p className="text-4xl mb-2">✅</p>
+          <p className="text-4xl mb-2"></p>
           <p className="font-medium">No insights - All systems nominal!</p>
           <p className="text-sm mt-1">
             Your project is on track with no issues detected
