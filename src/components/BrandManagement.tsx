@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, X } from 'lucide-react';
+import React, { useState } from "react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
+import BrandDashboardModal from "./BrandDashboardModal";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface Brand {
   _id: string;
@@ -20,46 +22,50 @@ interface BrandManagementProps {
   onRefresh: () => void;
 }
 
-export default function BrandManagement({ brands, onRefresh }: BrandManagementProps) {
+export default function BrandManagement({
+  brands,
+  onRefresh,
+}: BrandManagementProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
   });
   const [saving, setSaving] = useState(false);
 
   const handleCreateBrand = async () => {
     if (!formData.name.trim()) {
-      alert('Brand name is required');
+      alert("Brand name is required");
       return;
     }
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/brands`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         setIsCreateModalOpen(false);
-        setFormData({ name: '', description: '' });
+        setFormData({ name: "", description: "" });
         onRefresh();
-        alert('Brand created successfully!');
+        alert("Brand created successfully!");
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to create brand');
+        alert(error.message || "Failed to create brand");
       }
     } catch (error) {
-      console.error('Create brand error:', error);
-      alert('Failed to create brand');
+      console.error("Create brand error:", error);
+      alert("Failed to create brand");
     } finally {
       setSaving(false);
     }
@@ -67,80 +73,104 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
 
   const handleUpdateBrand = async () => {
     if (!selectedBrand || !selectedBrand.name.trim()) {
-      alert('Brand name is required');
+      alert("Brand name is required");
       return;
     }
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/brands/${selectedBrand._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/brands/${selectedBrand._id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: selectedBrand.name,
+            description: selectedBrand.description,
+            isActive: selectedBrand.isActive,
+          }),
         },
-        body: JSON.stringify({
-          name: selectedBrand.name,
-          description: selectedBrand.description,
-          isActive: selectedBrand.isActive,
-        }),
-      });
+      );
 
       if (response.ok) {
         setIsEditModalOpen(false);
         setSelectedBrand(null);
         onRefresh();
-        alert('Brand updated successfully!');
+        alert("Brand updated successfully!");
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to update brand');
+        alert(error.message || "Failed to update brand");
       }
     } catch (error) {
-      console.error('Update brand error:', error);
-      alert('Failed to update brand');
+      console.error("Update brand error:", error);
+      alert("Failed to update brand");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteBrand = async (brandId: string) => {
-    if (!confirm('Are you sure you want to delete this brand? This action cannot be undone.')) {
+  const handleDeleteBrand = async (brandId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening dashboard modal
+
+    if (
+      !confirm(
+        "Are you sure you want to delete this brand? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/brands/${brandId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
       if (response.ok) {
         onRefresh();
-        alert('Brand deleted successfully!');
+        alert("Brand deleted successfully!");
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to delete brand');
+        alert(error.message || "Failed to delete brand");
       }
     } catch (error) {
-      console.error('Delete brand error:', error);
-      alert('Failed to delete brand');
+      console.error("Delete brand error:", error);
+      alert("Failed to delete brand");
     }
+  };
+
+  const handleBrandClick = (brand: Brand) => {
+    setSelectedBrand(brand);
+    setIsDashboardModalOpen(true);
+  };
+
+  const handleEditClick = (brand: Brand, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedBrand(brand);
+    setIsEditModalOpen(true);
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Brand Management</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage brands for your projects</p>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Brand Management
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage brands for your projects
+          </p>
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus size={18} />
           <span>Add Brand</span>
@@ -157,30 +187,30 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
           {brands.map((brand) => (
             <div
               key={brand._id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              onClick={() => handleBrandClick(brand)}
+              className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-semibold text-gray-900">{brand.name}</h3>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      setSelectedBrand(brand);
-                      setIsEditModalOpen(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-800"
+                    onClick={(e) => handleEditClick(brand, e)}
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded transition-colors"
                   >
                     <Edit size={16} />
                   </button>
                   <button
-                    onClick={() => handleDeleteBrand(brand._id)}
-                    className="text-red-600 hover:text-red-800"
+                    onClick={(e) => handleDeleteBrand(brand._id, e)}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
               {brand.description && (
-                <p className="text-sm text-gray-600 mb-3">{brand.description}</p>
+                <p className="text-sm text-gray-600 mb-3">
+                  {brand.description}
+                </p>
               )}
               <div className="text-xs text-gray-500">
                 <p>Created by {brand.createdBy?.name}</p>
@@ -214,17 +244,23 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className="w-full px-4 py-2 border rounded-lg"
                     placeholder="e.g., Westfield Group"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description (Optional)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Description (Optional)
+                  </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     className="w-full px-4 py-2 border rounded-lg"
                     rows={3}
                     placeholder="Brief description about the brand..."
@@ -235,16 +271,16 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 px-4 py-2 border rounded-lg"
+                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreateBrand}
                   disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-blue-700 transition-colors"
                 >
-                  {saving ? 'Creating...' : 'Create Brand'}
+                  {saving ? "Creating..." : "Create Brand"}
                 </button>
               </div>
             </div>
@@ -279,18 +315,26 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
                     type="text"
                     value={selectedBrand.name}
                     onChange={(e) =>
-                      setSelectedBrand({ ...selectedBrand, name: e.target.value })
+                      setSelectedBrand({
+                        ...selectedBrand,
+                        name: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2 border rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description (Optional)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Description (Optional)
+                  </label>
                   <textarea
-                    value={selectedBrand.description || ''}
+                    value={selectedBrand.description || ""}
                     onChange={(e) =>
-                      setSelectedBrand({ ...selectedBrand, description: e.target.value })
+                      setSelectedBrand({
+                        ...selectedBrand,
+                        description: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2 border rounded-lg"
                     rows={3}
@@ -303,7 +347,10 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
                     id="isActive"
                     checked={selectedBrand.isActive}
                     onChange={(e) =>
-                      setSelectedBrand({ ...selectedBrand, isActive: e.target.checked })
+                      setSelectedBrand({
+                        ...selectedBrand,
+                        isActive: e.target.checked,
+                      })
                     }
                     className="w-4 h-4"
                   />
@@ -319,21 +366,33 @@ export default function BrandManagement({ brands, onRefresh }: BrandManagementPr
                     setIsEditModalOpen(false);
                     setSelectedBrand(null);
                   }}
-                  className="flex-1 px-4 py-2 border rounded-lg"
+                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleUpdateBrand}
                   disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-blue-700 transition-colors"
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Brand Dashboard Modal */}
+      {isDashboardModalOpen && selectedBrand && (
+        <BrandDashboardModal
+          brand={selectedBrand}
+          isOpen={isDashboardModalOpen}
+          onClose={() => {
+            setIsDashboardModalOpen(false);
+            setSelectedBrand(null);
+          }}
+        />
       )}
     </div>
   );
