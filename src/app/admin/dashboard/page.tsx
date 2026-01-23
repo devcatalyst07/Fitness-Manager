@@ -6,6 +6,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
 import AdminHeader from '@/components/AdminHeader';
 import BrandManagement from '@/components/BrandManagement';
+import ThreadsSection from '@/components/ThreadsSection';
 
 // ==================== Types ====================
 interface ProjectStats {
@@ -76,6 +77,7 @@ export default function AdminDashboard() {
   const [isVerified, setIsVerified] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -126,10 +128,18 @@ export default function AdminDashboard() {
       if (response.ok) {
         const data = await response.json();
         setBrands(data);
+        // Auto-select first brand if available
+        if (data.length > 0 && !selectedBrand) {
+          setSelectedBrand(data[0]);
+        }
       }
     } catch (error) {
       console.error('Error fetching brands:', error);
     }
+  };
+
+  const handleBrandSelect = (brand: Brand) => {
+    setSelectedBrand(brand);
   };
 
   if (!isVerified || loading) {
@@ -201,8 +211,38 @@ export default function AdminDashboard() {
 
         {/* Brand Management */}
         <div className="mb-8">
-          <BrandManagement brands={brands} onRefresh={fetchBrands} />
+          <BrandManagement 
+            brands={brands} 
+            onRefresh={fetchBrands}
+            onBrandSelect={handleBrandSelect}
+            selectedBrandId={selectedBrand?._id}
+          />
         </div>
+
+        {/* Threads Section */}
+        {selectedBrand && (
+          <div className="mb-8">
+            <ThreadsSection
+              brandId={selectedBrand._id}
+              brandName={selectedBrand.name}
+            />
+          </div>
+        )}
+
+        {/* Empty State for Threads */}
+        {!selectedBrand && brands.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <p className="text-gray-500 mb-2">Select a brand to view threads</p>
+            <p className="text-sm text-gray-400">Click on a brand above to see its threads and discussions</p>
+          </div>
+        )}
+
+        {!selectedBrand && brands.length === 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <p className="text-gray-500 mb-2">No brands available</p>
+            <p className="text-sm text-gray-400">Create a brand first to start using threads</p>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Edit, Trash2, X } from "lucide-react";
+import { Plus, Edit, Trash2, X, MessageSquare, ExternalLink } from "lucide-react";
 import BrandDashboardModal from "./BrandDashboardModal";
 
 const API_URL =
@@ -20,11 +20,15 @@ interface Brand {
 interface BrandManagementProps {
   brands: Brand[];
   onRefresh: () => void;
+  onBrandSelect: (brand: Brand) => void;
+  selectedBrandId?: string;
 }
 
 export default function BrandManagement({
   brands,
   onRefresh,
+  onBrandSelect,
+  selectedBrandId,
 }: BrandManagementProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -114,7 +118,7 @@ export default function BrandManagement({
   };
 
   const handleDeleteBrand = async (brandId: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent opening dashboard modal
+    e.stopPropagation();
 
     if (
       !confirm(
@@ -147,6 +151,12 @@ export default function BrandManagement({
   };
 
   const handleBrandClick = (brand: Brand) => {
+    // Filter threads by this brand
+    onBrandSelect(brand);
+  };
+
+  const handleOpenDashboard = (brand: Brand, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedBrand(brand);
     setIsDashboardModalOpen(true);
   };
@@ -165,7 +175,7 @@ export default function BrandManagement({
             Brand Management
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Manage brands for your projects
+            Select a brand to view threads or click dashboard icon for projects
           </p>
         </div>
         <button
@@ -188,20 +198,38 @@ export default function BrandManagement({
             <div
               key={brand._id}
               onClick={() => handleBrandClick(brand)}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+              className={`border rounded-lg p-4 transition-all cursor-pointer ${
+                selectedBrandId === brand._id
+                  ? "border-blue-500 bg-blue-50 shadow-md"
+                  : "border-gray-200 hover:shadow-md hover:border-blue-300"
+              }`}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-gray-900">{brand.name}</h3>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    {brand.name}
+                    {selectedBrandId === brand._id && (
+                      <MessageSquare size={16} className="text-blue-600" />
+                    )}
+                  </h3>
+                </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={(e) => handleOpenDashboard(brand, e)}
+                    className="text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded transition-colors"
+                    title="Open Dashboard"
+                  >
+                    <ExternalLink size={16} />
+                  </button>
+                  <button
                     onClick={(e) => handleEditClick(brand, e)}
-                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1 rounded transition-colors"
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-1 rounded transition-colors"
                   >
                     <Edit size={16} />
                   </button>
                   <button
                     onClick={(e) => handleDeleteBrand(brand._id, e)}
-                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition-colors"
+                    className="text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -216,6 +244,14 @@ export default function BrandManagement({
                 <p>Created by {brand.createdBy?.name}</p>
                 <p>{new Date(brand.createdAt).toLocaleDateString()}</p>
               </div>
+              {selectedBrandId === brand._id && (
+                <div className="mt-3 pt-3 border-t border-blue-200">
+                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                    <MessageSquare size={12} />
+                    Viewing threads for this brand
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
