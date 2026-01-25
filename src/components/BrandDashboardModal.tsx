@@ -16,11 +16,14 @@ interface Project {
   _id: string;
   projectName: string;
   status: string;
+  isCompleted?: boolean;
   budget?: number;
   spent?: number;
   completionPercent?: number;
   taskCount?: number;
+  completedTaskCount?: number;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface BrandTeamMember {
@@ -48,14 +51,10 @@ export default function BrandDashboardModal({
   );
   const [isAddUserExpanded, setIsAddUserExpanded] = useState(false);
 
-  // Form states
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Filter states
-  const [selectedProjectForGraph, setSelectedProjectForGraph] =
-    useState<string>("all");
   const [projectStatusFilter, setProjectStatusFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -78,6 +77,7 @@ export default function BrandDashboardModal({
 
       if (response.ok) {
         const data = await response.json();
+        console.log("Dashboard data:", data); // For debugging lang
         setProjects(data.projects || []);
       }
     } catch (error) {
@@ -142,8 +142,18 @@ export default function BrandDashboardModal({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    if (status === "Completed") {
+  const getStatusBadge = (project: Project) => {
+    // Check if ALL tasks are completed
+    const allTasksCompleted =
+      project.taskCount !== undefined &&
+      project.taskCount > 0 &&
+      project.completedTaskCount === project.taskCount;
+
+    if (
+      allTasksCompleted ||
+      project.isCompleted ||
+      project.status === "Completed"
+    ) {
       return {
         text: "Completed",
         className: "bg-green-100 text-green-700",
@@ -159,26 +169,34 @@ export default function BrandDashboardModal({
     if (projectStatusFilter === "all") {
       return projects;
     } else if (projectStatusFilter === "active") {
-      return projects.filter((p) => p.status !== "Completed");
+      // Active = NOT all tasks completed
+      return projects.filter((p) => {
+        const allTasksCompleted =
+          p.taskCount !== undefined &&
+          p.taskCount > 0 &&
+          p.completedTaskCount === p.taskCount;
+        return !allTasksCompleted && !p.isCompleted && p.status !== "Completed";
+      });
     } else if (projectStatusFilter === "completed") {
-      return projects.filter((p) => p.status === "Completed");
+      // Completed = all tasks completed OR status is Completed
+      return projects.filter((p) => {
+        const allTasksCompleted =
+          p.taskCount !== undefined &&
+          p.taskCount > 0 &&
+          p.completedTaskCount === p.taskCount;
+        return allTasksCompleted || p.isCompleted || p.status === "Completed";
+      });
     }
     return projects;
   };
 
   const filteredProjects = getFilteredProjects();
 
-  const calculateProjectProgress = (project: Project) => {
-    // Use task completion if available, otherwise fallback to 0
-    return project.completionPercent || 0;
-  };
-
   const handleProjectClick = (projectId: string) => {
     router.push(`/admin/projects/${projectId}`);
     onClose();
   };
 
-  // Click outside to close
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -207,7 +225,6 @@ export default function BrandDashboardModal({
           {loading ? (
             <div className="space-y-8 animate-pulse">
               <div className="bg-gray-100 rounded-lg h-80"></div>
-
               <div>
                 <div className="h-6 bg-gray-100 rounded w-48 mb-6"></div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -254,14 +271,10 @@ export default function BrandDashboardModal({
             </div>
           ) : (
             <>
-              {/* Line Graph Section */}
               <div className="mb-8">
-                <BrandLineGraph
-                  projects={projects}
-                />
+                <BrandLineGraph projects={projects} />
               </div>
 
-              {/* Projects & Tasks Section */}
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">
@@ -292,8 +305,8 @@ export default function BrandDashboardModal({
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {filteredProjects.map((project) => {
-                      const progressPercent = calculateProjectProgress(project);
-                      const statusBadge = getStatusBadge(project.status);
+                      const progressPercent = project.completionPercent || 0;
+                      const statusBadge = getStatusBadge(project);
 
                       return (
                         <div
@@ -350,13 +363,13 @@ export default function BrandDashboardModal({
                                 <span>Progress</span>
                               </div>
                               <span className="font-medium text-gray-900">
-                                {progressPercent.toFixed(0)}%
+                                {progressPercent}%
                               </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2.5">
                               <div
                                 className={`h-2.5 rounded-full transition-all duration-300 ${
-                                  project.status === "Completed"
+                                  statusBadge.text === "Completed"
                                     ? "bg-green-500"
                                     : "bg-blue-500"
                                 }`}
@@ -365,29 +378,30 @@ export default function BrandDashboardModal({
                             </div>
                           </div>
 
-                          {project.budget && (
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  />
-                                </svg>
-                                <span>Budget</span>
+                          {project.budget !== undefined &&
+                            project.budget > 0 && (
+                              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <span>Budget</span>
+                                </div>
+                                <span className="font-semibold text-gray-900">
+                                  ₱{project.budget.toLocaleString()}
+                                </span>
                               </div>
-                              <span className="font-semibold text-gray-900">
-                                ₱{project.budget.toLocaleString()}
-                              </span>
-                            </div>
-                          )}
+                            )}
                         </div>
                       );
                     })}
@@ -395,7 +409,6 @@ export default function BrandDashboardModal({
                 )}
               </div>
 
-              {/* Add User Section */}
               <div className="mt-8">
                 <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
                   <button
