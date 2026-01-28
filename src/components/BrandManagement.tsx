@@ -1,6 +1,14 @@
 import React, { useState } from "react";
-import { Plus, Edit, Trash2, X, MessageSquare, ExternalLink } from "lucide-react";
-import BrandDashboardModal from "./BrandDashboardModal";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  X,
+  MessageSquare,
+  ExternalLink,
+} from "lucide-react";
+import BrandDashboardModal from "@/components/BrandDashboardModal";
+import AccessControlModal from "@/components/Accesscontrolmodal";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -33,6 +41,7 @@ export default function BrandManagement({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
+  const [isAccessControlOpen, setIsAccessControlOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -178,13 +187,22 @@ export default function BrandManagement({
             Select a brand to view threads or click dashboard icon for projects
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} />
-          <span>Add Brand</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            <span>Add Brand</span>
+          </button>
+          <button
+            onClick={() => setIsAccessControlOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            <span>Access Control</span>
+          </button>
+        </div>
       </div>
 
       {brands.length === 0 ? (
@@ -430,6 +448,14 @@ export default function BrandManagement({
           }}
         />
       )}
+
+      {/* Access Control Modal */}
+      <AccessControlModal
+        isOpen={isAccessControlOpen}
+        onClose={() => setIsAccessControlOpen(false)}
+        brandId={selectedBrand?._id}
+        brands={brands} // Pass all brands for selection
+      />
     </div>
   );
 }

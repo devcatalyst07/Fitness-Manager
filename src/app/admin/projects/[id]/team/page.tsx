@@ -17,9 +17,19 @@ interface TeamMember {
     name: string;
     email: string;
   };
-  role: "ProjectManager" | "Finance" | "Vendor" | "Designer" | "Member";
+  roleId: {
+    _id: string;
+    name: string;
+    permissions: any[];
+  };
   status: "active" | "pending" | "removed";
   createdAt: string;
+}
+
+interface Role {
+  _id: string;
+  name: string;
+  permissions: any[];
 }
 
 interface BrandTeamMember {
@@ -43,9 +53,11 @@ export default function ProjectTeamPage() {
   const [brandTeamMembers, setBrandTeamMembers] = useState<BrandTeamMember[]>(
     [],
   );
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
   const [formData, setFormData] = useState({
     selectedUser: "",
-    role: "",
+    roleId: "", // Changed from 'role' to 'roleId'
   });
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +74,13 @@ export default function ProjectTeamPage() {
       fetchTeamMembers();
     }
   }, [params.id, router]);
+
+  // Fetch roles when brandId is set
+  useEffect(() => {
+    if (brandId) {
+      fetchRoles();
+    }
+  }, [brandId]);
 
   const fetchProject = async () => {
     try {
@@ -120,6 +139,31 @@ export default function ProjectTeamPage() {
     }
   };
 
+  const fetchRoles = async () => {
+    if (!brandId) return;
+
+    setLoadingRoles(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/roles/brand/${brandId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRoles(data);
+      } else {
+        console.error("Failed to fetch roles");
+        setRoles([]);
+      }
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      setRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
+
   const fetchTeamMembers = async () => {
     setLoading(true);
     try {
@@ -143,8 +187,15 @@ export default function ProjectTeamPage() {
   };
 
   const handleAddMember = async () => {
-    if (!formData.selectedUser || !formData.role) {
+    if (!formData.selectedUser || !formData.roleId) {
       alert("Please select a user and role");
+      return;
+    }
+
+    if (roles.length === 0) {
+      alert(
+        "No roles available. Please create roles in Brand Management first.",
+      );
       return;
     }
 
@@ -170,15 +221,14 @@ export default function ProjectTeamPage() {
           },
           body: JSON.stringify({
             userEmail: selectedMember.email,
-            userName: selectedMember.name,
-            role: formData.role,
+            roleId: formData.roleId, // Changed from 'role' to 'roleId'
           }),
         },
       );
 
       if (response.ok) {
         alert("Team member added successfully!");
-        setFormData({ selectedUser: "", role: "" });
+        setFormData({ selectedUser: "", roleId: "" }); // Changed from 'role' to 'roleId'
         setIsAddModalOpen(false);
         fetchTeamMembers();
       } else {
@@ -339,7 +389,7 @@ export default function ProjectTeamPage() {
 
                   <div className="flex items-center gap-4">
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                      {member.role}
+                      {member.roleId?.name || "No Role"}
                     </span>
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -411,19 +461,32 @@ export default function ProjectTeamPage() {
                   Role <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={formData.role}
+                  value={formData.roleId}
                   onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value })
+                    setFormData({ ...formData, roleId: e.target.value })
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loadingRoles}
                 >
-                  <option value="">-- Choose Role --</option>
-                  <option value="ProjectManager">Project Manager</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Vendor">Vendor</option>
-                  <option value="Designer">Designer</option>
-                  <option value="Member">Member</option>
+                  <option value="">
+                    {loadingRoles
+                      ? "Loading roles..."
+                      : roles.length === 0
+                        ? "No roles available - Create roles in Brand Management first"
+                        : "-- Choose Role --"}
+                  </option>
+                  {roles.map((role) => (
+                    <option key={role._id} value={role._id}>
+                      {role.name}
+                    </option>
+                  ))}
                 </select>
+                {roles.length === 0 && !loadingRoles && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ Please create roles for this brand in Brand Management
+                    first
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4">
