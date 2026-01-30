@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
 import AdminHeader from '@/components/AdminHeader';
+import ScopeWorkflowArchitecture from '@/components/ScopeWorkflowArchitecture';
 import BrandManagement from '@/components/BrandManagement';
 import ThreadsSection from '@/components/ThreadsSection';
 
@@ -142,6 +143,11 @@ export default function AdminDashboard() {
     setSelectedBrand(brand);
   };
 
+  const handleRefresh = () => {
+    fetchDashboardStats();
+    fetchBrands();
+  };
+
   if (!isVerified || loading) {
     return <FitoutLoadingSpinner />;
   }
@@ -207,6 +213,11 @@ export default function AdminDashboard() {
             change={`${projectStats?.completedProjects || 0} completed`}
             changeType="neutral"
           />
+        </div>
+
+        {/* Scope and Workflow Architecture - NEW COMPONENT */}
+        <div className="mb-8">
+          <ScopeWorkflowArchitecture onRefresh={handleRefresh} />
         </div>
 
         {/* Brand Management */}

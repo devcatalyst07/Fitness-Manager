@@ -135,7 +135,7 @@ export default function AdminProjects() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap self-start sm:self-auto"
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap self-start sm:self-auto"
           >
             <Plus size={20} />
             <span>New Project</span>

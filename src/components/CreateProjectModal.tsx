@@ -16,15 +16,29 @@ interface Brand {
   isActive: boolean;
 }
 
+interface Workflow {
+  _id: string;
+  name: string;
+  description?: string;
+}
+
+interface Scope {
+  _id: string;
+  name: string;
+  description?: string;
+  workflows: Workflow[];
+}
+
 export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
   const [formData, setFormData] = useState({
     projectName: '',
     brand: '',
-    scope: 'Fitout',
-    workflow: 'Standard',
+    scope: '',
+    workflow: '',
     projectCode: '',
     description: '',
     location: '',
+    region: '',
     startDate: '',
     endDate: '',
     budget: '',
@@ -32,13 +46,47 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [scopes, setScopes] = useState<Scope[]>([]);
+  const [availableWorkflows, setAvailableWorkflows] = useState<Workflow[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(true);
+  const [loadingScopes, setLoadingScopes] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       fetchBrands();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (formData.brand) {
+      fetchScopesForBrand(formData.brand);
+    } else {
+      setScopes([]);
+      setAvailableWorkflows([]);
+      setFormData(prev => ({ ...prev, scope: '', workflow: '' }));
+    }
+  }, [formData.brand]);
+
+  useEffect(() => {
+    if (formData.scope) {
+      const selectedScope = scopes.find(s => s.name === formData.scope);
+      if (selectedScope) {
+        setAvailableWorkflows(selectedScope.workflows);
+        // Auto-select first workflow if available
+        if (selectedScope.workflows.length > 0 && !formData.workflow) {
+          setFormData(prev => ({ 
+            ...prev, 
+            workflow: selectedScope.workflows[0].name 
+          }));
+        }
+      } else {
+        setAvailableWorkflows([]);
+      }
+    } else {
+      setAvailableWorkflows([]);
+      setFormData(prev => ({ ...prev, workflow: '' }));
+    }
+  }, [formData.scope, scopes]);
 
   const fetchBrands = async () => {
     try {
@@ -64,6 +112,31 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     }
   };
 
+  const fetchScopesForBrand = async (brandName: string) => {
+    setLoadingScopes(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/scopes/for-brand/${encodeURIComponent(brandName)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setScopes(data);
+        // Auto-select first scope if available
+        if (data.length > 0 && !formData.scope) {
+          setFormData(prev => ({ ...prev, scope: data[0].name }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching scopes:', error);
+    } finally {
+      setLoadingScopes(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
@@ -78,6 +151,18 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
 
     if (!formData.brand) {
       setError('Brand is required');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.scope) {
+      setError('Scope is required');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.workflow) {
+      setError('Workflow is required');
       setLoading(false);
       return;
     }
@@ -109,11 +194,12 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       setFormData({
         projectName: '',
         brand: '',
-        scope: 'Fitout',
-        workflow: 'Standard',
+        scope: '',
+        workflow: '',
         projectCode: '',
         description: '',
         location: '',
+        region: '',
         startDate: '',
         endDate: '',
         budget: '',
@@ -197,30 +283,60 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Scope <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.scope}
-                onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="Fitout">Fitout</option>
-                <option value="Refurbishment">Refurbishment</option>
-                <option value="Maintenance">Maintenance</option>
-              </select>
+              {loadingScopes ? (
+                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-500">
+                  Loading scopes...
+                </div>
+              ) : !formData.brand ? (
+                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-500 bg-gray-50">
+                  Please select a brand first
+                </div>
+              ) : scopes.length === 0 ? (
+                <div className="w-full px-4 py-2 border border-yellow-300 rounded-lg text-yellow-700 bg-yellow-50">
+                  No scopes available for this brand. Please create a scope in Dashboard → Scope & Workflow Architecture.
+                </div>
+              ) : (
+                <select
+                  value={formData.scope}
+                  onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Scope --</option>
+                  {scopes.map((scope) => (
+                    <option key={scope._id} value={scope.name}>
+                      {scope.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Workflow <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.workflow}
-                onChange={(e) => setFormData({ ...formData, workflow: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="Standard">Standard</option>
-                <option value="Design & Build">Design & Build</option>
-                <option value="Procurement Only">Procurement Only</option>
-              </select>
+              {!formData.scope ? (
+                <div className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-500 bg-gray-50">
+                  Please select a scope first
+                </div>
+              ) : availableWorkflows.length === 0 ? (
+                <div className="w-full px-4 py-2 border border-yellow-300 rounded-lg text-yellow-700 bg-yellow-50">
+                  No workflows available for this scope. Please add workflows in Dashboard → Scope & Workflow Architecture.
+                </div>
+              ) : (
+                <select
+                  value={formData.workflow}
+                  onChange={(e) => setFormData({ ...formData, workflow: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Workflow --</option>
+                  {availableWorkflows.map((workflow) => (
+                    <option key={workflow._id} value={workflow.name}>
+                      {workflow.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -246,6 +362,19 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 placeholder="e.g., Sydney CBD"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Region
+              </label>
+              <input
+                type="text"
+                value={formData.region}
+                onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                placeholder="e.g., NSW, Victoria"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -311,7 +440,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading || brands.length === 0}
+              disabled={loading || brands.length === 0 || scopes.length === 0}
               className="flex-1 px-4 py-3 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Creating...' : 'Create Project'}

@@ -579,7 +579,7 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
               }}
               style={{...styles.roleSelect, flex: 1}}
             >
-              <option value="" disabled>-- Select a Brand --</option>
+              <option value="" disabled>Select a Brand</option>
               {brands.map((brand) => (
                 <option key={brand._id} value={brand._id}>
                   {brand.name}
@@ -599,7 +599,7 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
             disabled={roles.length === 0}
           >
             {roles.length === 0 ? (
-              <option value="" disabled>-- Select Roles --</option>
+              <option value="" disabled>Select Roles</option>
             ) : (
               roles.map((role) => (
                 <option key={role._id} value={role._id}>
