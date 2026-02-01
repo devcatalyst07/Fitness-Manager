@@ -220,6 +220,7 @@ export default function ProjectTasksPage() {
           onRemoveFile={(index) => {
             setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
           }}
+          canEdit={true}
         />
       </main>
     </div>

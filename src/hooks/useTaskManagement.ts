@@ -116,7 +116,19 @@ export function useTaskManagement(projectId: string) {
   const fetchTasks = async () => {
     try {
       const data = await taskService.getTasks(projectId);
-      setTasks(data);
+      
+      // ✅ FIX: Extract allTasks array from the response
+      // The API returns: { phases: [...], unassignedTasks: [...], allTasks: [...] }
+      // We need just the allTasks array
+      if (data && typeof data === 'object' && 'allTasks' in data) {
+        setTasks(data.allTasks || []);
+      } else if (Array.isArray(data)) {
+        // Fallback: if the API returns an array directly
+        setTasks(data);
+      } else {
+        console.warn('Unexpected tasks data structure:', data);
+        setTasks([]);
+      }
     } catch (error) {
       // Handle 403 from backend (e.g., "Admins only") with a user-friendly message
       const err: any = error;
@@ -128,6 +140,7 @@ export function useTaskManagement(projectId: string) {
         setTasks([]);
       } else {
         console.error("Error fetching tasks:", error);
+        setTasks([]);
       }
     } finally {
       setLoading(false);
