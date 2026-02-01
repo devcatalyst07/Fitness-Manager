@@ -93,6 +93,7 @@ export default function UserProjectTasksPage() {
     selectedFiles,
     setSelectedFiles,
     handleFileSelect,
+    phases,
   } = useTaskManagement(params.id as string);
 
   useEffect(() => {
@@ -362,6 +363,7 @@ export default function UserProjectTasksPage() {
             selectedAssignees={selectedAssignees}
             setSelectedAssignees={setSelectedAssignees}
             teamMembers={teamMembers}
+            phases={phases}
             onSubmit={createTask}
             saving={saving}
             checkMemberHasActiveTask={checkMemberHasActiveTask}

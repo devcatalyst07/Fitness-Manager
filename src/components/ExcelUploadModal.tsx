@@ -149,10 +149,11 @@ export function ExcelUploadModal({ scopeId, workflowId, onClose, onSuccess }: Ex
   };
 
   const downloadTemplate = () => {
-    // Trigger download of template file
+    // Download template file from public/files directory
     const link = document.createElement('a');
-    link.href = `${API_URL}/api/templates/task-upload-template.xlsx`;
+    link.href = '/files/task-upload-template.xlsx';
     link.download = 'task-upload-template.xlsx';
+    link.setAttribute('download', 'task-upload-template.xlsx'); // Force download
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

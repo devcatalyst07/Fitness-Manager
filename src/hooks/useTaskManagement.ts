@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Task, Comment, ActivityLog, TeamMember } from "@/types/task.types";
+import { Task, Comment, ActivityLog, TeamMember, Phase } from "@/types/task.types";
 import {
   taskService,
   commentService,
@@ -9,6 +9,8 @@ import {
   projectService,
   fileService,
 } from "@/services/taskService";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 export function useTaskManagement(projectId: string) {
   const router = useRouter();
@@ -21,6 +23,13 @@ export function useTaskManagement(projectId: string) {
   const [projectName, setProjectName] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
 
+  // ============================================
+  // PHASE MANAGEMENT - NEW
+  // ============================================
+  const [phases, setPhases] = useState<Phase[]>([]);
+  const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
+  const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
+
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -29,16 +38,28 @@ export function useTaskManagement(projectId: string) {
     "details" | "comments" | "activity"
   >("details");
 
-  // Form Data
-  const [formData, setFormData] = useState({
+  // Form Data - UPDATED to include phaseId
+// Form Data - UPDATED to include phaseId
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    status: string;
+    priority: string;
+    assignees: { email: string; name: string }[];
+    startDate: string;
+    dueDate: string;
+    progress: number;
+    phaseId: string | null;
+  }>({
     title: "",
     description: "",
     status: "",
     priority: "",
-    assignees: [] as { email: string; name: string }[],
+    assignees: [],
     startDate: "",
     dueDate: "",
     progress: 0,
+    phaseId: null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -81,6 +102,7 @@ export function useTaskManagement(projectId: string) {
     fetchProject();
     fetchTasks();
     fetchTeamMembers();
+    fetchPhases(); // NEW - Fetch phases on mount
   }, [projectId, router]);
 
   // ============================================
@@ -189,6 +211,131 @@ export function useTaskManagement(projectId: string) {
   };
 
   // ============================================
+  // PHASE OPERATIONS - NEW
+  // ============================================
+
+  const fetchPhases = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/api/projects/${projectId}/phases`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setPhases(data);
+      } else {
+        console.error('Fetch phases failed:', response.status);
+      }
+    } catch (error) {
+      console.error('Fetch phases error:', error);
+    }
+  };
+
+  const createPhase = async (phaseData: { 
+    name: string; 
+    description?: string; 
+    color?: string 
+  }): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/api/projects/${projectId}/phases`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(phaseData),
+        }
+      );
+
+      if (response.ok) {
+        await fetchPhases();
+        setIsPhaseModalOpen(false);
+        return true;
+      }
+      
+      const error = await response.json();
+      alert(error.message || 'Failed to create phase');
+      return false;
+    } catch (error) {
+      console.error('Create phase error:', error);
+      alert('Failed to create phase');
+      return false;
+    }
+  };
+
+  const updatePhase = async (
+    phaseId: string, 
+    phaseData: Partial<Phase>
+  ): Promise<boolean> => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/api/projects/${projectId}/phases/${phaseId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(phaseData),
+        }
+      );
+
+      if (response.ok) {
+        await fetchPhases();
+        setEditingPhase(null);
+        return true;
+      }
+
+      const error = await response.json();
+      alert(error.message || 'Failed to update phase');
+      return false;
+    } catch (error) {
+      console.error('Update phase error:', error);
+      alert('Failed to update phase');
+      return false;
+    }
+  };
+
+  const deletePhase = async (phaseId: string): Promise<boolean> => {
+    if (!confirm('Delete this phase? Tasks will be moved to "Unassigned".')) {
+      return false;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/api/projects/${projectId}/phases/${phaseId}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.ok) {
+        await fetchPhases();
+        await fetchTasks(); // Refresh tasks since they've been updated
+        return true;
+      }
+
+      const error = await response.json();
+      alert(error.message || 'Failed to delete phase');
+      return false;
+    } catch (error) {
+      console.error('Delete phase error:', error);
+      alert('Failed to delete phase');
+      return false;
+    }
+  };
+
+  // ============================================
   // TASK OPERATIONS
   // ============================================
 
@@ -210,6 +357,7 @@ export function useTaskManagement(projectId: string) {
         startDate: formData.startDate,
         dueDate: formData.dueDate,
         progress: formData.progress,
+        phaseId: formData.phaseId, // NEW - Include phaseId
       });
 
       alert("Task created successfully!");
@@ -224,23 +372,23 @@ export function useTaskManagement(projectId: string) {
     }
   };
 
- const updateTask = async (taskId: string, updates: Partial<Task>) => {
-  try {
-    console.log('Update attempt:', { projectId, taskId, updates }); // ← ADD THIS
-    await taskService.updateTask(projectId, taskId, updates);
-    alert("Task updated successfully!");
-    fetchTasks();
-    if (selectedTask?._id === taskId) {
-      setIsDetailModalOpen(false);
-      setSelectedTask(null);
+  const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      console.log('Update attempt:', { projectId, taskId, updates });
+      await taskService.updateTask(projectId, taskId, updates);
+      alert("Task updated successfully!");
+      fetchTasks();
+      if (selectedTask?._id === taskId) {
+        setIsDetailModalOpen(false);
+        setSelectedTask(null);
+      }
+    } catch (error: any) {
+      console.error("Update task error:", error);
+      console.error("Error status:", error.status);
+      console.error("Error body:", error.body);
+      alert(error.message || "Failed to update task");
     }
-  } catch (error: any) {
-    console.error("Update task error:", error);
-    console.error("Error status:", error.status); // ← ADD THIS
-    console.error("Error body:", error.body); // ← ADD THIS
-    alert(error.message || "Failed to update task");
-  }
-};
+  };
 
   const deleteTask = async (taskId: string) => {
     try {
@@ -283,7 +431,7 @@ export function useTaskManagement(projectId: string) {
       // Then create comment with attachments
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app"}/api/tasks/${selectedTask._id}/comments`,
+        `${API_URL}/api/tasks/${selectedTask._id}/comments`,
         {
           method: "POST",
           headers: {
@@ -335,7 +483,7 @@ export function useTaskManagement(projectId: string) {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app"}/api/upload`,
+          `${API_URL}/api/upload`,
           {
             method: "POST",
             headers: {
@@ -383,6 +531,7 @@ export function useTaskManagement(projectId: string) {
       startDate: "",
       dueDate: "",
       progress: 0,
+      phaseId: null, // NEW - Reset phaseId
     });
     setSelectedAssignees([]);
     setSelectedFiles([]);
@@ -458,5 +607,18 @@ export function useTaskManagement(projectId: string) {
     deleteTask,
     changeTaskStatus,
     openTaskDetails,
+
+    // ============================================
+    // PHASE MANAGEMENT - NEW RETURNS
+    // ============================================
+    phases,
+    isPhaseModalOpen,
+    setIsPhaseModalOpen,
+    editingPhase,
+    setEditingPhase,
+    createPhase,
+    updatePhase,
+    deletePhase,
+    fetchPhases,
   };
 }

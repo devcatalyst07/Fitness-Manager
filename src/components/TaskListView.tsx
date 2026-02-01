@@ -25,6 +25,19 @@ export default function TaskListView({
   openDropdown,
   setOpenDropdown,
 }: TaskListViewProps) {
+  // Sort tasks by nearest deadline
+  const sortedTasks = React.useMemo(() => {
+    return [...tasks].sort((a, b) => {
+      // Tasks without due dates go to the end
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      
+      // Sort by date (nearest first)
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
+  }, [tasks]);
+
   if (tasks.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
@@ -68,7 +81,7 @@ export default function TaskListView({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {tasks.map((task) => (
+            {sortedTasks.map((task) => (
               <tr
                 key={task._id}
                 className="hover:bg-gray-50 cursor-pointer transition-colors"

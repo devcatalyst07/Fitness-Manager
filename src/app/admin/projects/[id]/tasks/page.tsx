@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Settings } from "lucide-react";
 
 // Components
 import AdminSidebar from "@/components/AdminSidebar";
@@ -14,6 +14,8 @@ import TaskStats from "@/components/TaskStats";
 import TaskViewToggle from "@/components/TaskViewToggle";
 import TaskListView from "@/components/TaskListView";
 import TaskBoardView from "@/components/TaskBoardView";
+import TaskPhaseView from "@/components/TaskPhaseView";
+import PhaseManagementModal from "@/components/PhaseManagementModal";
 import { TimelineContainer } from "@/components/TimelineComponents";
 
 // Custom Hook
@@ -23,9 +25,9 @@ export default function ProjectTasksPage() {
   const router = useRouter();
   const params = useParams();
 
-  // View Mode State
-  const [viewMode, setViewMode] = useState<"list" | "board" | "timeline">(
-    "list",
+  // View Mode State - add 'phase' as an option
+  const [viewMode, setViewMode] = useState<"list" | "board" | "timeline" | "phase">(
+    "phase", // Default to phase view
   );
   const [isEditing, setIsEditing] = useState(false);
 
@@ -67,6 +69,13 @@ export default function ProjectTasksPage() {
     selectedFiles,
     setSelectedFiles,
     handleFileSelect,
+    // Phase management
+    phases,
+    isPhaseModalOpen,
+    setIsPhaseModalOpen,
+    createPhase,
+    updatePhase,
+    deletePhase,
   } = useTaskManagement(params.id as string);
 
   // Loading State
@@ -130,14 +139,22 @@ export default function ProjectTasksPage() {
           </div>
         </div>
 
-        {/* Create Task Button */}
-        <div className="flex justify-end mb-6">
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+          <button
+            onClick={() => setIsPhaseModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Settings size={20} />
+            <span>Manage Phases</span>
+          </button>
+
           <button
             onClick={() => {
               resetForm();
               setIsCreateModalOpen(true);
             }}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus size={20} />
             <span>Create Task</span>
@@ -147,10 +164,64 @@ export default function ProjectTasksPage() {
         {/* Stats */}
         <TaskStats tasks={tasks} />
 
-        {/* View Toggle */}
-        <TaskViewToggle viewMode={viewMode} onViewChange={setViewMode} />
+        {/* View Toggle - Updated to include Phase view */}
+        <div className="mb-6">
+          <div className="inline-flex bg-white border border-gray-200 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode("phase")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === "phase"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Phase View
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === "list"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              List View
+            </button>
+            <button
+              onClick={() => setViewMode("board")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === "board"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Board View
+            </button>
+            <button
+              onClick={() => setViewMode("timeline")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === "timeline"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Timeline
+            </button>
+          </div>
+        </div>
 
         {/* Views */}
+        {viewMode === "phase" && (
+          <TaskPhaseView
+            tasks={tasks}
+            phases={phases}
+            onTaskClick={openTaskDetails}
+            onDelete={deleteTask}
+            openDropdown={openDropdown}
+            setOpenDropdown={setOpenDropdown}
+          />
+        )}
+
         {viewMode === "list" && (
           <TaskListView
             tasks={tasks}
@@ -178,6 +249,16 @@ export default function ProjectTasksPage() {
           <TimelineContainer tasks={tasks} onTaskClick={openTaskDetails} />
         )}
 
+        {/* Phase Management Modal */}
+        <PhaseManagementModal
+          isOpen={isPhaseModalOpen}
+          onClose={() => setIsPhaseModalOpen(false)}
+          phases={phases}
+          onCreatePhase={createPhase}
+          onUpdatePhase={updatePhase}
+          onDeletePhase={deletePhase}
+        />
+
         {/* Create Modal */}
         <TaskCreateModal
           isOpen={isCreateModalOpen}
@@ -190,6 +271,7 @@ export default function ProjectTasksPage() {
           selectedAssignees={selectedAssignees}
           setSelectedAssignees={setSelectedAssignees}
           teamMembers={teamMembers}
+          phases={phases}
           onSubmit={createTask}
           saving={saving}
           checkMemberHasActiveTask={checkMemberHasActiveTask}

@@ -25,6 +25,7 @@ export interface Task {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  phaseId?: string | null;
 }
 
 export interface CreateTaskData {
@@ -37,6 +38,7 @@ export interface CreateTaskData {
   dueDate: string;
   progress: number;
   estimateHours?: number;
+  phaseId?: string | null;
 }
 
 export interface UpdateTaskData extends Partial<CreateTaskData> {
@@ -100,4 +102,13 @@ export interface FileAttachment {
   size?: number;
   type?: string;
   uploadedAt?: string;
+}
+
+export interface Phase {
+  _id: string;
+  name: string;
+  description?: string;
+  order: number;
+  color?: string;
+  projectId: string;
 }

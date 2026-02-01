@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Flag, Users, FileText, Clock } from 'lucide-react';
+import { X, Calendar, Flag, Users, FileText, Clock, Layers } from 'lucide-react';
 
 interface TeamMember {
   _id: string;
@@ -16,6 +16,15 @@ interface Assignee {
   name: string;
 }
 
+interface Phase {
+  _id: string;
+  name: string;
+  description?: string;
+  order: number;
+  color?: string;
+  projectId: string;
+}
+
 interface FormData {
   title: string;
   description: string;
@@ -25,6 +34,7 @@ interface FormData {
   startDate: string;
   dueDate: string;
   progress: number;
+  phaseId: string | null;
 }
 
 interface TaskCreateModalProps {
@@ -35,6 +45,7 @@ interface TaskCreateModalProps {
   selectedAssignees: Assignee[];
   setSelectedAssignees: React.Dispatch<React.SetStateAction<Assignee[]>>;
   teamMembers: TeamMember[];
+  phases: Phase[];
   onSubmit: () => void;
   saving: boolean;
   checkMemberHasActiveTask: (email: string) => boolean;
@@ -48,6 +59,7 @@ export default function TaskCreateModal({
   selectedAssignees,
   setSelectedAssignees,
   teamMembers,
+  phases,
   onSubmit,
   saving,
   checkMemberHasActiveTask,
@@ -194,6 +206,31 @@ const handleAddAssignee = (email: string) => {
               </div>
             </div>
 
+            {/* Phase Selection */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                <Layers size={16} className="text-gray-500" />
+                Phase
+              </label>
+              <select
+                value={formData.phaseId || ''}
+                onChange={(e) => setFormData({ ...formData, phaseId: e.target.value || null })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+              >
+                <option value="">No Phase (Unassigned)</option>
+                {phases
+                  .sort((a, b) => a.order - b.order)
+                  .map((phase) => (
+                    <option key={phase._id} value={phase._id}>
+                      {phase.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Assign this task to a specific phase or leave unassigned
+              </p>
+            </div>
+
             {/* Assignees */}
             <div>
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
@@ -310,7 +347,7 @@ const handleAddAssignee = (email: string) => {
               </div>
               <div className="mt-3 bg-gray-100 rounded-full h-3 overflow-hidden">
                 <div
-                  className=" from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300"
                   style={{ width: `${formData.progress}%` }}
                 />
               </div>
@@ -330,13 +367,13 @@ const handleAddAssignee = (email: string) => {
            <button
                 onClick={onSubmit}
                 disabled={saving || !formData.title || formData.assignees.length === 0}
-                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl 
-                            hover:bg-gray-100 transition-all 
-                            disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl 
+                            hover:bg-blue-700 transition-all 
+                            disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                 {saving ? (
                     <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Creating...
                     </span>
                 ) : (
