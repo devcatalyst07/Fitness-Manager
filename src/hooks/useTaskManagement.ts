@@ -224,20 +224,23 @@ export function useTaskManagement(projectId: string) {
     }
   };
 
-  const updateTask = async (taskId: string, updates: Partial<Task>) => {
-    try {
-      await taskService.updateTask(projectId, taskId, updates);
-      alert("Task updated successfully!");
-      fetchTasks();
-      if (selectedTask?._id === taskId) {
-        setIsDetailModalOpen(false);
-        setSelectedTask(null);
-      }
-    } catch (error: any) {
-      console.error("Update task error:", error);
-      alert(error.message || "Failed to update task");
+ const updateTask = async (taskId: string, updates: Partial<Task>) => {
+  try {
+    console.log('Update attempt:', { projectId, taskId, updates }); // ← ADD THIS
+    await taskService.updateTask(projectId, taskId, updates);
+    alert("Task updated successfully!");
+    fetchTasks();
+    if (selectedTask?._id === taskId) {
+      setIsDetailModalOpen(false);
+      setSelectedTask(null);
     }
-  };
+  } catch (error: any) {
+    console.error("Update task error:", error);
+    console.error("Error status:", error.status); // ← ADD THIS
+    console.error("Error body:", error.body); // ← ADD THIS
+    alert(error.message || "Failed to update task");
+  }
+};
 
   const deleteTask = async (taskId: string) => {
     try {

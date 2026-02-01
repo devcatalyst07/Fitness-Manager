@@ -155,6 +155,82 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
     }
   };
 
+  // ✨ NEW: Optimized function to refresh a single workflow without reloading everything
+  const refreshWorkflow = async (scopeId: string, workflowId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${API_URL}/api/scopes/${scopeId}/workflows/${workflowId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.ok) {
+        const updatedWorkflow = await response.json();
+        
+        // Update only the specific workflow in state
+        setScopes(prevScopes => 
+          prevScopes.map(scope => {
+            if (scope._id === scopeId) {
+              return {
+                ...scope,
+                workflows: scope.workflows.map(wf => 
+                  wf._id === workflowId ? updatedWorkflow : wf
+                )
+              };
+            }
+            return scope;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error refreshing workflow:', error);
+    }
+  };
+
+  // ✨ NEW: Optimized function to add a workflow without full reload
+  const handleAddWorkflow = async (scopeId: string, newWorkflow: Workflow) => {
+    setScopes(prevScopes =>
+      prevScopes.map(scope => {
+        if (scope._id === scopeId) {
+          return {
+            ...scope,
+            workflows: [...scope.workflows, newWorkflow]
+          };
+        }
+        return scope;
+      })
+    );
+  };
+
+  // ✨ NEW: Optimized function to delete a workflow without full reload
+  const handleDeleteWorkflow = async (scopeId: string, workflowId: string) => {
+    if (!confirm('Delete this workflow?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/scopes/${scopeId}/workflows/${workflowId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (response.ok) {
+        // Remove workflow from state
+        setScopes(prevScopes =>
+          prevScopes.map(scope => {
+            if (scope._id === scopeId) {
+              return {
+                ...scope,
+                workflows: scope.workflows.filter(wf => wf._id !== workflowId)
+              };
+            }
+            return scope;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   const handleDeleteScope = async (scopeId: string) => {
     if (!confirm('Delete this scope? This will delete all workflows, phases, and tasks.')) {
       return;
@@ -189,7 +265,6 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Settings className="text-gray-700" size={24} />
           <div>
             <h2 className="text-xl font-bold text-gray-900">
               Scope & Workflow Architecture
@@ -247,7 +322,7 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
             onChange={(e) => setSelectedBrandFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
           >
-            <option value="">-- Select Brand --</option>
+            <option value="">Select Brand</option>
             {brands.map((brand) => (
               <option key={brand._id} value={brand._id}>{brand.name}</option>
             ))}
@@ -293,6 +368,9 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
               onEdit={() => { setSelectedScope(scope); setIsEditScopeModalOpen(true); }}
               onDelete={() => handleDeleteScope(scope._id)}
               onRefresh={fetchScopes}
+              onRefreshWorkflow={refreshWorkflow}
+              onAddWorkflow={handleAddWorkflow}
+              onDeleteWorkflow={handleDeleteWorkflow}
             />
           ))}
         </div>
@@ -329,24 +407,24 @@ interface ScopeItemProps {
   onEdit: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onRefreshWorkflow: (scopeId: string, workflowId: string) => void;
+  onAddWorkflow: (scopeId: string, workflow: Workflow) => void;
+  onDeleteWorkflow: (scopeId: string, workflowId: string) => void;
 }
 
-function ScopeItem({ scope, isExpanded, expandedWorkflow, onToggle, onToggleWorkflow, onEdit, onDelete, onRefresh }: ScopeItemProps) {
+function ScopeItem({ 
+  scope, 
+  isExpanded, 
+  expandedWorkflow, 
+  onToggle, 
+  onToggleWorkflow, 
+  onEdit, 
+  onDelete,
+  onRefreshWorkflow,
+  onAddWorkflow,
+  onDeleteWorkflow
+}: ScopeItemProps) {
   const [isAddWorkflowModalOpen, setIsAddWorkflowModalOpen] = useState(false);
-
-  const handleDeleteWorkflow = async (workflowId: string) => {
-    if (!confirm('Delete this workflow?')) return;
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/api/scopes/${scope._id}/workflows/${workflowId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      onRefresh();
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -390,8 +468,8 @@ function ScopeItem({ scope, isExpanded, expandedWorkflow, onToggle, onToggleWork
                   scopeId={scope._id}
                   isExpanded={expandedWorkflow === workflow._id}
                   onToggle={() => onToggleWorkflow(workflow._id)}
-                  onDelete={() => handleDeleteWorkflow(workflow._id)}
-                  onRefresh={onRefresh}
+                  onDelete={() => onDeleteWorkflow(scope._id, workflow._id)}
+                  onRefresh={() => onRefreshWorkflow(scope._id, workflow._id)}
                 />
               ))}
             </div>
@@ -401,7 +479,10 @@ function ScopeItem({ scope, isExpanded, expandedWorkflow, onToggle, onToggleWork
             <AddWorkflowModal
               scopeId={scope._id}
               onClose={() => setIsAddWorkflowModalOpen(false)}
-              onSuccess={onRefresh}
+              onSuccess={(newWorkflow) => {
+                onAddWorkflow(scope._id, newWorkflow);
+                setIsAddWorkflowModalOpen(false);
+              }}
             />
           )}
         </div>
@@ -490,7 +571,12 @@ function WorkflowItem({ workflow, scopeId, isExpanded, onToggle, onDelete, onRef
       )}
 
       {isManageTasksModalOpen && (
-        <ManageTasksModal scopeId={scopeId} workflowId={workflow._id} onClose={() => setIsManageTasksModalOpen(false)} onSuccess={onRefresh} />
+        <ManageTasksModal 
+          scopeId={scopeId} 
+          workflowId={workflow._id} 
+          onClose={() => setIsManageTasksModalOpen(false)} 
+          onSuccess={onRefresh} 
+        />
       )}
     </div>
   );

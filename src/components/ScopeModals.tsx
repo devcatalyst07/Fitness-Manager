@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Edit2, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, AlertCircle, CheckCircle, Loader, Upload } from 'lucide-react';
+import { ExcelUploadModal } from './ExcelUploadModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
@@ -33,6 +34,13 @@ interface Task {
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
   estimateHours?: number;
   order: number;
+}
+
+interface Workflow {
+  _id: string;
+  name: string;
+  description?: string;
+  phases: Phase[];
 }
 
 // ==================== CUSTOM ALERT COMPONENTS ====================
@@ -593,7 +601,7 @@ export function EditScopeModal({ scope, brands, onClose, onSuccess }: EditScopeM
 interface AddWorkflowModalProps {
   scopeId: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newWorkflow: Workflow) => void; // ✨ CHANGED: Now passes the workflow back
 }
 
 export function AddWorkflowModal({ scopeId, onClose, onSuccess }: AddWorkflowModalProps) {
@@ -631,10 +639,29 @@ export function AddWorkflowModal({ scopeId, onClose, onSuccess }: AddWorkflowMod
       }
 
       setShowSuccess(true);
-      onSuccess();
       setLoading(false);
+      
+      // ✨ CHANGED: Pass the new workflow back to parent
+      // Fetch the full workflow details
+      const workflowResponse = await fetch(
+        `${API_URL}/api/scopes/${scopeId}/workflows/${data.workflow._id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (workflowResponse.ok) {
+        const fullWorkflow = await workflowResponse.json();
+        onSuccess(fullWorkflow);
+      } else {
+        onSuccess(data.workflow);
+      }
+      
       // Reset form to allow adding another workflow
       setFormData({ name: '', description: '' });
+      
+      // Auto-close after showing success
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 1500);
     } catch (err) {
       setError('Failed to add workflow');
       setLoading(false);
@@ -671,6 +698,7 @@ export function AddWorkflowModal({ scopeId, onClose, onSuccess }: AddWorkflowMod
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
                   placeholder="e.g., Design & Build"
                   disabled={loading}
+                  autoFocus
                 />
               </div>
 
@@ -682,6 +710,7 @@ export function AddWorkflowModal({ scopeId, onClose, onSuccess }: AddWorkflowMod
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none"
                   disabled={loading}
+                  placeholder="Optional description..."
                 />
               </div>
 
@@ -696,7 +725,7 @@ export function AddWorkflowModal({ scopeId, onClose, onSuccess }: AddWorkflowMod
                 </button>
                 <button 
                   type="submit" 
-                  disabled={loading} 
+                  disabled={loading || !formData.name.trim()} 
                   className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:bg-gray-400 flex items-center justify-center gap-2"
                 >
                   {loading ? (
@@ -723,7 +752,7 @@ interface ManageTasksModalProps {
   scopeId: string;
   workflowId: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void; // ✨ CHANGED: This now only triggers workflow refresh, not full component reload
 }
 
 export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: ManageTasksModalProps) {
@@ -757,6 +786,7 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
   const [taskLoading, setTaskLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showExcelUpload, setShowExcelUpload] = useState(false);
 
   useEffect(() => {
     fetchPhases();
@@ -805,7 +835,7 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
         setIsAddingPhase(false);
         setSuccessMessage('Phase added successfully!');
         setShowSuccess(true);
-        onSuccess();
+        onSuccess(); // ✨ Refresh workflow in parent
       }
     } catch (error) {
       console.error('Error adding phase:', error);
@@ -833,7 +863,7 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
           await fetchPhases();
           setSuccessMessage('Phase deleted successfully!');
           setShowSuccess(true);
-          onSuccess();
+          onSuccess(); // ✨ Refresh workflow in parent
         } catch (error) {
           console.error('Error deleting phase:', error);
         }
@@ -861,7 +891,7 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
       setTaskFormModal({ isOpen: false, phaseId: '' });
       setSuccessMessage('Task added successfully!');
       setShowSuccess(true);
-      onSuccess();
+      onSuccess(); // ✨ Refresh workflow in parent
     } catch (error) {
       console.error('Error adding task:', error);
     } finally {
@@ -888,7 +918,7 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
           await fetchPhases();
           setSuccessMessage('Task deleted successfully!');
           setShowSuccess(true);
-          onSuccess();
+          onSuccess(); // ✨ Refresh workflow in parent
         } catch (error) {
           console.error('Error deleting task:', error);
         }
@@ -906,8 +936,19 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
           </button>
 
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-black mb-2">Manage Workflow Tasks</h2>
-            <p className="text-sm text-gray-600 mb-6">Create phases and predefined tasks</p>
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-black">Manage Workflow Tasks</h2>
+                <p className="text-sm text-gray-600 mt-1">Create phases and predefined tasks</p>
+              </div>
+              <button
+                onClick={() => setShowExcelUpload(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+              >
+                <Upload size={18} />
+                Upload Excel
+              </button>
+            </div>
 
             {loading ? (
               <div className="text-center py-12">
@@ -1058,6 +1099,21 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
         message={successMessage}
         onClose={() => setShowSuccess(false)}
       />
+
+      {showExcelUpload && (
+        <ExcelUploadModal
+          scopeId={scopeId}
+          workflowId={workflowId}
+          onClose={() => setShowExcelUpload(false)}
+          onSuccess={() => {
+            fetchPhases();
+            onSuccess();
+            setSuccessMessage('Tasks imported successfully from Excel!');
+            setShowSuccess(true);
+            setShowExcelUpload(false);
+          }}
+        />
+      )}
     </>
   );
 }
