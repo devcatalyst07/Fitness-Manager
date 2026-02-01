@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, FolderKanban, DollarSign, BarChart3, FileText, Settings, ChevronLeft, Menu, X } from 'lucide-react';
+import Image from 'next/image';
 
 interface AdminSidebarProps {
   pathname?: string;
@@ -63,15 +64,23 @@ export function AdminSidebar({ pathname: propPathname, setPathname }: AdminSideb
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : 'space-x-3'}`}>
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">FM</span>
-            </div>
-            {!isCollapsed && (
-              <div>
-                <div className="font-bold text-black text-lg">FITOUT</div>
-                <div className="font-bold text-black text-sm">MANAGER</div>
-              </div>
+          <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : ''}`}>
+            {isCollapsed ? (
+              <Image
+                src="/files/FM_ICON.svg"
+                alt="Fitout Manager Icon"
+                width={48}
+                height={48}
+                className="object-contain"
+              />
+            ) : (
+              <Image
+                src="/files/FM_LOGO_LANDSCAPE.svg"
+                alt="Fitout Manager Logo"
+                width={200}
+                height={48}
+                className="object-contain"
+              />
             )}
           </div>
         </div>
