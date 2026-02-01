@@ -12,10 +12,13 @@ interface CalendarEvent {
   title: string;
   startDate: string;
   type: string;
+  canAddEvent: boolean;
 }
 
 interface CalendarWidgetProps {
   projectId: string;
+  canAddEvent?: boolean;
+  userRole?: "admin" | "user";
 }
 
 function getUserTimezone() {
@@ -27,7 +30,11 @@ function getCityFromTimezone(timezone: string): string {
   return parts[parts.length - 1].replace(/_/g, " ");
 }
 
-export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
+export default function CalendarWidget({
+  projectId,
+  canAddEvent = false,
+  userRole,
+}: CalendarWidgetProps) {
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +65,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
         `${API_URL}/api/projects/${projectId}/events`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -67,8 +74,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
           .filter((e: CalendarEvent) => new Date(e.startDate) >= new Date())
           .sort(
             (a: CalendarEvent, b: CalendarEvent) =>
-              new Date(a.startDate).getTime() -
-              new Date(b.startDate).getTime()
+              new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
           )
           .slice(0, 5);
         setEvents(upcomingEvents);
@@ -93,7 +99,7 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
             ...formData,
             endDate: formData.startDate,
           }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -133,13 +139,15 @@ export default function CalendarWidget({ projectId }: CalendarWidgetProps) {
               <Clock size={16} />
               <span className="font-medium">{timezone}</span>
             </div>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm whitespace-nowrap"
-            >
-              <Plus size={16} />
-              Add Event
-            </button>
+            {canAddEvent && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm whitespace-nowrap"
+              >
+                <Plus size={16} />
+                Add Event
+              </button>
+            )}
           </div>
         </div>
 

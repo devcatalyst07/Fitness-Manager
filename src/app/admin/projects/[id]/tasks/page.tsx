@@ -25,7 +25,7 @@ export default function ProjectTasksPage() {
 
   // View Mode State
   const [viewMode, setViewMode] = useState<"list" | "board" | "timeline">(
-    "list"
+    "list",
   );
   const [isEditing, setIsEditing] = useState(false);
 
@@ -105,30 +105,28 @@ export default function ProjectTasksPage() {
         {/* Project Navigation Tabs */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto">
           <div className="flex gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Documents", "Team"].map(
-              (tab) => (
-                <button
-                  key={tab}
-                  className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                    tab === "Tasks"
-                      ? "border-black text-black"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                  onClick={() => {
-                    if (tab === "Overview")
-                      router.push(`/admin/projects/${params.id}`);
-                    if (tab === "Budget")
-                      router.push(`/admin/projects/${params.id}/budget`);
-                    if (tab === "Documents")
-                      router.push(`/admin/projects/${params.id}/documents`);
-                    if (tab === "Team")
-                      router.push(`/admin/projects/${params.id}/team`);
-                  }}
-                >
-                  {tab}
-                </button>
-              )
-            )}
+            {["Overview", "Tasks", "Budget", "Documents", "Team"].map((tab) => (
+              <button
+                key={tab}
+                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                  tab === "Tasks"
+                    ? "border-black text-black"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => {
+                  if (tab === "Overview")
+                    router.push(`/admin/projects/${params.id}`);
+                  if (tab === "Budget")
+                    router.push(`/admin/projects/${params.id}/budget`);
+                  if (tab === "Documents")
+                    router.push(`/admin/projects/${params.id}/documents`);
+                  if (tab === "Team")
+                    router.push(`/admin/projects/${params.id}/team`);
+                }}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
 

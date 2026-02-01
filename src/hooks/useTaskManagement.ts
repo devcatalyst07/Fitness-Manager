@@ -64,18 +64,23 @@ export function useTaskManagement(projectId: string) {
   // AUTHENTICATION CHECK
   // ============================================
   useEffect(() => {
+    // Auto-detect role from localStorage (don't use requiredRole param)
     const token = localStorage.getItem("token");
-    const role = localStorage.getItem("userRole");
+    const userRole = localStorage.getItem("userRole");
 
-    if (!token || role !== "admin") {
-      localStorage.clear();
-      router.replace("/");
-    } else {
-      setIsVerified(true);
-      fetchProject();
-      fetchTasks();
-      fetchTeamMembers();
+    if (!token || !userRole) {
+      // No token or role, don't redirect here - let the page handle it
+      console.warn("No authentication found in useTaskManagement");
+      setIsVerified(false);
+      setLoading(false);
+      return;
     }
+
+    // Valid authentication found
+    setIsVerified(true);
+    fetchProject();
+    fetchTasks();
+    fetchTeamMembers();
   }, [projectId, router]);
 
   // ============================================
@@ -113,7 +118,17 @@ export function useTaskManagement(projectId: string) {
       const data = await taskService.getTasks(projectId);
       setTasks(data);
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      // Handle 403 from backend (e.g., "Admins only") with a user-friendly message
+      const err: any = error;
+      if (err?.status === 403) {
+        console.warn("Access denied when fetching tasks:", err.message || err);
+        alert(
+          "You don't have access to view tasks for this project. Contact your administrator.",
+        );
+        setTasks([]);
+      } else {
+        console.error("Error fetching tasks:", error);
+      }
     } finally {
       setLoading(false);
     }
@@ -124,7 +139,20 @@ export function useTaskManagement(projectId: string) {
       const data = await teamService.getTeamMembers(projectId);
       setTeamMembers(data);
     } catch (error) {
-      console.error("Error fetching team members:", error);
+      const err: any = error;
+      if (err?.status === 403) {
+        console.warn(
+          "Access denied when fetching team members:",
+          err.message || err,
+        );
+        // don't spam console; show a single alert
+        alert(
+          "You don't have access to view team members for this project. Contact your administrator.",
+        );
+        setTeamMembers([]);
+      } else {
+        console.error("Error fetching team members:", error);
+      }
     }
   };
 

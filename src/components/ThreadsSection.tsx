@@ -1,10 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Plus, Filter, Search, Users, FolderOpen } from 'lucide-react';
-import CreateThreadModal from './CreateThreadModal';
-import ThreadCard from './ThreadCard';
-import ThreadDetailModal from './ThreadDetailModal';
+import React, { useState, useEffect } from "react";
+import {
+  MessageSquare,
+  Plus,
+  Filter,
+  Search,
+  Users,
+  FolderOpen,
+} from "lucide-react";
+import CreateThreadModal from "./CreateThreadModal";
+import ThreadCard from "./ThreadCard";
+import ThreadDetailModal from "./ThreadDetailModal";
+import { hasPermission } from "@/utils/permissions";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+
+interface Permission {
+  id: string;
+  label: string;
+  checked: boolean;
+  children?: Permission[];
+}
 
 interface Thread {
   _id: string;
@@ -27,6 +43,7 @@ interface Thread {
   isPinned: boolean;
   createdAt: string;
   updatedAt: string;
+  canAddThread: boolean;
 }
 
 interface Project {
@@ -37,43 +54,79 @@ interface Project {
 interface ThreadsSectionProps {
   brandId: string;
   brandName: string;
+  canAddThread?: boolean;
+  userRole?: "admin" | "user";
+  userAssignedProjects?: string[];
 }
 
-export default function ThreadsSection({ brandId, brandName }: ThreadsSectionProps) {
+export default function ThreadsSection({
+  brandId,
+  brandName,
+  canAddThread: propCanAddThread = false,
+  userRole = "admin",
+  userAssignedProjects = [],
+}: ThreadsSectionProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [filteredThreads, setFilteredThreads] = useState<Thread[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null);
-  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProjectFilter, setSelectedProjectFilter] =
+    useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [permissions, setPermissions] = useState<Permission[]>([]);
 
   useEffect(() => {
     fetchThreads();
     fetchProjects();
+    fetchUserPermissions();
   }, [brandId]);
 
   useEffect(() => {
     filterThreads();
   }, [threads, selectedProjectFilter, searchQuery]);
 
+  const fetchUserPermissions = async () => {
+    try {
+      const roleId = localStorage.getItem("roleId");
+      const token = localStorage.getItem("token");
+
+      if (!roleId) {
+        // Admin or no specific role
+        setPermissions([]);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPermissions(data.permissions || []);
+      }
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+    }
+  };
+
   const fetchThreads = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/brands/${brandId}/threads`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
         setThreads(data);
       } else {
-        console.error('Failed to fetch threads:', response.status);
+        console.error("Failed to fetch threads:", response.status);
       }
     } catch (error) {
-      console.error('Error fetching threads:', error);
+      console.error("Error fetching threads:", error);
     } finally {
       setLoading(false);
     }
@@ -81,17 +134,20 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
 
   const fetchProjects = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/brands/${brandId}/projects`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/brands/${brandId}/projects`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
         setProjects(data);
       }
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error("Error fetching projects:", error);
     }
   };
 
@@ -99,23 +155,36 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
     let filtered = [...threads];
 
     // Filter by project
-    if (selectedProjectFilter !== 'all') {
-      if (selectedProjectFilter === 'general') {
+    if (selectedProjectFilter !== "all") {
+      if (selectedProjectFilter === "general") {
         // Show only threads without a project (general brand threads)
-        filtered = filtered.filter(t => !t.projectId);
+        filtered = filtered.filter((t) => !t.projectId);
       } else {
         // Show only threads for the selected project
-        filtered = filtered.filter(t => t.projectId === selectedProjectFilter);
+        filtered = filtered.filter(
+          (t) => t.projectId === selectedProjectFilter,
+        );
       }
+    }
+
+    // FILTER BY USER'S ASSIGNED PROJECTS
+    if (userRole === "user" && userAssignedProjects.length > 0) {
+      filtered = filtered.filter((t) => {
+        // Show general threads (no projectId)
+        if (!t.projectId) return true;
+        // Show only threads from user's assigned projects
+        return userAssignedProjects.includes(t.projectId);
+      });
     }
 
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(t =>
-        t.title.toLowerCase().includes(query) ||
-        t.content.toLowerCase().includes(query) ||
-        t.createdByName.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (t) =>
+          t.title.toLowerCase().includes(query) ||
+          t.content.toLowerCase().includes(query) ||
+          t.createdByName.toLowerCase().includes(query),
       );
     }
 
@@ -132,13 +201,20 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
   };
 
   const handleThreadDeleted = (threadId: string) => {
-    setThreads(threads.filter(t => t._id !== threadId));
+    setThreads(threads.filter((t) => t._id !== threadId));
     setSelectedThread(null);
   };
 
-  // Calculate stats
-  const generalThreadsCount = threads.filter(t => !t.projectId).length;
-  const projectThreadsCount = threads.filter(t => t.projectId).length;
+  // Calculate stats (use filteredThreads instead of threads for user)
+  const displayThreads = userRole === "user" ? filteredThreads : threads;
+  const generalThreadsCount = displayThreads.filter((t) => !t.projectId).length;
+  const projectThreadsCount = displayThreads.filter((t) => t.projectId).length;
+
+  // Determine if user can add threads
+  const canAddThread =
+    userRole === "admin"
+      ? true
+      : hasPermission("dashboard-add-threads", permissions) || propCanAddThread;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -150,7 +226,8 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
             <h2 className="text-xl font-semibold text-gray-900">Threads</h2>
           </div>
           <p className="text-sm text-gray-500">
-            Collaborate and share updates for <span className="font-medium text-gray-700">{brandName}</span>
+            Collaborate and share updates for{" "}
+            <span className="font-medium text-gray-700">{brandName}</span>
           </p>
           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
             <div className="flex items-center gap-1">
@@ -163,20 +240,25 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={18} />
-          <span>New Thread</span>
-        </button>
+        {canAddThread && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus size={18} />
+            <span>New Thread</span>
+          </button>
+        )}
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* Search */}
         <div className="flex-1 relative">
-          <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+          />
           <input
             type="text"
             placeholder="Search threads..."
@@ -194,41 +276,55 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
             onChange={(e) => setSelectedProjectFilter(e.target.value)}
             className="flex-1 text-sm border-none outline-none bg-transparent"
           >
-            <option value="all">All Threads ({threads.length})</option>
-            <option value="general">General Threads ({generalThreadsCount})</option>
-            {projects.map((project) => {
-              const projectThreads = threads.filter(t => t.projectId === project._id);
-              return (
-                <option key={project._id} value={project._id}>
-                  {project.projectName} ({projectThreads.length})
-                </option>
-              );
-            })}
+            <option value="all">All Threads ({filteredThreads.length})</option>
+            <option value="general">
+              General Threads ({generalThreadsCount})
+            </option>
+            {projects
+              .filter((project) => {
+                // ✅ Admin sees all projects, User sees only assigned projects
+                if (userRole === "admin") return true;
+                return userAssignedProjects.includes(project._id);
+              })
+              .map((project) => {
+                const projectThreads = filteredThreads.filter(
+                  (t) => t.projectId === project._id,
+                );
+                return (
+                  <option key={project._id} value={project._id}>
+                    {project.projectName} ({projectThreads.length})
+                  </option>
+                );
+              })}
           </select>
         </div>
       </div>
 
       {/* Filter Info Banner */}
-      {selectedProjectFilter !== 'all' && (
+      {selectedProjectFilter !== "all" && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start gap-2">
             <Filter size={16} className="text-blue-600 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm text-blue-900 font-medium">
-                {selectedProjectFilter === 'general' ? (
+                {selectedProjectFilter === "general" ? (
                   <>Showing general threads visible to all brand members</>
                 ) : (
-                  <>Showing threads for {projects.find(p => p._id === selectedProjectFilter)?.projectName || 'selected project'}</>
+                  <>
+                    Showing threads for{" "}
+                    {projects.find((p) => p._id === selectedProjectFilter)
+                      ?.projectName || "selected project"}
+                  </>
                 )}
               </p>
               <p className="text-xs text-blue-700 mt-1">
-                {selectedProjectFilter === 'general' 
-                  ? 'These threads are not associated with any specific project'
-                  : 'Only members of this project can see these threads'}
+                {selectedProjectFilter === "general"
+                  ? "These threads are not associated with any specific project"
+                  : "Only members of this project can see these threads"}
               </p>
             </div>
             <button
-              onClick={() => setSelectedProjectFilter('all')}
+              onClick={() => setSelectedProjectFilter("all")}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
               Clear
@@ -247,20 +343,20 @@ export default function ThreadsSection({ brandId, brandName }: ThreadsSectionPro
         <div className="text-center py-12 text-gray-500">
           <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
           <p className="font-semibold mb-2">
-            {searchQuery 
-              ? 'No threads match your search' 
-              : selectedProjectFilter !== 'all'
-              ? 'No threads in this category yet'
-              : 'No threads yet'}
+            {searchQuery
+              ? "No threads match your search"
+              : selectedProjectFilter !== "all"
+                ? "No threads in this category yet"
+                : "No threads yet"}
           </p>
           <p className="text-sm mb-4">
             {searchQuery
-              ? 'Try adjusting your search terms'
-              : selectedProjectFilter === 'general'
-              ? 'Create a general thread to start a brand-wide conversation'
-              : selectedProjectFilter !== 'all'
-              ? 'Create a thread for this project to get started'
-              : 'Start a conversation by creating a new thread'}
+              ? "Try adjusting your search terms"
+              : selectedProjectFilter === "general"
+                ? "Create a general thread to start a brand-wide conversation"
+                : selectedProjectFilter !== "all"
+                  ? "Create a thread for this project to get started"
+                  : "Start a conversation by creating a new thread"}
           </p>
           {!searchQuery && (
             <button

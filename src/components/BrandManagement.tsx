@@ -30,6 +30,12 @@ interface BrandManagementProps {
   onRefresh: () => void;
   onBrandSelect: (brand: Brand) => void;
   selectedBrandId?: string;
+  canAddBrand?: boolean;
+  canAccessControl?: boolean;
+  canView?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canAddUser?: boolean;
 }
 
 export default function BrandManagement({
@@ -37,6 +43,12 @@ export default function BrandManagement({
   onRefresh,
   onBrandSelect,
   selectedBrandId,
+  canAddBrand = true,
+  canAccessControl = true,
+  canView = true,
+  canEdit = true,
+  canDelete = true,
+  canAddUser = false,
 }: BrandManagementProps) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -104,7 +116,6 @@ export default function BrandManagement({
           body: JSON.stringify({
             name: selectedBrand.name,
             description: selectedBrand.description,
-            isActive: selectedBrand.isActive,
           }),
         },
       );
@@ -159,9 +170,10 @@ export default function BrandManagement({
     }
   };
 
-  const handleBrandClick = (brand: Brand) => {
-    // Filter threads by this brand
-    onBrandSelect(brand);
+  const handleEditClick = (brand: Brand, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedBrand({ ...brand });
+    setIsEditModalOpen(true);
   };
 
   const handleOpenDashboard = (brand: Brand, e: React.MouseEvent) => {
@@ -170,10 +182,8 @@ export default function BrandManagement({
     setIsDashboardModalOpen(true);
   };
 
-  const handleEditClick = (brand: Brand, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedBrand(brand);
-    setIsEditModalOpen(true);
+  const handleBrandClick = (brand: Brand) => {
+    onBrandSelect(brand);
   };
 
   return (
@@ -188,20 +198,24 @@ export default function BrandManagement({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={18} />
-            <span>Add Brand</span>
-          </button>
-          <button
-            onClick={() => setIsAccessControlOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={18} />
-            <span>Access Control</span>
-          </button>
+          {canAddBrand && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={18} />
+              <span>Add Brand</span>
+            </button>
+          )}
+          {canAccessControl && (
+            <button
+              onClick={() => setIsAccessControlOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={18} />
+              <span>Access Control</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -232,25 +246,31 @@ export default function BrandManagement({
                   </h3>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={(e) => handleOpenDashboard(brand, e)}
-                    className="text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded transition-colors"
-                    title="Open Dashboard"
-                  >
-                    <ExternalLink size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => handleEditClick(brand, e)}
-                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-1 rounded transition-colors"
-                  >
-                    <Edit size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteBrand(brand._id, e)}
-                    className="text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {canView && (
+                    <button
+                      onClick={(e) => handleOpenDashboard(brand, e)}
+                      className="text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded transition-colors"
+                      title="Open Dashboard"
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={(e) => handleEditClick(brand, e)}
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 p-1 rounded transition-colors"
+                    >
+                      <Edit size={16} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => handleDeleteBrand(brand._id, e)}
+                      className="text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
               {brand.description && (
@@ -332,7 +352,7 @@ export default function BrandManagement({
                 <button
                   onClick={handleCreateBrand}
                   disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                 >
                   {saving ? "Creating..." : "Create Brand"}
                 </button>
@@ -394,24 +414,6 @@ export default function BrandManagement({
                     rows={3}
                   />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="isActive"
-                    checked={selectedBrand.isActive}
-                    onChange={(e) =>
-                      setSelectedBrand({
-                        ...selectedBrand,
-                        isActive: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <label htmlFor="isActive" className="text-sm font-medium">
-                    Active
-                  </label>
-                </div>
               </div>
 
               <div className="flex gap-3 mt-6">
@@ -427,7 +429,7 @@ export default function BrandManagement({
                 <button
                   onClick={handleUpdateBrand}
                   disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-blue-700 transition-colors"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                 >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
@@ -446,16 +448,18 @@ export default function BrandManagement({
             setIsDashboardModalOpen(false);
             setSelectedBrand(null);
           }}
+          canAddUser={canAddUser}
         />
       )}
 
       {/* Access Control Modal */}
-      <AccessControlModal
-        isOpen={isAccessControlOpen}
-        onClose={() => setIsAccessControlOpen(false)}
-        brandId={selectedBrand?._id}
-        brands={brands} // Pass all brands for selection
-      />
+      {isAccessControlOpen && (
+        <AccessControlModal
+          isOpen={isAccessControlOpen}
+          onClose={() => setIsAccessControlOpen(false)}
+          brands={brands}
+        />
+      )}
     </div>
   );
 }

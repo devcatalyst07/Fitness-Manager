@@ -21,12 +21,40 @@ import CalendarWidget from "@/components/CalendarWidget";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
-export default function ProjectOverviewPage() {
+interface Permission {
+  id: string;
+  label: string;
+  checked: boolean;
+  children?: Permission[];
+}
+
+interface RoleData {
+  _id: string;
+  name: string;
+  permissions: Permission[];
+}
+
+const hasPermission = (
+  permissionId: string,
+  permissions: Permission[],
+): boolean => {
+  const check = (perms: Permission[]): boolean => {
+    for (const perm of perms) {
+      if (perm.id === permissionId && perm.checked) return true;
+      if (perm.children && check(perm.children)) return true;
+    }
+    return false;
+  };
+  return check(permissions);
+};
+
+export default function UserProjectOverviewPage() {
   const router = useRouter();
   const params = useParams();
-  const [pathname, setPathname] = useState("/admin/projects");
+  const [pathname, setPathname] = useState("/user/projects");
   const [loading, setLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
+  const [roleData, setRoleData] = useState<RoleData | null>(null);
   const [projectName, setProjectName] = useState("");
   const [stats, setStats] = useState<any>(null);
   const [insights, setInsights] = useState<any[]>([]);
@@ -37,18 +65,53 @@ export default function ProjectOverviewPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("userRole");
+    const roleId = localStorage.getItem("roleId");
 
-    if (!token || role !== "admin") {
+    if (!token || role !== "user") {
       localStorage.clear();
+      router.replace("/");
+    } else if (!roleId) {
+      alert("No role assigned. Contact administrator.");
       router.replace("/");
     } else {
       setIsVerified(true);
-      fetchAllData();
+      fetchRolePermissions(roleId);
     }
   }, [params.id, router, deadlineDays]);
 
+  const fetchRolePermissions = async (roleId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+          setRoleData(data);
+          const permissions = data.permissions;
+
+        if (!hasPermission("projects-view-details-overview", permissions)) {
+          alert("You do not have permission to access Overview.");
+          router.replace("/user/projects");
+          return;
+        }
+
+        fetchAllData();
+      } else {
+        alert("Failed to load permissions.");
+        router.replace("/");
+      }
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      alert("Failed to load permissions.");
+      router.replace("/");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchAllData = async () => {
-    setLoading(true);
     await Promise.all([
       fetchProject(),
       fetchStats(),
@@ -56,7 +119,6 @@ export default function ProjectOverviewPage() {
       fetchActivity(),
       fetchDeadlines(),
     ]);
-    setLoading(false);
   };
 
   const fetchProject = async () => {
@@ -140,16 +202,44 @@ export default function ProjectOverviewPage() {
 
   if (!isVerified || loading) return <FitoutLoadingSpinner />;
 
+  if (!roleData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Permissions
+          </h2>
+          <p className="text-gray-600">Contact administrator.</p>
+        </div>
+      </div>
+    );
+  }
+
+const permissions = roleData.permissions;
+const canViewTasks = hasPermission("projects-view-details-task", permissions);
+const canViewBudget = hasPermission("projects-view-details-budget", permissions);
+const canViewDocuments = hasPermission("projects-view-details-documents", permissions);
+const canViewTeam = hasPermission("projects-view-details-team", permissions);
+  const canViewOverview = hasPermission("projects-view-details-overview", permissions);
+  const canAddCalendarEvent = hasPermission(
+    "projects-calendar-add",
+    permissions,
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminSidebar pathname={pathname} setPathname={setPathname} />
+      <AdminSidebar
+        pathname={pathname}
+        setPathname={setPathname}
+        userRole="user"
+        permissions={permissions}
+      />
       <AdminHeader />
 
       <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
-        {/* Header */}
         <div className="mb-6">
           <button
-            onClick={() => router.push("/admin/projects")}
+            onClick={() => router.push("/user/projects")}
             className="text-gray-600 hover:text-black mb-4 flex items-center gap-2"
           >
             <ArrowLeft size={20} />
@@ -158,50 +248,64 @@ export default function ProjectOverviewPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             {projectName} - Overview
           </h1>
-          <p className="text-sm text-gray-600">
-            Project dashboard showing budget performance, task progress, and
-            approval status
-          </p>
+          <p className="text-sm text-gray-600">Role: {roleData.name}</p>
         </div>
 
         {/* Tab Navigation */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto">
           <div className="flex gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Documents", "Team"].map((tab) => (
-              <button
-                key={tab}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                  tab === "Overview"
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => {
-                  if (tab === "Tasks")
-                    router.push(`/admin/projects/${params.id}/tasks`);
-                  if (tab === "Budget")
-                    router.push(`/admin/projects/${params.id}/budget`);
-                  if (tab === "Documents")
-                    router.push(`/admin/projects/${params.id}/documents`);
-                  if (tab === "Team")
-                    router.push(`/admin/projects/${params.id}/team`);
-                }}
-              >
-                {tab}
+            {canViewOverview && (
+              <button className="pb-3 px-1 text-sm font-medium border-b-2 border-black text-black">
+                Overview
               </button>
-            ))}
+            )}
+            {canViewTasks && (
+              <button
+                onClick={() => router.push(`/user/projects/${params.id}/tasks`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Tasks
+              </button>
+            )}
+            {canViewBudget && (
+              <button
+                onClick={() =>
+                  router.push(`/user/projects/${params.id}/budget`)
+                }
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Budget
+              </button>
+            )}
+            {canViewDocuments && (
+              <button
+                onClick={() =>
+                  router.push(`/user/projects/${params.id}/documents`)
+                }
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Documents
+              </button>
+            )}
+            {canViewTeam && (
+              <button
+                onClick={() => router.push(`/user/projects/${params.id}/team`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Team
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Calendar Widget */}
         <div className="mb-6">
           <CalendarWidget
-                      projectId={params.id as string}
-                      canAddEvent={true}
-                      userRole="admin"
-                    />
+            projectId={params.id as string}
+            canAddEvent={canAddCalendarEvent}
+            userRole="user"
+          />
         </div>
 
-        {/* Stats Grid */}
         {stats && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatsCard
@@ -228,52 +332,43 @@ export default function ProjectOverviewPage() {
           </div>
         )}
 
-        {/* Project Insights */}
         <InsightsContainer
           insights={insights}
           onAction={(url) => router.push(url)}
           onRefresh={fetchInsights}
         />
 
-        {/* Bottom Section: Upcoming Deadlines & Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Upcoming Deadlines */}
           <DeadlinesContainer
             deadlines={upcomingDeadlines}
             currentDays={deadlineDays}
             onFilterChange={setDeadlineDays}
             onTaskClick={() =>
-              router.push(`/admin/projects/${params.id}/tasks`)
+              canViewTasks && router.push(`/user/projects/${params.id}/tasks`)
             }
           />
 
-          {/* Recent Activity */}
           <ActivityContainer activities={recentActivity} loading={loading} />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => router.push(`/admin/projects/${params.id}/budget`)}
-            className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-          >
-            View Budget
-          </button>
-          <button
-            onClick={() => router.push(`/admin/projects/${params.id}/tasks`)}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-          >
-            View Tasks
-          </button>
-          <button
-            onClick={() =>
-              router.push(`/admin/projects/${params.id}/approvals`)
-            }
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
-          >
-            View Approvals
-          </button>
-        </div>
+        {/* <div className="flex flex-col sm:flex-row gap-3">
+          {canViewBudget && (
+            <button
+              onClick={() => router.push(`/user/projects/${params.id}/budget`)}
+              className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              View Budget
+            </button>
+          )}
+          {canViewTasks && (
+            <button
+              onClick={() => router.push(`/user/projects/${params.id}/tasks`)}
+              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              View Tasks
+            </button>
+          )}
+        </div> */}
       </main>
     </div>
   );

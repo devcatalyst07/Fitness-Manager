@@ -35,13 +35,24 @@ const getHeaders = (): HeadersInit => {
  * Handle API response errors
  */
 const handleResponse = async (response: Response) => {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      message: "An error occurred",
-    }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+  const text = await response.text().catch(() => "");
+  let body: any = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = { message: text || `HTTP ${response.status}` };
   }
-  return response.json();
+
+  if (!response.ok) {
+    const message =
+      body && body.message ? body.message : `HTTP ${response.status}`;
+    const error: any = new Error(message);
+    error.status = response.status;
+    error.body = body;
+    throw error;
+  }
+
+  return body;
 };
 
 // ============================================
