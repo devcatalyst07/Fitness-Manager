@@ -1,40 +1,48 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, LogOut, ChevronDown } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef } from "react";
+import { Search, Bell, User, LogOut, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export const AdminHeader: React.FC = () => {
   const router = useRouter();
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const name = localStorage.getItem('userName') || 'Admin';
+    const name = localStorage.getItem("userName") || "Admin";
     setUserName(name);
   }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
-    localStorage.clear();
-    router.push('/');
+    localStorage.removeItem("token");
+    localStorage.removeItem("roleId");
+    localStorage.removeItem("userRole");
+    router.push("/");
   };
 
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white border-b border-gray-200 z-20 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       <div className="flex-auto max-w-xs sm:ml-0 ml-12 mt-2 sm:mt-0">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={20}
+          />
           <input
             type="text"
             placeholder="Search..."
@@ -59,7 +67,10 @@ export const AdminHeader: React.FC = () => {
             className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg"
           >
             <User size={20} />
-            <ChevronDown size={16} className={`${dropdownOpen ? 'rotate-180' : ''} transition-transform`} />
+            <ChevronDown
+              size={16}
+              className={`${dropdownOpen ? "rotate-180" : ""} transition-transform`}
+            />
           </button>
 
           {dropdownOpen && (

@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import AdminSidebar from '@/components/AdminSidebar';
-import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
-import AdminHeader from '@/components/AdminHeader';
-import ScopeWorkflowArchitecture from '@/components/ScopeWorkflowArchitecture';
-import BrandManagement from '@/components/BrandManagement';
-import ThreadsSection from '@/components/ThreadsSection';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import AdminSidebar from "@/components/AdminSidebar";
+import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import AdminHeader from "@/components/AdminHeader";
+import ScopeWorkflowArchitecture from "@/components/ScopeWorkflowArchitecture";
+import BrandManagement from "@/components/BrandManagement";
+import ThreadsSection from "@/components/ThreadsSection";
 
 // ==================== Types ====================
 interface ProjectStats {
@@ -36,11 +36,11 @@ interface DashboardStats {
   projectStats: ProjectStats;
 }
 
-type ChangeType = 'positive' | 'negative' | 'neutral';
+type ChangeType = "positive" | "negative" | "neutral";
 
 // API URL
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 // ==================== DashboardCard ====================
 interface DashboardCardProps {
@@ -57,9 +57,9 @@ function DashboardCard({
   changeType,
 }: DashboardCardProps) {
   const changeColor: Record<ChangeType, string> = {
-    positive: 'text-green-600',
-    negative: 'text-red-600',
-    neutral: 'text-gray-600',
+    positive: "text-green-600",
+    negative: "text-red-600",
+    neutral: "text-gray-600",
   };
 
   return (
@@ -74,7 +74,7 @@ function DashboardCard({
 // ==================== AdminDashboard ====================
 export default function AdminDashboard() {
   const router = useRouter();
-  const [pathname, setPathname] = useState('/admin/dashboard');
+  const [pathname, setPathname] = useState("/admin/dashboard");
   const [isVerified, setIsVerified] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -82,12 +82,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("userRole");
 
-    if (!token || role !== 'admin') {
+    if (!token || role !== "admin") {
       localStorage.clear();
-      router.replace('/');
+      router.replace("/");
     } else {
       setIsVerified(true);
       fetchDashboardStats();
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/admin/dashboard/stats`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -105,13 +105,13 @@ export default function AdminDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch stats');
+        throw new Error("Failed to fetch stats");
       }
 
       const data = await response.json();
       setStats({ projectStats: data.projectStats });
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      console.error("Error fetching dashboard stats:", error);
     } finally {
       setLoading(false);
     }
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
 
   const fetchBrands = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/brands/all`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
         }
       }
     } catch (error) {
-      console.error('Error fetching brands:', error);
+      console.error("Error fetching brands:", error);
     }
   };
 
@@ -156,13 +156,13 @@ export default function AdminDashboard() {
 
   // Helpers
   const getChangeType = (value: number): ChangeType => {
-    if (value > 0) return 'positive';
-    if (value < 0) return 'negative';
-    return 'neutral';
+    if (value > 0) return "positive";
+    if (value < 0) return "negative";
+    return "neutral";
   };
 
-  const formatChange = (value: number, suffix = '') => {
-    const sign = value > 0 ? '+' : '';
+  const formatChange = (value: number, suffix = "") => {
+    const sign = value > 0 ? "+" : "";
     return `${sign}${value} ${suffix}`;
   };
 
@@ -183,11 +183,9 @@ export default function AdminDashboard() {
             value={projectStats?.totalProjects || 0}
             change={formatChange(
               projectStats?.projectsThisMonth || 0,
-              'from last month'
+              "from last month",
             )}
-            changeType={getChangeType(
-              projectStats?.projectsThisMonth || 0
-            )}
+            changeType={getChangeType(projectStats?.projectsThisMonth || 0)}
           />
 
           <DashboardCard
@@ -195,7 +193,7 @@ export default function AdminDashboard() {
             value={projectStats?.activeProjects || 0}
             change={formatChange(
               projectStats?.activeChange || 0,
-              'from last week'
+              "from last week",
             )}
             changeType={getChangeType(projectStats?.activeChange || 0)}
           />
@@ -217,16 +215,23 @@ export default function AdminDashboard() {
 
         {/* Scope and Workflow Architecture - NEW COMPONENT */}
         <div className="mb-8">
-          <ScopeWorkflowArchitecture onRefresh={handleRefresh} />
+          <ScopeWorkflowArchitecture
+            onRefresh={handleRefresh}
+            scopeId=""
+            brandName="All Brands"
+            canCreateScope={true}
+            userRole="admin"
+          />
         </div>
 
         {/* Brand Management */}
         <div className="mb-8">
-          <BrandManagement 
-            brands={brands} 
+          <BrandManagement
+            brands={brands}
             onRefresh={fetchBrands}
             onBrandSelect={handleBrandSelect}
             selectedBrandId={selectedBrand?._id}
+            canAddUser={true}
           />
         </div>
 
@@ -244,14 +249,18 @@ export default function AdminDashboard() {
         {!selectedBrand && brands.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <p className="text-gray-500 mb-2">Select a brand to view threads</p>
-            <p className="text-sm text-gray-400">Click on a brand above to see its threads and discussions</p>
+            <p className="text-sm text-gray-400">
+              Click on a brand above to see its threads and discussions
+            </p>
           </div>
         )}
 
         {!selectedBrand && brands.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <p className="text-gray-500 mb-2">No brands available</p>
-            <p className="text-sm text-gray-400">Create a brand first to start using threads</p>
+            <p className="text-sm text-gray-400">
+              Create a brand first to start using threads
+            </p>
           </div>
         )}
       </main>

@@ -36,12 +36,14 @@ interface BrandDashboardModalProps {
   brand: Brand;
   isOpen: boolean;
   onClose: () => void;
+  canAddUser?: boolean;
 }
 
 export default function BrandDashboardModal({
   brand,
   isOpen,
   onClose,
+  canAddUser = false,
 }: BrandDashboardModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -51,7 +53,6 @@ export default function BrandDashboardModal({
   );
   const [isAddUserExpanded, setIsAddUserExpanded] = useState(false);
 
-  const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -77,7 +78,7 @@ export default function BrandDashboardModal({
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Dashboard data:", data); // For debugging lang
+        // console.log("Dashboard data:", data); // For debugging lang
         setProjects(data.projects || []);
       }
     } catch (error) {
@@ -104,8 +105,8 @@ export default function BrandDashboardModal({
   };
 
   const handleAddUser = async () => {
-    if (!newUserName.trim() || !newUserEmail.trim()) {
-      alert("Please fill in all fields");
+    if (!newUserEmail.trim()) {
+      alert("Please fill in email");
       return;
     }
 
@@ -119,14 +120,13 @@ export default function BrandDashboardModal({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: newUserName,
+          name: newUserEmail.split("@")[0],
           email: newUserEmail,
         }),
       });
 
       if (response.ok) {
         alert("User added successfully!");
-        setNewUserName("");
         setNewUserEmail("");
         setIsAddUserExpanded(false);
         fetchBrandTeamMembers();
@@ -409,75 +409,79 @@ export default function BrandDashboardModal({
                 )}
               </div>
 
-              <div className="mt-8">
-                <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
-                  <button
-                    onClick={() => setIsAddUserExpanded(!isAddUserExpanded)}
-                    className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <UserPlus size={22} className="text-blue-600" />
-                      <span className="font-semibold text-gray-900 text-lg">
-                        Add New User
-                      </span>
-                    </div>
-                    <X
-                      size={20}
-                      className={`text-gray-400 transform transition-transform ${
-                        isAddUserExpanded ? "rotate-45" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {isAddUserExpanded && (
-                    <div className="border-t border-gray-200 p-6 bg-gray-50">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Name
-                          </label>
-                          <input
-                            type="text"
-                            value={newUserName}
-                            onChange={(e) => setNewUserName(e.target.value)}
-                            placeholder="Enter user name"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
+              {canAddUser && (
+                <div className="mt-8">
+                  <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddUserExpanded(!isAddUserExpanded)}
+                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-blue-50 p-2 rounded-md">
+                          <UserPlus size={18} className="text-blue-600" />
                         </div>
-
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Email
-                          </label>
-                          <input
-                            type="email"
-                            value={newUserEmail}
-                            onChange={(e) => setNewUserEmail(e.target.value)}
-                            placeholder="Enter user email"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <div className="flex gap-3 pt-2">
-                          <button
-                            onClick={handleAddUser}
-                            disabled={saving}
-                            className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
-                          >
-                            {saving ? "Adding..." : "Add User"}
-                          </button>
-                          <button
-                            onClick={() => setIsAddUserExpanded(false)}
-                            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                          >
-                            Cancel
-                          </button>
+                          <div className="font-semibold text-gray-900 text-sm">
+                            Add New User
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Invite a team member to this brand
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+
+                      <X
+                        size={20}
+                        className={`text-gray-400 transform transition-transform ${
+                          isAddUserExpanded ? "rotate-45" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isAddUserExpanded && (
+                      <div className="border-t border-gray-100 p-6 bg-gray-50">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Email
+                            </label>
+                            <input
+                              type="email"
+                              value={newUserEmail}
+                              onChange={(e) => setNewUserEmail(e.target.value)}
+                              placeholder="name@company.com"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p className="text-xs text-gray-500 mt-2">
+                              The invited user will receive an email to join
+                              this brand's team.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-3 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsAddUserExpanded(false)}
+                              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors font-medium"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleAddUser}
+                              disabled={saving}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                            >
+                              {saving ? "Adding..." : "Add User"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>

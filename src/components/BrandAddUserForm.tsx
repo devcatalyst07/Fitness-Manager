@@ -14,14 +14,13 @@ export default function BrandAddUserForm({
 }: BrandAddUserFormProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
   });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
-    if (!formData.name.trim() || !formData.email.trim()) {
-      alert("Name and Email are required");
+    if (!formData.email.trim()) {
+      alert("Email is required");
       return;
     }
 
@@ -37,8 +36,8 @@ export default function BrandAddUserForm({
       // For now, just simulate success
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      alert(`User ${formData.name} added to ${brandName} successfully!`);
-      setFormData({ name: "", email: "" });
+      alert(`User added to ${brandName} successfully!`);
+      setFormData({ email: "" });
       setIsExpanded(false);
 
       if (onUserAdded) {
@@ -53,7 +52,7 @@ export default function BrandAddUserForm({
   };
 
   const handleCancel = () => {
-    setFormData({ name: "", email: "" });
+    setFormData({ email: "" });
     setIsExpanded(false);
   };
 
@@ -85,21 +84,6 @@ export default function BrandAddUserForm({
       {isExpanded && (
         <div className="p-4 pt-0 border-t border-gray-200">
           <div className="space-y-4 mt-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="Enter user name"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email <span className="text-red-500">*</span>

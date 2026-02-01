@@ -27,6 +27,7 @@ interface TaskDetailModalProps {
   selectedFiles?: File[];
   onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveFile?: (index: number) => void;
+  canEdit?: boolean; // ✅ ADD THIS - Permission to edit task
 }
 
 export default function TaskDetailModal({
@@ -47,6 +48,7 @@ export default function TaskDetailModal({
   selectedFiles = [],
   onFileSelect,
   onRemoveFile,
+  canEdit = false, // ✅ ADD THIS - Default false
 }: TaskDetailModalProps) {
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
 
@@ -109,7 +111,7 @@ export default function TaskDetailModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {!isEditing && setIsEditing && (
+              {!isEditing && setIsEditing && canEdit && (
                 <button
                   onClick={handleEdit}
                   className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-all text-sm font-medium"
