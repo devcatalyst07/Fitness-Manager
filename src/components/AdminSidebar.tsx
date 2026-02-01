@@ -5,12 +5,22 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Home, FolderKanban, DollarSign, BarChart3, FileText, Settings, ChevronLeft, Menu, X } from 'lucide-react';
 import Image from 'next/image';
 
+// Use inline interface definition to avoid import issues
+interface Permission {
+  id: string;
+  label: string;
+  checked: boolean;
+  children?: Permission[];
+}
+
 interface AdminSidebarProps {
   pathname?: string;
   setPathname?: React.Dispatch<React.SetStateAction<string>>;
+  userRole?: string;
+  permissions?: Permission[];
 }
 
-export function AdminSidebar({ pathname: propPathname, setPathname }: AdminSidebarProps) {
+export function AdminSidebar({ pathname: propPathname, setPathname, userRole, permissions }: AdminSidebarProps) {
   const router = useRouter();
   const currentPathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -142,7 +152,7 @@ export function AdminSidebar({ pathname: propPathname, setPathname }: AdminSideb
         {!isCollapsed && (
           <div className="p-6 border-t border-gray-200 text-xs text-gray-500">
             <div className="font-semibold">Fitout Manager</div>
-            <div>v2025.01 • UI Overhaul</div>
+            <div>2026 All Rights Reserved.</div>
           </div>
         )}
       </div>
