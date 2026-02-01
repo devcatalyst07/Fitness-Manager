@@ -231,6 +231,7 @@ export default function AdminDashboard() {
             onRefresh={fetchBrands}
             onBrandSelect={handleBrandSelect}
             selectedBrandId={selectedBrand?._id}
+            canAddUser={true}
           />
         </div>
 

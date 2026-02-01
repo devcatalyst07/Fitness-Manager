@@ -186,7 +186,7 @@ export default function UserDashboard() {
   const canViewBrand = hasPermission("dashboard-brand-view", permissions);
   const canEditBrand = hasPermission("dashboard-brand-edit", permissions);
   const canDeleteBrand = hasPermission("dashboard-brand-delete", permissions);
-  const canAddUser = hasPermission("brand-add-user", permissions);
+  const canAddUser = hasPermission("dashboard-brand-view-adduser", permissions);
   const canViewThreads = hasPermission("view-threads", permissions);
 
   return (
