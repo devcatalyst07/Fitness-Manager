@@ -117,14 +117,15 @@ export function useTaskManagement(projectId: string) {
     try {
       const data = await taskService.getTasks(projectId);
       
-      // ✅ FIX: Extract allTasks array from the response
+      // ✅ FIX: Extract allTasks array from the response with proper typing
       // The API returns: { phases: [...], unassignedTasks: [...], allTasks: [...] }
       // We need just the allTasks array
       if (data && typeof data === 'object' && 'allTasks' in data) {
-        setTasks(data.allTasks || []);
+        const allTasks = (data as { allTasks?: Task[] }).allTasks;
+        setTasks(Array.isArray(allTasks) ? allTasks : []);
       } else if (Array.isArray(data)) {
         // Fallback: if the API returns an array directly
-        setTasks(data);
+        setTasks(data as Task[]);
       } else {
         console.warn('Unexpected tasks data structure:', data);
         setTasks([]);

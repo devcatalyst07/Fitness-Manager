@@ -49,6 +49,10 @@ interface Scope {
 
 interface ScopeWorkflowArchitectureProps {
   onRefresh?: () => void;
+  scopeId?: string;
+  brandName?: string;
+  canCreateScope?: boolean;
+  userRole?: string;
 }
 
 export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowArchitectureProps) {
