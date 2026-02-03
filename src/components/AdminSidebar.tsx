@@ -1,9 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Home, FolderKanban, DollarSign, BarChart3, FileText, Settings, ChevronLeft, Menu, X } from 'lucide-react';
-import Image from 'next/image';
+import React, { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import {
+  Home,
+  FolderKanban,
+  DollarSign,
+  BarChart3,
+  FileText,
+  Settings,
+  ChevronLeft,
+  Menu,
+  X,
+  ChevronDown,
+  ChevronRight,
+  User,
+  Lock,
+} from "lucide-react";
+import Image from "next/image";
 
 // Use inline interface definition to avoid import issues
 interface Permission {
@@ -20,21 +34,27 @@ interface AdminSidebarProps {
   permissions?: Permission[];
 }
 
-export function AdminSidebar({ pathname: propPathname, setPathname, userRole, permissions }: AdminSidebarProps) {
+export function AdminSidebar({
+  pathname: propPathname,
+  setPathname,
+  userRole,
+  permissions,
+}: AdminSidebarProps) {
   const router = useRouter();
   const currentPathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Use prop pathname if provided, otherwise use Next.js pathname
   const activePath = propPathname || currentPathname;
 
   const menuItems = [
-    { icon: Home, label: 'Dashboard', href: '/admin/dashboard' },
-    { icon: FolderKanban, label: 'Projects', href: '/admin/projects' },
-    { icon: DollarSign, label: 'Finance', href: '/admin/finance' },
-    { icon: BarChart3, label: 'Reports', href: '/admin/reports' },
-    { icon: FileText, label: 'Documents', href: '/admin/documents' },
+    { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
+    { icon: FolderKanban, label: "Projects", href: "/admin/projects" },
+    { icon: DollarSign, label: "Finance", href: "/admin/finance" },
+    { icon: BarChart3, label: "Reports", href: "/admin/reports" },
+    { icon: FileText, label: "Documents", href: "/admin/documents" },
   ];
 
   const handleNavClick = (href: string) => {
@@ -66,15 +86,17 @@ export function AdminSidebar({ pathname: propPathname, setPathname, userRole, pe
       {/* Sidebar */}
       <div
         className={`
-          ${isCollapsed ? 'w-20' : 'w-64'}
+          ${isCollapsed ? "w-20" : "w-64"}
           h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-40
           transition-all duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center w-full' : ''}`}>
+          <div
+            className={`flex items-center ${isCollapsed ? "justify-center w-full" : ""}`}
+          >
             {isCollapsed ? (
               <Image
                 src="/files/FM_ICON.svg"
@@ -99,10 +121,13 @@ export function AdminSidebar({ pathname: propPathname, setPathname, userRole, pe
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={`hidden lg:flex px-6 py-4 items-center text-gray-600 hover:text-black border-b border-gray-200 ${
-            isCollapsed ? 'justify-center' : 'space-x-2'
+            isCollapsed ? "justify-center" : "space-x-2"
           }`}
         >
-          <ChevronLeft size={20} className={`transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+          <ChevronLeft
+            size={20}
+            className={`transition-transform ${isCollapsed ? "rotate-180" : ""}`}
+          />
           {!isCollapsed && <span className="text-sm">Collapse</span>}
         </button>
 
@@ -116,11 +141,11 @@ export function AdminSidebar({ pathname: propPathname, setPathname, userRole, pe
                 key={item.href}
                 onClick={() => handleNavClick(item.href)}
                 className={`w-full flex items-center px-6 py-3 transition-colors ${
-                  isCollapsed ? 'justify-center' : 'space-x-3'
+                  isCollapsed ? "justify-center" : "space-x-3"
                 } ${
                   isActive
-                    ? 'bg-gray-100 text-black font-medium border-r-2 border-black'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-black'
+                    ? "bg-gray-100 text-black font-medium border-r-2 border-black"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-black"
                 }`}
               >
                 <Icon size={20} />
@@ -135,17 +160,65 @@ export function AdminSidebar({ pathname: propPathname, setPathname, userRole, pe
               Admin
             </div>
           )}
-          {isCollapsed && <div className="mt-8 border-t border-gray-200 pt-4" />}
+          {isCollapsed && (
+            <div className="mt-8 border-t border-gray-200 pt-4" />
+          )}
 
-          <button
-            onClick={() => handleNavClick('/admin/settings')}
-            className={`w-full flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50 hover:text-black transition-colors ${
-              isCollapsed ? 'justify-center' : 'space-x-3'
-            }`}
-          >
-            <Settings size={20} />
-            {!isCollapsed && <span>Settings</span>}
-          </button>
+          {/* Settings Dropdown */}
+          <div>
+            <button
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className={`w-full flex items-center justify-between px-6 py-3 transition-all duration-200 ease-in-out ${
+              isCollapsed ? "justify-center" : ""
+              } ${
+              isSettingsOpen
+                ? "bg-gray-100 text-gray-700 border-r-2 border-gray-600"
+                : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+              }`}
+            >
+              <div className={`flex items-center ${isCollapsed ? "justify-center" : "space-x-3"}`}>
+              <Settings size={20} className={isSettingsOpen ? "text-gray-700" : ""} />
+              {!isCollapsed && <span className="font-medium text-sm">Settings</span>}
+              </div>
+              {!isCollapsed && (
+              isSettingsOpen ? (
+                <ChevronDown size={18} className="transition-transform duration-200" />
+              ) : (
+                <ChevronRight size={18} className="transition-transform duration-200" />
+              )
+              )}
+            </button>
+
+            {/* Settings Submenu */}
+            {isSettingsOpen && !isCollapsed && (
+              <div className="bg-gradient-to-b from-gray-50 to-white border-t border-gray-100">
+                <button
+                  onClick={() => handleNavClick("/admin/settings/profile")}
+                  className={`w-full flex items-center space-x-3 px-8 py-3 text-sm transition-all duration-150 ${
+                    activePath === "/admin/settings/profile"
+                      ? "bg-gray-100 text-gray-700 font-medium border-r-2 border-gray-600"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-blue-700"
+                  }`}
+                >
+                  <User size={16} />
+                  <span>Profile</span>
+                </button>
+                <button
+                  onClick={() =>
+                    handleNavClick("/admin/settings/change-password")
+                  }
+                  className={`w-full flex items-center space-x-3 px-8 py-3 text-sm transition-all duration-150 ${
+                    activePath === "/admin/settings/change-password"
+                      ? "bg-gray-100 text-gray-700 font-medium border-r-2 border-gray-600"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+                  }`}
+                >
+                  <Lock size={16} />
+                  <span>Change Password</span>
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Footer */}

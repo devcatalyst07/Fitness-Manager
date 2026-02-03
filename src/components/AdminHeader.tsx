@@ -13,6 +13,16 @@ export const AdminHeader: React.FC = () => {
   useEffect(() => {
     const name = localStorage.getItem("userName") || "Admin";
     setUserName(name);
+
+    // Listen for profile updates
+    const handleProfileUpdate = () => {
+      const updatedName = localStorage.getItem("userName") || "Admin";
+      setUserName(updatedName);
+    };
+
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+    return () =>
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
   }, []);
 
   useEffect(() => {
