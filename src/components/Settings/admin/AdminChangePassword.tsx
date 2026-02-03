@@ -257,9 +257,7 @@ export default function AdminChangePassword() {
 
           {/* ── Card ── */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
-            {/* Form */}
             <div className="p-8 space-y-6">
-              {/* Success message */}
               {isSuccess && <SuccessMessage />}
 
               {/* Current Password */}
