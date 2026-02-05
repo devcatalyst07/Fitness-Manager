@@ -1,93 +1,86 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Search, Bell, User, LogOut, ChevronDown } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Bell, User, LogOut, ChevronDown } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
-export const AdminHeader: React.FC = () => {
+export default function AdminHeader() {
   const router = useRouter();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userName, setUserName] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const name = localStorage.getItem("userName") || "Admin";
-    setUserName(name);
-
-    // Listen for profile updates
-    const handleProfileUpdate = () => {
-      const updatedName = localStorage.getItem("userName") || "Admin";
-      setUserName(updatedName);
-    };
-
-    window.addEventListener("profileUpdated", handleProfileUpdate);
-    return () =>
-      window.removeEventListener("profileUpdated", handleProfileUpdate);
+    const name = localStorage.getItem("userName");
+    if (name) {
+      setUserName(name);
+    }
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
-        setDropdownOpen(false);
+        setIsDropdownOpen(false);
       }
-    }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("roleId");
-    localStorage.removeItem("userRole");
-    router.push("/");
+    localStorage.clear();
+    router.replace("/");
   };
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white border-b border-gray-200 z-20 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-      <div className="flex-auto max-w-xs sm:ml-0 ml-12 mt-2 sm:mt-0">
-        <div className="relative w-full">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={20}
-          />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
+    <header className="fixed top-0 right-0 left-0 lg:left-64 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-30 transition-colors">
+      {/* Left side - could add breadcrumbs or page title here */}
+      <div className="flex-1" />
 
-      <div className="flex items-center space-x-4">
-        <div className="hidden sm:block text-gray-700 text-sm font-medium whitespace-nowrap">
-          <strong>{`Welcome, ${userName}. You are now signed in.`}</strong>
+      {/* Right side - Actions */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Theme Toggle */}
+        <div className="flex items-center">
+          <ThemeToggle />
         </div>
 
-        <button className="p-2 hover:bg-gray-100 rounded-lg relative">
+        {/* Notifications */}
+        <button className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
           <Bell size={20} />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
         </button>
 
+        {/* User Menu */}
         <div className="relative" ref={dropdownRef}>
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center space-x-1 p-2 hover:bg-gray-100 rounded-lg"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
-            <User size={20} />
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <User size={16} className="text-white" />
+            </div>
+            <span className="hidden sm:block text-sm font-medium text-gray-900 dark:text-gray-100">
+              {userName || "User"}
+            </span>
             <ChevronDown
               size={16}
-              className={`${dropdownOpen ? "rotate-180" : ""} transition-transform`}
+              className={`text-gray-600 dark:text-gray-400 transition-transform ${
+                isDropdownOpen ? "rotate-180" : ""
+              }`}
             />
           </button>
 
-          {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+          {/* Dropdown Menu */}
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 transition-colors">
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center space-x-2"
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
               >
                 <LogOut size={16} />
                 <span>Logout</span>
@@ -96,12 +89,6 @@ export const AdminHeader: React.FC = () => {
           )}
         </div>
       </div>
-
-      <div className="sm:hidden absolute right-4 top-16 text-gray-700 text-sm font-medium">
-        <strong>{`Welcome, ${userName}.`}</strong>
-      </div>
     </header>
   );
-};
-
-export default AdminHeader;
+}

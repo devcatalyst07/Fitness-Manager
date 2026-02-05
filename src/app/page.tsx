@@ -4,70 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { AuthModal } from '../components/AuthModal';
 import { PricingCard } from '../components/PricingCards';
+import FitoutLoadingSpinner from '../components/FitoutLoadingSpinner';
 
 type ModalType = 'login' | 'register' | null;
-
-// Loading Spinner Component
-const FitoutLoadingSpinner = () => {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        {/* Animated Logo */}
-        <div className="relative">
-          {/* Spinning ring */}
-          <div 
-            className="absolute inset-0 rounded-2xl border-4 border-blue-200" 
-            style={{ 
-              width: '80px', 
-              height: '80px',
-              borderTopColor: '#2563eb',
-              animation: 'spin 1s linear infinite'
-            }}
-          />
-          
-          {/* Logo container with pulse */}
-          <div 
-            className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center"
-            style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}
-          >
-            <span className="text-white font-bold text-2xl">FM</span>
-          </div>
-        </div>
-
-        {/* Brand text */}
-        <div className="text-center">
-          <div className="font-bold text-black text-xl">FITOUT</div>
-          <div className="font-bold text-black text-base">MANAGER</div>
-        </div>
-
-        {/* Loading text with dots animation */}
-        <div className="flex items-center gap-1 text-gray-600">
-          <span>Loading</span>
-          <span className="flex gap-0.5">
-            <span style={{ animation: 'bounce 1s infinite', animationDelay: '0ms' }}>.</span>
-            <span style={{ animation: 'bounce 1s infinite', animationDelay: '150ms' }}>.</span>
-            <span style={{ animation: 'bounce 1s infinite', animationDelay: '300ms' }}>.</span>
-          </span>
-        </div>
-      </div>
-      
-      <style jsx>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: .5; }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-      `}</style>
-    </div>
-  );
-};
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -231,7 +170,6 @@ export default function Home() {
         modalType={modalType}
         onSwitchToRegister={handleSwitchToRegister}
       />
-
 
       {/* Footer */}
       <footer className="bg-gray-100 border-t border-gray-200 py-4 sm:py-6 mt-1 sm:mt-16">

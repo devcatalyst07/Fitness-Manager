@@ -19,27 +19,15 @@ export default function FitoutLoadingSpinner() {
           
           {/* Logo container with pulse */}
           <div 
-            className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center animate-pulse"
+            className="w-20 h-20 flex items-center justify-center animate-pulse"
             style={{ animationDuration: '2s' }}
           >
-            <span className="text-white font-bold text-2xl">FM</span>
+            <img 
+              src="/files/FM_ICON.svg" 
+              alt="Fitout Manager" 
+              className="w-full h-full object-contain"
+            />
           </div>
-        </div>
-
-        {/* Brand text */}
-        <div className="text-center">
-          <div className="font-bold text-black text-xl">FITOUT</div>
-          <div className="font-bold text-black text-base">MANAGER</div>
-        </div>
-
-        {/* Loading text with dots animation */}
-        <div className="flex items-center gap-1 text-gray-600">
-          <span>Loading</span>
-          <span className="flex gap-0.5">
-            <span className="animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }}>.</span>
-            <span className="animate-bounce" style={{ animationDelay: '150ms', animationDuration: '1s' }}>.</span>
-            <span className="animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1s' }}>.</span>
-          </span>
         </div>
       </div>
     </div>
