@@ -1,5 +1,5 @@
 "use client";
-// USER/PROJECTS/PAGE.TSX
+// USER/PROJECTS/PAGE.TSX - FIXED
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Filter, FolderKanban } from "lucide-react";
@@ -106,8 +106,8 @@ export default function UserProjects() {
           return;
         }
 
+        // ✅ FIXED: Only fetch projects (stats will be calculated from projects)
         fetchProjects();
-        fetchStats();
       } else {
         alert("Failed to load permissions.");
         router.replace("/");
@@ -131,31 +131,34 @@ export default function UserProjects() {
       if (response.ok) {
         const data = await response.json();
         setProjects(data);
+
+        setStats({
+          total: data.length,
+          active: data.filter((p: Project) => p.status === "In Progress")
+            .length,
+          completed: data.filter((p: Project) => p.status === "Completed")
+            .length,
+          planning: data.filter((p: Project) => p.status === "Planning").length,
+        });
+      } else if (response.status === 401) {
+        // Token expired
+        console.error("Unauthorized - token expired");
+        localStorage.clear();
+        router.replace("/");
+      } else if (response.status === 403) {
+        // No permission
+        alert("You don't have permission to access projects.");
+        router.replace("/user/dashboard");
       }
     } catch (error) {
       console.error("Error fetching projects:", error);
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/projects/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
+  // ✅ FIXED: Removed fetchStats() function entirely
 
   const handleProjectCreated = () => {
-    fetchProjects();
-    fetchStats();
+    fetchProjects(); // ✅ FIXED: Only refresh projects
   };
 
   if (!isVerified || loading) {

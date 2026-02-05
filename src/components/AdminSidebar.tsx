@@ -46,16 +46,34 @@ export function AdminSidebar({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const resolvedRole = userRole ?? "admin";
+  const isUser = resolvedRole === "user";
+
   // Use prop pathname if provided, otherwise use Next.js pathname
   const activePath = propPathname || currentPathname;
 
-  const menuItems = [
-    { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
-    { icon: FolderKanban, label: "Projects", href: "/admin/projects" },
-    { icon: DollarSign, label: "Finance", href: "/admin/finance" },
-    { icon: BarChart3, label: "Reports", href: "/admin/reports" },
-    { icon: FileText, label: "Documents", href: "/admin/documents" },
-  ];
+  const menuItems = isUser
+    ? [
+        { icon: Home, label: "Dashboard", href: "/user/dashboard" },
+        { icon: FolderKanban, label: "Projects", href: "/user/projects" },
+        { icon: DollarSign, label: "Finance", href: "/user/finance" },
+        { icon: BarChart3, label: "Reports", href: "/user/reports" },
+        { icon: FileText, label: "Documents", href: "/user/documents" },
+      ]
+    : [
+        { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
+        { icon: FolderKanban, label: "Projects", href: "/admin/projects" },
+        { icon: DollarSign, label: "Finance", href: "/admin/finance" },
+        { icon: BarChart3, label: "Reports", href: "/admin/reports" },
+        { icon: FileText, label: "Documents", href: "/admin/documents" },
+      ];
+
+  const profileHref = isUser
+    ? "/user/settings/profile"
+    : "/admin/settings/profile";
+  const changePasswordHref = isUser
+    ? "/user/settings/change-password"
+    : "/admin/settings/change-password";
 
   const handleNavClick = (href: string) => {
     if (setPathname) {
@@ -157,7 +175,7 @@ export function AdminSidebar({
           {/* Admin Section */}
           {!isCollapsed && (
             <div className="mt-8 px-6 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Admin
+              {isUser ? "Account" : "Admin"}
             </div>
           )}
           {isCollapsed && (
@@ -169,33 +187,45 @@ export function AdminSidebar({
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
               className={`w-full flex items-center justify-between px-6 py-3 transition-all duration-200 ease-in-out ${
-              isCollapsed ? "justify-center" : ""
+                isCollapsed ? "justify-center" : ""
               } ${
-              isSettingsOpen
-                ? "bg-gray-100 text-gray-700 border-r-2 border-gray-600"
-                : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+                isSettingsOpen
+                  ? "bg-gray-100 text-gray-700 border-r-2 border-gray-600"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
               }`}
             >
-              <div className={`flex items-center ${isCollapsed ? "justify-center" : "space-x-3"}`}>
-              <Settings size={20} className={isSettingsOpen ? "text-gray-700" : ""} />
-              {!isCollapsed && <span className="font-medium text-sm">Settings</span>}
+              <div
+                className={`flex items-center ${isCollapsed ? "justify-center" : "space-x-3"}`}
+              >
+                <Settings
+                  size={20}
+                  className={isSettingsOpen ? "text-gray-700" : ""}
+                />
+                {!isCollapsed && (
+                  <span className="font-medium text-sm">Settings</span>
+                )}
               </div>
-              {!isCollapsed && (
-              isSettingsOpen ? (
-                <ChevronDown size={18} className="transition-transform duration-200" />
-              ) : (
-                <ChevronRight size={18} className="transition-transform duration-200" />
-              )
-              )}
+              {!isCollapsed &&
+                (isSettingsOpen ? (
+                  <ChevronDown
+                    size={18}
+                    className="transition-transform duration-200"
+                  />
+                ) : (
+                  <ChevronRight
+                    size={18}
+                    className="transition-transform duration-200"
+                  />
+                ))}
             </button>
 
             {/* Settings Submenu */}
             {isSettingsOpen && !isCollapsed && (
               <div className="bg-gradient-to-b from-gray-50 to-white border-t border-gray-100">
                 <button
-                  onClick={() => handleNavClick("/admin/settings/profile")}
+                  onClick={() => handleNavClick(profileHref)}
                   className={`w-full flex items-center space-x-3 px-8 py-3 text-sm transition-all duration-150 ${
-                    activePath === "/admin/settings/profile"
+                    activePath === profileHref
                       ? "bg-gray-100 text-gray-700 font-medium border-r-2 border-gray-600"
                       : "text-gray-600 hover:bg-gray-100 hover:text-blue-700"
                   }`}
@@ -204,11 +234,9 @@ export function AdminSidebar({
                   <span>Profile</span>
                 </button>
                 <button
-                  onClick={() =>
-                    handleNavClick("/admin/settings/change-password")
-                  }
+                  onClick={() => handleNavClick(changePasswordHref)}
                   className={`w-full flex items-center space-x-3 px-8 py-3 text-sm transition-all duration-150 ${
-                    activePath === "/admin/settings/change-password"
+                    activePath === changePasswordHref
                       ? "bg-gray-100 text-gray-700 font-medium border-r-2 border-gray-600"
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
                   }`}

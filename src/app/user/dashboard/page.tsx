@@ -1,4 +1,5 @@
 "use client";
+// USER DASHBOARD - FIXED (No /api/projects/stats call)
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -37,6 +38,12 @@ interface Brand {
     email: string;
   };
   createdAt: string;
+}
+
+interface Project {
+  _id: string;
+  status: string;
+  brand: string;
 }
 
 export default function UserDashboard() {
@@ -79,7 +86,7 @@ export default function UserDashboard() {
         const data = await response.json();
         setRoleData(data);
         fetchUserBrandsFromProjects();
-        fetchUserStats();
+        // ✅ FIXED: Removed fetchUserStats() call - stats now calculated from projects
       } else {
         alert("Failed to load user permissions.");
         router.replace("/");
@@ -101,12 +108,19 @@ export default function UserDashboard() {
       });
 
       if (projectsResponse.ok) {
-        const projects = await projectsResponse.json();
+        const projects: Project[] = await projectsResponse.json();
 
         //SAVE USER'S ASSIGNED PROJECT IDs
         const projectIds = projects.map((p: any) => p._id);
         setUserAssignedProjects(projectIds);
         console.log("🎯 User assigned to projects:", projectIds);
+
+        setProjectStats({
+          total: projects.length,
+          active: projects.filter((p) => p.status === "In Progress").length,
+          completed: projects.filter((p) => p.status === "Completed").length,
+          planning: projects.filter((p) => p.status === "Planning").length,
+        });
 
         const uniqueBrandNames = [
           ...new Set(projects.map((p: any) => p.brand)),
@@ -135,21 +149,7 @@ export default function UserDashboard() {
     }
   };
 
-  const fetchUserStats = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/projects/stats`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProjectStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
+  // ✅ FIXED: Removed fetchUserStats() function entirely
 
   const handleBrandSelect = (brand: Brand) => {
     setSelectedBrand(brand);
@@ -157,7 +157,7 @@ export default function UserDashboard() {
 
   const handleRefresh = () => {
     fetchUserBrandsFromProjects();
-    fetchUserStats();
+    // ✅ FIXED: No need to call fetchUserStats - it's calculated in fetchUserBrandsFromProjects
   };
 
   if (!isVerified || loading) {

@@ -74,14 +74,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
 
         // Store token and redirect
+        const normalizedRole = String(data.role || "").toLowerCase();
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userRole", data.role);
+        localStorage.setItem("userRole", normalizedRole);
         localStorage.setItem("userName", data.name);
         localStorage.setItem("userEmail", email);
         localStorage.setItem("roleId", data.roleId);
 
         // Get redirect path based on permissions
-        const redirectPath = await getRedirectPath(data.roleId, data.role);
+        const redirectPath = await getRedirectPath(data.roleId, normalizedRole);
         router.push(redirectPath);
         onClose();
       } else {
@@ -110,23 +111,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
-        if (data.role !== activeTab) {
+        if (String(data.role || "").toLowerCase() !== activeTab) {
           setError("Invalid credentials. Please try again.");
           setLoading(false);
           return;
         }
 
+        const normalizedRole = String(data.role || "").toLowerCase();
         localStorage.setItem("token", data.token);
-        localStorage.setItem("userRole", data.role);
+        localStorage.setItem("userRole", normalizedRole);
         localStorage.setItem("userName", data.name);
         localStorage.setItem("userEmail", email);
         localStorage.setItem("roleId", data.roleId);
 
-        if (data.role === "admin") {
+        if (normalizedRole === "admin") {
           router.push("/admin/dashboard");
         } else {
           // Get redirect path based on permissions for users
-          const redirectPath = await getRedirectPath(data.roleId, data.role);
+          const redirectPath = await getRedirectPath(
+            data.roleId,
+            normalizedRole,
+          );
           router.push(redirectPath);
         }
 
