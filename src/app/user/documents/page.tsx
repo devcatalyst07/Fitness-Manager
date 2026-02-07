@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Upload, FileText, FolderOpen, Search, Filter } from 'lucide-react';
-import { UploadDocumentModal } from '@/components/UploadDocumentModal';
-import { DocumentFolderCard } from '@/components/DocumentFolderCard';
-import AdminSidebar from '@/components/AdminSidebar';
-import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
-import AdminHeader from '@/components/AdminHeader';
-import { Document } from '@/types/document';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Upload, FileText, FolderOpen, Search, Filter } from "lucide-react";
+import { UploadDocumentModal } from "@/components/UploadDocumentModal";
+import { DocumentFolderCard } from "@/components/DocumentFolderCard";
+import AdminSidebar from "@/components/AdminSidebar";
+import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import AdminHeader from "@/components/AdminHeader";
+import { Document } from "@/types/document";
+import { hasPermission } from "@/utils/permissions";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface ProjectFolder {
   _id: string;
@@ -38,32 +40,25 @@ interface RoleData {
   permissions: Permission[];
 }
 
-const hasPermission = (
-  permissionId: string,
-  permissions: Permission[],
-): boolean => {
-  const check = (perms: Permission[]): boolean => {
-    for (const perm of perms) {
-      if (perm.id === permissionId && perm.checked) return true;
-      if (perm.children && check(perm.children)) return true;
-    }
-    return false;
-  };
-  return check(permissions);
-};
-
 export default function userAdminDocuments() {
   const router = useRouter();
-  const [pathname, setPathname] = useState('/user/documents');
+  const [pathname, setPathname] = useState("/user/documents");
   const [isVerified, setIsVerified] = useState(false);
-    const [roleData, setRoleData] = useState<RoleData | null>(null);
+  const [roleData, setRoleData] = useState<RoleData | null>(null);
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalDocuments: 0, totalProjects: 0, totalSize: 0 });
+  const [stats, setStats] = useState<Stats>({
+    totalDocuments: 0,
+    totalProjects: 0,
+    totalSize: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [successMessage, setSuccessMessage] = useState('');
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -116,7 +111,7 @@ export default function userAdminDocuments() {
     try {
       await Promise.all([fetchFolders(), fetchStats()]);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
@@ -124,72 +119,73 @@ export default function userAdminDocuments() {
 
   const fetchFolders = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/documents/folders`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) throw new Error('Failed to fetch folders');
+      if (!response.ok) throw new Error("Failed to fetch folders");
 
       const data = await response.json();
       setFolders(data);
     } catch (error) {
-      console.error('Error fetching folders:', error);
+      console.error("Error fetching folders:", error);
     }
   };
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/documents/stats/overview`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) throw new Error('Failed to fetch stats');
+      if (!response.ok) throw new Error("Failed to fetch stats");
 
       const data = await response.json();
       setStats(data);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
     }
   };
 
   const fetchProjectDocuments = async (projectId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/documents/project/${projectId}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/documents/project/${projectId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
-      if (!response.ok) throw new Error('Failed to fetch documents');
+      if (!response.ok) throw new Error("Failed to fetch documents");
 
       const documents = await response.json();
-      
-      setFolders(prevFolders =>
-        prevFolders.map(folder =>
-          folder._id === projectId
-            ? { ...folder, documents }
-            : folder
-        )
+
+      setFolders((prevFolders) =>
+        prevFolders.map((folder) =>
+          folder._id === projectId ? { ...folder, documents } : folder,
+        ),
       );
     } catch (error) {
-      console.error('Error fetching project documents:', error);
+      console.error("Error fetching project documents:", error);
     }
   };
 
   const handleFolderClick = async (projectId: string) => {
     const isExpanded = expandedFolders.has(projectId);
-    
+
     if (isExpanded) {
-      setExpandedFolders(prev => {
+      setExpandedFolders((prev) => {
         const newSet = new Set(prev);
         newSet.delete(projectId);
         return newSet;
       });
     } else {
-      setExpandedFolders(prev => new Set(prev).add(projectId));
-      
-      const folder = folders.find(f => f._id === projectId);
+      setExpandedFolders((prev) => new Set(prev).add(projectId));
+
+      const folder = folders.find((f) => f._id === projectId);
       if (!folder?.documents) {
         await fetchProjectDocuments(projectId);
       }
@@ -202,42 +198,42 @@ export default function userAdminDocuments() {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/documents/${doc._id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) throw new Error('Delete failed');
+      if (!response.ok) throw new Error("Delete failed");
 
       await fetchData();
-      
+
       if (doc.projectId && expandedFolders.has(doc.projectId._id)) {
         await fetchProjectDocuments(doc.projectId._id);
       }
 
-      showSuccessMessage('Document deleted successfully');
+      showSuccessMessage("Document deleted successfully");
     } catch (error) {
-      console.error('Error deleting document:', error);
-      alert('Failed to delete document');
+      console.error("Error deleting document:", error);
+      alert("Failed to delete document");
     }
   };
 
   const handleViewDocument = (doc: Document) => {
     // For Cloudinary URLs
-    if (doc.fileUrl.startsWith('http')) {
+    if (doc.fileUrl.startsWith("http")) {
       // Handle PDF viewing
-      if (doc.fileType === 'application/pdf') {
+      if (doc.fileType === "application/pdf") {
         // Open PDF in new tab - Cloudinary will handle it
-        window.open(doc.fileUrl, '_blank');
+        window.open(doc.fileUrl, "_blank");
       } else {
         // For other file types (images, docs, etc.)
-        window.open(doc.fileUrl, '_blank');
+        window.open(doc.fileUrl, "_blank");
       }
     } else {
       // For local files
       const fileUrl = `${API_URL}${doc.fileUrl}`;
-      window.open(fileUrl, '_blank');
+      window.open(fileUrl, "_blank");
     }
   };
 
@@ -248,25 +244,24 @@ export default function userAdminDocuments() {
 
   const showSuccessMessage = (message: string) => {
     setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 5000);
+    setTimeout(() => setSuccessMessage(""), 5000);
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const filteredFolders = folders.filter(folder =>
-    folder.projectName.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredFolders = folders.filter((folder) =>
+    folder.projectName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (!isVerified || loading) {
     return <FitoutLoadingSpinner />;
-    }
-    
+  }
 
   if (!roleData) {
     return (
@@ -282,7 +277,6 @@ export default function userAdminDocuments() {
   }
 
   const permissions = roleData.permissions;
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -305,13 +299,22 @@ export default function userAdminDocuments() {
               Global document library across all projects and entities
             </p>
           </div>
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap self-center sm:self-auto"
-          >
-            <Upload size={20} />
-            <span>Upload</span>
-          </button>
+          <div className="flex flex-wrap gap-2 self-center sm:self-auto">
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+            >
+              <Upload size={20} />
+              <span>Upload</span>
+            </button>
+            <button
+              onClick={() => setIsBulkUploadModalOpen(true)}
+              className="flex items-center justify-center gap-2 border border-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+            >
+              <Upload size={20} />
+              <span>Bulk Upload</span>
+            </button>
+          </div>
         </div>
 
         {/* Success Message */}
@@ -463,6 +466,12 @@ export default function userAdminDocuments() {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onSuccess={handleUploadSuccess}
+      />
+      <UploadDocumentModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={() => setIsBulkUploadModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+        allowMultiple
       />
     </div>
   );

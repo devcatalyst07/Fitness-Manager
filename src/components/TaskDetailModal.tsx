@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Flag, Users, FileText, MessageSquare, Activity, Clock, Layers, Link2, AlertCircle, Edit2, Save } from 'lucide-react';
-import { Task, Comment, ActivityLog, Phase } from '@/types/task.types';
+import { X, Calendar, Flag, Users, FileText, MessageSquare, Activity, Clock, Layers, Link2, AlertCircle, Edit2, Save, Send } from 'lucide-react';
+import { Task, Comment, ActivityLog, Phase, TeamMember } from '@/types/task.types';
 import {
   getPriorityBadge,
   getStatusBadge,
@@ -29,6 +29,14 @@ interface TaskDetailModalProps {
   uploadingFiles: boolean;
   phases: Phase[];
   allTasks: Task[];
+  // Additional optional props from remote
+  onUpdateTask?: (taskId: string, data: Partial<Task>) => void;
+  teamMembers?: TeamMember[];
+  isEditing?: boolean;
+  setIsEditing?: (editing: boolean) => void;
+  onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveFile?: (index: number) => void;
+  canEdit?: boolean;
 }
 
 export default function TaskDetailModal({
@@ -50,9 +58,20 @@ export default function TaskDetailModal({
   uploadingFiles,
   phases,
   allTasks,
+  onUpdateTask,
+  teamMembers,
+  isEditing: externalIsEditing,
+  setIsEditing: externalSetIsEditing,
+  onFileSelect,
+  onRemoveFile,
+  canEdit = true,
 }: TaskDetailModalProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [internalIsEditing, setInternalIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
+
+  // Use external editing state if provided, otherwise use internal
+  const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
+  const setIsEditing = externalSetIsEditing || setInternalIsEditing;
 
   useEffect(() => {
     if (task) {
@@ -72,6 +91,13 @@ export default function TaskDetailModal({
     }
   }, [task]);
 
+  useEffect(() => {
+    if (isOpen && task && canEdit && externalSetIsEditing) {
+      setEditedTask(task);
+      externalSetIsEditing(true);
+    }
+  }, [isOpen, task, canEdit, externalSetIsEditing]);
+
   if (!isOpen || !task) return null;
 
   const handleSave = () => {
@@ -80,7 +106,12 @@ export default function TaskDetailModal({
       return;
     }
 
-    onUpdate(task._id, editedTask);
+    // Use onUpdateTask if provided, otherwise use onUpdate
+    if (onUpdateTask && task._id) {
+      onUpdateTask(task._id, editedTask);
+    } else {
+      onUpdate(task._id, editedTask);
+    }
     setIsEditing(false);
   };
 
@@ -150,6 +181,11 @@ export default function TaskDetailModal({
     );
   };
 
+  const currentTask = isEditing ? editedTask : task;
+
+  // Use onFileSelect if provided, otherwise use handleFileSelect
+  const fileSelectHandler = onFileSelect || handleFileSelect;
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
@@ -180,22 +216,24 @@ export default function TaskDetailModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {!isEditing ? (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all flex items-center gap-2"
-                >
-                  <Edit2 size={16} />
-                  Edit
-                </button>
-              ) : (
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-all flex items-center gap-2"
-                >
-                  <Save size={16} />
-                  Save
-                </button>
+              {canEdit && (
+                !isEditing ? (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all flex items-center gap-2"
+                  >
+                    <Edit2 size={16} />
+                    Edit
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-all flex items-center gap-2"
+                  >
+                    <Save size={16} />
+                    Save
+                  </button>
+                )
               )}
               <button
                 onClick={onClose}
@@ -597,7 +635,7 @@ export default function TaskDetailModal({
                 )}
               </div>
 
-              {!isEditing && (
+              {!isEditing && canEdit && (
                 <div className="pt-4 border-t border-gray-200">
                   <button
                     onClick={() => {
@@ -635,7 +673,13 @@ export default function TaskDetailModal({
                       >
                         <span className="text-gray-700">{file.name}</span>
                         <button
-                          onClick={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== index))}
+                          onClick={() => {
+                            if (onRemoveFile) {
+                              onRemoveFile(index);
+                            } else {
+                              setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+                            }
+                          }}
                           className="text-gray-400 hover:text-red-600"
                         >
                           <X size={14} />
@@ -650,7 +694,7 @@ export default function TaskDetailModal({
                     <input
                       type="file"
                       multiple
-                      onChange={handleFileSelect}
+                      onChange={fileSelectHandler}
                       className="hidden"
                     />
                     📎 Attach files

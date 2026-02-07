@@ -18,6 +18,7 @@ import {
   Lock,
 } from "lucide-react";
 import Image from "next/image";
+import { hasPermission } from "@/utils/permissions";
 
 // Use inline interface definition to avoid import issues
 interface Permission {
@@ -32,6 +33,13 @@ interface AdminSidebarProps {
   setPathname?: React.Dispatch<React.SetStateAction<string>>;
   userRole?: string;
   permissions?: Permission[];
+}
+
+interface MenuItem {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+  permissionId?: string;
 }
 
 export function AdminSidebar({
@@ -52,21 +60,54 @@ export function AdminSidebar({
   // Use prop pathname if provided, otherwise use Next.js pathname
   const activePath = propPathname || currentPathname;
 
+  const userMenuItems: MenuItem[] = [
+    {
+      icon: Home,
+      label: "Dashboard",
+      href: "/user/dashboard",
+      permissionId: "dashboard",
+    },
+    {
+      icon: FolderKanban,
+      label: "Projects",
+      href: "/user/projects",
+      permissionId: "projects",
+    },
+    {
+      icon: DollarSign,
+      label: "Finance",
+      href: "/user/finance",
+      permissionId: "finance",
+    },
+    {
+      icon: BarChart3,
+      label: "Reports",
+      href: "/user/reports",
+      permissionId: "reports",
+    },
+    {
+      icon: FileText,
+      label: "Documents",
+      href: "/user/documents",
+      permissionId: "documents",
+    },
+  ];
+
+  const adminMenuItems: MenuItem[] = [
+    { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
+    { icon: FolderKanban, label: "Projects", href: "/admin/projects" },
+    { icon: DollarSign, label: "Finance", href: "/admin/finance" },
+    { icon: BarChart3, label: "Reports", href: "/admin/reports" },
+    { icon: FileText, label: "Documents", href: "/admin/documents" },
+  ];
+
   const menuItems = isUser
-    ? [
-        { icon: Home, label: "Dashboard", href: "/user/dashboard" },
-        { icon: FolderKanban, label: "Projects", href: "/user/projects" },
-        { icon: DollarSign, label: "Finance", href: "/user/finance" },
-        { icon: BarChart3, label: "Reports", href: "/user/reports" },
-        { icon: FileText, label: "Documents", href: "/user/documents" },
-      ]
-    : [
-        { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
-        { icon: FolderKanban, label: "Projects", href: "/admin/projects" },
-        { icon: DollarSign, label: "Finance", href: "/admin/finance" },
-        { icon: BarChart3, label: "Reports", href: "/admin/reports" },
-        { icon: FileText, label: "Documents", href: "/admin/documents" },
-      ];
+    ? userMenuItems.filter((item) =>
+        permissions && item.permissionId
+          ? hasPermission(item.permissionId, permissions)
+          : false,
+      )
+    : adminMenuItems;
 
   const profileHref = isUser
     ? "/user/settings/profile"

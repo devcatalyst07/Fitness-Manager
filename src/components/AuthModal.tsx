@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { hasPermission } from "@/utils/permissions";
 
 type LoginType = "user" | "admin";
 type ModalType = "login" | "register" | null;
@@ -159,6 +160,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         const roleData = await response.json();
         const permissions = roleData.permissions || [];
 
+        try {
+          localStorage.setItem("rolePermissions", JSON.stringify(permissions));
+        } catch {
+          // Ignore storage errors
+        }
+
         // Define available pages and their permission IDs
         const availablePages = [
           { path: `/user/dashboard`, permissionId: "dashboard" },
@@ -167,21 +174,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           { path: `/user/documents`, permissionId: "documents" },
           { path: `/user/reports`, permissionId: "reports" },
         ];
-
-        // Helper function to check if permission exists and is checked
-        const hasPermission = (permissionId: string, perms: any[]): boolean => {
-          for (const perm of perms) {
-            if (perm.id === permissionId && perm.checked) {
-              return true;
-            }
-            if (perm.children && perm.children.length > 0) {
-              if (hasPermission(permissionId, perm.children)) {
-                return true;
-              }
-            }
-          }
-          return false;
-        };
 
         // Find first available page based on permissions
         for (const page of availablePages) {

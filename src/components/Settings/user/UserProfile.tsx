@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
+import { Permission } from "@/utils/permissions";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -68,6 +69,16 @@ function getRoleBadgeStyles(role: string) {
       border: "border-indigo-100",
     }
   );
+}
+
+function getCachedPermissions(): Permission[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("rolePermissions");
+    return raw ? (JSON.parse(raw) as Permission[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 // ─── Avatar Component ─────────────────────────────────────────────────────────
@@ -162,25 +173,20 @@ function EditProfileModal({
   };
 
   const handleSubmit = async () => {
-    if (
-      !form.firstName.trim() ||
-      !form.lastName.trim() ||
-      !form.username.trim() ||
-      !form.email.trim()
-    ) {
-      setError("All fields are required.");
-      return;
-    }
     setIsLoading(true);
     setError("");
     try {
       const token = localStorage.getItem("token");
+      const firstName = form.firstName.trim() || profile.firstName;
+      const lastName = form.lastName.trim() || profile.lastName;
+      const username = form.username.trim() || profile.username;
+      const email = form.email.trim() || profile.email;
 
       const formData = new FormData();
-      formData.append("firstName", form.firstName.trim());
-      formData.append("lastName", form.lastName.trim());
-      formData.append("username", form.username.trim());
-      formData.append("email", form.email.trim());
+      if (firstName) formData.append("firstName", firstName);
+      if (lastName) formData.append("lastName", lastName);
+      if (username) formData.append("username", username);
+      if (email) formData.append("email", email);
       if (selectedFile) {
         formData.append("profilePhoto", selectedFile);
       }
@@ -381,12 +387,16 @@ export default function UserProfile() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [permissions, setPermissions] =
+    useState<Permission[]>(getCachedPermissions);
+  const [roleName, setRoleName] = useState<string>("Member");
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
         const token = localStorage.getItem("token");
         const headers = { Authorization: `Bearer ${token}` };
+        const roleId = localStorage.getItem("roleId");
 
         // ── 1. Fetch base profile ──
         const profileRes = await fetch(`${API_URL}/api/profile`, { headers });
@@ -434,6 +444,27 @@ export default function UserProfile() {
             : "",
           brandRoles,
         });
+
+        if (roleId) {
+          const roleRes = await fetch(`${API_URL}/api/roles/${roleId}`, {
+            headers,
+          });
+          if (roleRes.ok) {
+            const roleData = await roleRes.json();
+            setPermissions(roleData.permissions || []);
+            if (roleData?.name) {
+              setRoleName(roleData.name);
+            }
+            try {
+              localStorage.setItem(
+                "rolePermissions",
+                JSON.stringify(roleData.permissions || []),
+              );
+            } catch {
+              // Ignore storage errors
+            }
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
       } finally {
@@ -445,11 +476,12 @@ export default function UserProfile() {
 
   const initials =
     `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase();
+  const primaryRole = roleName || profile.brandRoles[0]?.role || "Member";
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen bg-gray-50">
-        <AdminSidebar userRole="user" />
+        <AdminSidebar userRole="user" permissions={permissions} />
         <AdminHeader />
         <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 flex-1">
           <div className="text-center text-gray-400 text-sm mt-24">
@@ -462,7 +494,7 @@ export default function UserProfile() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <AdminSidebar userRole="user" />
+      <AdminSidebar userRole="user" permissions={permissions} />
       <AdminHeader />
 
       <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 flex-1">
@@ -470,7 +502,9 @@ export default function UserProfile() {
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Profile Setting
+              </h1>
               <p className="text-sm text-gray-500 mt-1">
                 Manage your personal information and account settings
               </p>
@@ -488,40 +522,30 @@ export default function UserProfile() {
         {/* ── Two Column Layout ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ── LEFT COL — Avatar Card ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="flex flex-col items-center py-10 px-6">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-full">
+            <div className="flex flex-col items-center flex-1 justify-center px-6 py-8">
               <Avatar
                 photoUrl={profile.profilePhoto}
                 initials={initials}
                 size={112}
               />
-              <h2 className="text-xl font-semibold text-gray-900 mt-5">
+              <h2 className="text-xl font-semibold text-gray-900">
                 {profile.firstName} {profile.lastName}
               </h2>
-              <p className="text-sm text-gray-500 mt-0.5">
-                @{profile.username}
-              </p>
+              <p className="text-sm text-gray-500 mt-2">@{profile.username}</p>
 
-              {/* Brand Role Badges */}
-              <div className="flex flex-wrap justify-center gap-2 mt-3">
-                {profile.brandRoles.map((br, i) => {
-                  const styles = getRoleBadgeStyles(br.role);
-                  return (
-                    <span
-                      key={i}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${styles.bg} ${styles.text} ${styles.border}`}
-                    >
-                      <Shield size={12} />
-                      {br.role}
-                    </span>
-                  );
-                })}
+              {/* Primary Role Badge */}
+              <div className="mt-6">
+                <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
+                  <Shield size={13} className="text-blue-600" />
+                  {primaryRole}
+                </span>
               </div>
             </div>
 
             {/* Last Updated footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-              <p className="flex items-center gap-1.5 text-xs text-gray-400">
+            <div className="px-6 py-5 bg-gray-50 border-t border-gray-100">
+              <p className="flex items-center gap-1.5 text-xs text-gray-500">
                 <Clock size={13} />
                 Last updated: {profile.updatedAt || "—"}
               </p>
@@ -603,58 +627,19 @@ export default function UserProfile() {
                     </p>
                   </div>
 
-                  {/* Roles summary */}
+                  {/* Role */}
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center gap-2 text-xs text-gray-400 uppercase tracking-wider mb-2">
                       <Shield size={13} />
-                      <span>Roles</span>
+                      <span>Role</span>
                     </div>
-                    <p className="text-sm text-gray-500 italic">
-                      {profile.brandRoles.length} role
-                      {profile.brandRoles.length !== 1 ? "s" : ""} assigned
-                    </p>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-50 text-black text-xs font-semibold border border-indigo-100">
+                      {primaryRole}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Roles Per Brand Card */}
-            {profile.brandRoles.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-800">
-                    Roles Per Brand
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Your assigned brands and roles
-                  </p>
-                </div>
-
-                <div className="p-6 space-y-2">
-                  {profile.brandRoles.map((br, i) => {
-                    const styles = getRoleBadgeStyles(br.role);
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between px-4 py-3 rounded-lg bg-gray-50 border border-gray-100"
-                      >
-                        <div className="flex items-center gap-2">
-                          <FolderKanban size={15} className="text-gray-400" />
-                          <span className="text-sm text-gray-700 font-medium">
-                            {br.brandName}
-                          </span>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${styles.bg} ${styles.text} ${styles.border}`}
-                        >
-                          {br.role}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Quick Actions Card */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">

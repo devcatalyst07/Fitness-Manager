@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Plus, Settings } from "lucide-react";
 
@@ -19,6 +19,23 @@ import { TimelineContainer } from "@/components/TimelineComponents";
 
 // Custom Hook
 import { useTaskManagement } from "@/hooks/useTaskManagement";
+import { hasPermission } from "@/utils/permissions";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+
+interface Permission {
+  id: string;
+  label: string;
+  checked: boolean;
+  children?: Permission[];
+}
+
+interface RoleData {
+  _id: string;
+  name: string;
+  permissions: Permission[];
+}
 
 export default function UserProjectTasksPage() {
   const router = useRouter();
@@ -29,10 +46,14 @@ export default function UserProjectTasksPage() {
     "phase"
   );
 
+  // Auth and Permission State
+  const [isVerified, setIsVerified] = useState(false);
+  const [roleData, setRoleData] = useState<RoleData | null>(null);
+
   // Custom Hook - ALL business logic
   const {
     loading,
-    isVerified,
+    isVerified: hookIsVerified,
     projectName,
     tasks,
     isCreateModalOpen,
@@ -75,8 +96,58 @@ export default function UserProjectTasksPage() {
     deletePhase,
   } = useTaskManagement(params.id as string);
 
-  // Check if user can create tasks (e.g., based on permissions)
-  const canCreateTask = true; // Adjust based on your permission logic
+  // Auth check
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("userRole");
+    const roleId = localStorage.getItem("roleId");
+
+    // console.log("Auth check:", { token, role, roleId });
+
+    if (!token || role !== "user") {
+      // console.log("Redirecting to / — auth failed", { token, role, roleId });
+      localStorage.removeItem("token");
+      localStorage.removeItem("roleId");
+      // localStorage.clear();
+      router.replace("/");
+    } else if (!roleId) {
+      alert("No role assigned. Contact administrator.");
+      router.replace("/");
+    } else {
+      setIsVerified(true);
+      fetchRolePermissions(roleId);
+    }
+  }, [router]);
+
+  const fetchRolePermissions = async (roleId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // console.log("Role fetch response ok:", response.ok, "data:", data);
+        setRoleData(data);
+        const permissions = data.permissions;
+
+        // console.log("🔐 Role Data:", data);
+        // console.log("🔍 Permissions:", data.permissions);
+        // console.log(
+        //   "✅ Has Task Permission:",
+        //   hasPermission("projects-view-details-task", data.permissions),
+        // );
+      }
+    } catch (error) {
+      console.error("Error fetching role permissions:", error);
+    }
+  };
+
+  // Check if user can create tasks based on permissions
+  const canCreateTask = roleData
+    ? hasPermission("projects-view-details-task", roleData.permissions)
+    : false;
 
   // Loading State
   if (!isVerified || loading) {
@@ -302,6 +373,7 @@ export default function UserProjectTasksPage() {
           uploadingFiles={uploadingFiles}
           phases={phases}
           allTasks={tasks}
+          canEdit={canCreateTask}
         />
       </main>
     </div>

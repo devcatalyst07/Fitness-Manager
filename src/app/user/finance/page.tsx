@@ -1,15 +1,24 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { DollarSign, TrendingUp, AlertTriangle, FileDown, Filter, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  DollarSign,
+  TrendingUp,
+  AlertTriangle,
+  FileDown,
+  Filter,
+  ShieldCheck,
+} from "lucide-react";
 
-import AdminSidebar from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
-import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
-import EACPolicyModal from '@/components/EACPolicyModal';
+import AdminSidebar from "@/components/AdminSidebar";
+import AdminHeader from "@/components/AdminHeader";
+import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import EACPolicyModal from "@/components/EACPolicyModal";
+import { hasPermission } from "@/utils/permissions";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface ProjectFinance {
   _id: string;
@@ -79,33 +88,21 @@ interface RoleData {
   permissions: Permission[];
 }
 
-const hasPermission = (
-  permissionId: string,
-  permissions: Permission[],
-): boolean => {
-  const check = (perms: Permission[]): boolean => {
-    for (const perm of perms) {
-      if (perm.id === permissionId && perm.checked) return true;
-      if (perm.children && check(perm.children)) return true;
-    }
-    return false;
-  };
-  return check(permissions);
-};
-
 export default function userFinancePage() {
   const router = useRouter();
-  const [pathname, setPathname] = useState('/user/finance');
+  const [pathname, setPathname] = useState("/user/finance");
   const [isVerified, setIsVerified] = useState(false);
   const [loading, setLoading] = useState(true);
-    const [roleData, setRoleData] = useState<RoleData | null>(null);
+  const [roleData, setRoleData] = useState<RoleData | null>(null);
   const [financeData, setFinanceData] = useState<FinanceData | null>(null);
 
-  const [selectedBrand, setSelectedBrand] = useState<string>('All');
-  const [selectedRegion, setSelectedRegion] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState<string>("All");
+  const [selectedRegion, setSelectedRegion] = useState<string>("All");
 
   const [isEACModalOpen, setIsEACModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectFinance | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectFinance | null>(
+    null,
+  );
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -123,52 +120,51 @@ export default function userFinancePage() {
       fetchRolePermissions(roleId);
     }
   }, [router]);
-    
-    const fetchRolePermissions = async (roleId: string) => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
 
-        if (response.ok) {
-          const data = await response.json();
-          setRoleData(data);
+  const fetchRolePermissions = async (roleId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-          if (!hasPermission("finance", data.permissions)) {
-            alert("You do not have permission to access Finance.");
-            router.replace("/user/dashboard");
-            return;
-          }
+      if (response.ok) {
+        const data = await response.json();
+        setRoleData(data);
 
-        } else {
-          alert("Failed to load permissions.");
-          router.replace("/");
+        if (!hasPermission("finance", data.permissions)) {
+          alert("You do not have permission to access Finance.");
+          router.replace("/user/dashboard");
+          return;
         }
-      } catch (error) {
-        console.error("Error fetching permissions:", error);
+      } else {
         alert("Failed to load permissions.");
         router.replace("/");
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+      alert("Failed to load permissions.");
+      router.replace("/");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchFinanceData = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) return;
 
       const params = new URLSearchParams();
-      if (selectedBrand !== 'All') params.append('brand', selectedBrand);
-      if (selectedRegion !== 'All') params.append('region', selectedRegion);
+      if (selectedBrand !== "All") params.append("brand", selectedBrand);
+      if (selectedRegion !== "All") params.append("region", selectedRegion);
 
       const url = `${API_URL}/api/finance?${params.toString()}`;
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
@@ -180,45 +176,45 @@ export default function userFinancePage() {
       const data = await response.json();
       setFinanceData(data);
     } catch (error) {
-      console.error('Error fetching finance data:', error);
+      console.error("Error fetching finance data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
 
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
   const handleResetFilters = () => {
-    setSelectedBrand('All');
-    setSelectedRegion('All');
+    setSelectedBrand("All");
+    setSelectedRegion("All");
   };
 
   const handleExportCSV = () => {
     if (!financeData) return;
 
     const headers = [
-      'Project',
-      'Brand',
-      'Region',
-      'Budget',
-      'Committed',
-      'Invoiced',
-      'Paid',
-      'Accruals',
-      'Headroom',
-      'EAC',
-      'Variance',
-      'Utilisation',
+      "Project",
+      "Brand",
+      "Region",
+      "Budget",
+      "Committed",
+      "Invoiced",
+      "Paid",
+      "Accruals",
+      "Headroom",
+      "EAC",
+      "Variance",
+      "Utilisation",
     ];
 
-    const rows = financeData.projects.map(p => [
+    const rows = financeData.projects.map((p) => [
       p.projectName,
       p.brand,
       p.region,
@@ -233,12 +229,15 @@ export default function userFinancePage() {
       p.utilisation,
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `finance-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `finance-report-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
 
@@ -265,7 +264,7 @@ export default function userFinancePage() {
 
   const summary = financeData?.summary;
   const totals = financeData?.portfolioTotals;
-    
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminSidebar

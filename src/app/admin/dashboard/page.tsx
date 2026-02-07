@@ -8,6 +8,8 @@ import AdminHeader from "@/components/AdminHeader";
 import ScopeWorkflowArchitecture from "@/components/ScopeWorkflowArchitecture";
 import BrandManagement from "@/components/BrandManagement";
 import ThreadsSection from "@/components/ThreadsSection";
+import BrandsTask from "@/components/BrandsTask";
+import TaskDetailModal from "@/components/TaskDetailModal";
 
 // ==================== Types ====================
 interface ProjectStats {
@@ -34,6 +36,21 @@ interface Brand {
 
 interface DashboardStats {
   projectStats: ProjectStats;
+}
+
+interface DashboardTask {
+  _id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate?: string;
+  progress: number;
+  assignees: any[];
+  brand: string;
+  projectName: string;
+  projectId: string;
+  category: "upcoming" | "overdue" | "completed";
 }
 
 type ChangeType = "positive" | "negative" | "neutral";
@@ -80,6 +97,16 @@ export default function AdminDashboard() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Task modal state
+  const [selectedTask, setSelectedTask] = useState<DashboardTask | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "details" | "comments" | "activity"
+  >("details");
+  const [comments, setComments] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -148,6 +175,55 @@ export default function AdminDashboard() {
     fetchBrands();
   };
 
+  // Handle task click
+  const handleTaskClick = async (task: DashboardTask) => {
+    router.push(`/admin/projects/${task.projectId}/tasks?taskId=${task._id}`);
+  };
+
+  const handleTaskModalClose = () => {
+    setIsTaskModalOpen(false);
+    setSelectedTask(null);
+    setActiveTab("details");
+    setComments([]);
+    setActivityLogs([]);
+    setNewComment("");
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !selectedTask) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/tasks/${selectedTask._id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: newComment }),
+        },
+      );
+
+      if (response.ok) {
+        setNewComment("");
+        const commentsRes = await fetch(
+          `${API_URL}/api/tasks/${selectedTask._id}/comments`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        if (commentsRes.ok) {
+          const commentsData = await commentsRes.json();
+          setComments(commentsData);
+        }
+      }
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
   if (!isVerified || loading) {
     return <FitoutLoadingSpinner />;
   }
@@ -213,7 +289,12 @@ export default function AdminDashboard() {
           />
         </div>
 
-        {/* Scope and Workflow Architecture - NEW COMPONENT */}
+        {/*Brands Task Widget*/}
+        <div className="mb-8">
+          <BrandsTask onTaskClick={handleTaskClick} />
+        </div>
+
+        {/* Scope and Workflow Architecture */}
         <div className="mb-8">
           <ScopeWorkflowArchitecture
             onRefresh={handleRefresh}
@@ -264,6 +345,23 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          isOpen={isTaskModalOpen}
+          onClose={handleTaskModalClose}
+          task={selectedTask as any}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          comments={comments}
+          activityLogs={activityLogs}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          onAddComment={handleAddComment}
+          canEdit={true}
+        />
+      )}
     </div>
   );
 }
