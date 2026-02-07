@@ -17,6 +17,7 @@ import { InsightsContainer } from "@/components/InsightsComponents";
 import { DeadlinesContainer } from "@/components/DeadlineComponents";
 import { ActivityContainer } from "@/components/ActivityComponents";
 import CalendarWidget from "@/components/CalendarWidget";
+import { hasPermission } from "@/utils/permissions";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -33,20 +34,6 @@ interface RoleData {
   name: string;
   permissions: Permission[];
 }
-
-const hasPermission = (
-  permissionId: string,
-  permissions: Permission[],
-): boolean => {
-  const check = (perms: Permission[]): boolean => {
-    for (const perm of perms) {
-      if (perm.id === permissionId && perm.checked) return true;
-      if (perm.children && check(perm.children)) return true;
-    }
-    return false;
-  };
-  return check(permissions);
-};
 
 export default function UserProjectOverviewPage() {
   const router = useRouter();
@@ -88,8 +75,8 @@ export default function UserProjectOverviewPage() {
 
       if (response.ok) {
         const data = await response.json();
-          setRoleData(data);
-          const permissions = data.permissions;
+        setRoleData(data);
+        const permissions = data.permissions;
 
         if (!hasPermission("projects-view-details-overview", permissions)) {
           alert("You do not have permission to access Overview.");
@@ -215,12 +202,21 @@ export default function UserProjectOverviewPage() {
     );
   }
 
-const permissions = roleData.permissions;
-const canViewTasks = hasPermission("projects-view-details-task", permissions);
-const canViewBudget = hasPermission("projects-view-details-budget", permissions);
-const canViewDocuments = hasPermission("projects-view-details-documents", permissions);
-const canViewTeam = hasPermission("projects-view-details-team", permissions);
-  const canViewOverview = hasPermission("projects-view-details-overview", permissions);
+  const permissions = roleData.permissions;
+  const canViewTasks = hasPermission("projects-view-details-task", permissions);
+  const canViewBudget = hasPermission(
+    "projects-view-details-budget",
+    permissions,
+  );
+  const canViewDocuments = hasPermission(
+    "projects-view-details-documents",
+    permissions,
+  );
+  const canViewTeam = hasPermission("projects-view-details-team", permissions);
+  const canViewOverview = hasPermission(
+    "projects-view-details-overview",
+    permissions,
+  );
   const canAddCalendarEvent = hasPermission(
     "projects-calendar-add",
     permissions,

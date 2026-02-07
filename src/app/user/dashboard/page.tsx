@@ -9,6 +9,8 @@ import AdminSidebar from "@/components/AdminSidebar";
 import ScopeWorkflowArchitecture from "@/components/ScopeWorkflowArchitecture";
 import BrandManagement from "@/components/BrandManagement";
 import ThreadsSection from "@/components/ThreadsSection";
+import MyTask from "@/components/MyTask";
+import TaskDetailModal from "@/components/TaskDetailModal";
 import { hasPermission } from "@/utils/permissions";
 
 const API_URL =
@@ -46,6 +48,21 @@ interface Project {
   brand: string;
 }
 
+interface DashboardTask {
+  _id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  dueDate?: string;
+  progress: number;
+  assignees: any[];
+  brand: string;
+  projectName: string;
+  projectId: string;
+  category: "upcoming" | "overdue" | "completed";
+}
+
 export default function UserDashboard() {
   const router = useRouter();
   const [isVerified, setIsVerified] = useState(false);
@@ -57,6 +74,14 @@ export default function UserDashboard() {
   const [userAssignedProjects, setUserAssignedProjects] = useState<string[]>(
     [],
   );
+  const [selectedTask, setSelectedTask] = useState<DashboardTask | null>(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "details" | "comments" | "activity"
+  >("details");
+  const [comments, setComments] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -160,6 +185,81 @@ export default function UserDashboard() {
     // ✅ FIXED: No need to call fetchUserStats - it's calculated in fetchUserBrandsFromProjects
   };
 
+  const handleTaskClick = async (task: DashboardTask) => {
+    setSelectedTask(task);
+    setIsTaskModalOpen(true);
+    setActiveTab("details");
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const [commentsRes, logsRes] = await Promise.all([
+        fetch(`${API_URL}/api/tasks/${task._id}/comments`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_URL}/api/tasks/${task._id}/activity`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (commentsRes.ok) {
+        const commentsData = await commentsRes.json();
+        setComments(commentsData);
+      }
+
+      if (logsRes.ok) {
+        const logsData = await logsRes.json();
+        setActivityLogs(logsData);
+      }
+    } catch (error) {
+      console.error("Error fetching task details:", error);
+    }
+  };
+
+  const handleTaskModalClose = () => {
+    setIsTaskModalOpen(false);
+    setSelectedTask(null);
+    setActiveTab("details");
+    setComments([]);
+    setActivityLogs([]);
+    setNewComment("");
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !selectedTask) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/tasks/${selectedTask._id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: newComment }),
+        },
+      );
+
+      if (response.ok) {
+        setNewComment("");
+        const commentsRes = await fetch(
+          `${API_URL}/api/tasks/${selectedTask._id}/comments`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        if (commentsRes.ok) {
+          const commentsData = await commentsRes.json();
+          setComments(commentsData);
+        }
+      }
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
   if (!isVerified || loading) {
     return <FitoutLoadingSpinner />;
   }
@@ -187,7 +287,8 @@ export default function UserDashboard() {
   const canEditBrand = hasPermission("dashboard-brand-edit", permissions);
   const canDeleteBrand = hasPermission("dashboard-brand-delete", permissions);
   const canAddUser = hasPermission("dashboard-brand-view-adduser", permissions);
-  const canViewThreads = hasPermission("view-threads", permissions);
+  const canViewThreads = hasPermission("dashboard-threads", permissions);
+  const canAddThread = hasPermission("dashboard-add-threads", permissions);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -252,6 +353,11 @@ export default function UserDashboard() {
           </div>
         </div>
 
+        {/* My Task */}
+        <div className="mb-8">
+          <MyTask onTaskClick={handleTaskClick} />
+        </div>
+
         {/* Scope Workflow Architecture */}
         {canViewScope && (
           <div className="mb-8">
@@ -266,7 +372,7 @@ export default function UserDashboard() {
         )}
 
         {/* Brand Management */}
-        {canViewBrandManagement ? (
+        {canViewBrandManagement && (
           <div className="mb-8">
             <BrandManagement
               brands={userBrands}
@@ -281,55 +387,61 @@ export default function UserDashboard() {
               canAddUser={canAddUser}
             />
           </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Brand Management
-            </h2>
-            <div className="text-center py-12">
-              <p className="text-gray-500">Access restricted</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Contact administrator for brand management access
-              </p>
-            </div>
-          </div>
         )}
 
         {/* Threads*/}
-        {selectedBrand ? (
-          <ThreadsSection
-            brandId={selectedBrand._id}
-            brandName={selectedBrand.name}
-            canAddThread={canViewThreads}
-            userRole="user"
-            userAssignedProjects={userAssignedProjects}
-          />
-        ) : userBrands.length > 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Threads
-            </h2>
-            <div className="text-center py-12">
-              <p className="text-gray-500">Select a brand to view threads</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Click on a brand card above to see its threads
-              </p>
+        {canViewThreads &&
+          (selectedBrand ? (
+            <ThreadsSection
+              brandId={selectedBrand._id}
+              brandName={selectedBrand.name}
+              canAddThread={canAddThread}
+              userRole="user"
+              userAssignedProjects={userAssignedProjects}
+            />
+          ) : userBrands.length > 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Threads
+              </h2>
+              <div className="text-center py-12">
+                <p className="text-gray-500">Select a brand to view threads</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Click on a brand card above to see its threads
+                </p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Threads
-            </h2>
-            <div className="text-center py-12">
-              <p className="text-gray-500">No brands assigned</p>
-              <p className="text-sm text-gray-400 mt-2">
-                You'll see threads here once assigned to projects
-              </p>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Threads
+              </h2>
+              <div className="text-center py-12">
+                <p className="text-gray-500">No brands assigned</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  You'll see threads here once assigned to projects
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          ))}
       </main>
+
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          isOpen={isTaskModalOpen}
+          onClose={handleTaskModalClose}
+          task={selectedTask as any}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          comments={comments}
+          activityLogs={activityLogs}
+          newComment={newComment}
+          setNewComment={setNewComment}
+          onAddComment={handleAddComment}
+          canEdit={false}
+        />
+      )}
     </div>
   );
 }

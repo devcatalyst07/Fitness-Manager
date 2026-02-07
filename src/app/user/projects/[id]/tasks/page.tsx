@@ -14,6 +14,7 @@ import TaskListView from "@/components/TaskListView";
 import TaskBoardView from "@/components/TaskBoardView";
 import { TimelineContainer } from "@/components/TimelineComponents";
 import { useTaskManagement } from "@/hooks/useTaskManagement";
+import { hasPermission } from "@/utils/permissions";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -30,20 +31,6 @@ interface RoleData {
   name: string;
   permissions: Permission[];
 }
-
-const hasPermission = (
-  permissionId: string,
-  permissions: Permission[],
-): boolean => {
-  const check = (perms: Permission[]): boolean => {
-    for (const perm of perms) {
-      if (perm.id === permissionId && perm.checked) return true;
-      if (perm.children && check(perm.children)) return true;
-    }
-    return false;
-  };
-  return check(permissions);
-};
 
 export default function UserProjectTasksPage() {
   const router = useRouter();
@@ -102,7 +89,7 @@ export default function UserProjectTasksPage() {
     const roleId = localStorage.getItem("roleId");
 
     // console.log("Auth check:", { token, role, roleId });
-    
+
     if (!token || role !== "user") {
       // console.log("Redirecting to / — auth failed", { token, role, roleId });
       localStorage.removeItem("token");
@@ -130,13 +117,13 @@ export default function UserProjectTasksPage() {
         // console.log("Role fetch response ok:", response.ok, "data:", data);
         setRoleData(data);
         const permissions = data.permissions;
-          
-          // console.log("🔐 Role Data:", data);
-          // console.log("🔍 Permissions:", data.permissions);
-          // console.log(
-          //   "✅ Has Task Permission:",
-          //   hasPermission("projects-view-details-task", data.permissions),
-          // );
+
+        // console.log("🔐 Role Data:", data);
+        // console.log("🔍 Permissions:", data.permissions);
+        // console.log(
+        //   "✅ Has Task Permission:",
+        //   hasPermission("projects-view-details-task", data.permissions),
+        // );
 
         if (!hasPermission("projects-view-details-task", permissions)) {
           alert("You do not have permission to access Tasks.");
