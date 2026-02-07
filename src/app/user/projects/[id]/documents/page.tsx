@@ -6,6 +6,7 @@ import { ArrowLeft, Upload, Search, FileText, Eye, Trash2 } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import { hasPermission } from "@/utils/permissions";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -35,20 +36,6 @@ interface RoleData {
   name: string;
   permissions: Permission[];
 }
-
-const hasPermission = (
-  permissionId: string,
-  permissions: Permission[],
-): boolean => {
-  const check = (perms: Permission[]): boolean => {
-    for (const perm of perms) {
-      if (perm.id === permissionId && perm.checked) return true;
-      if (perm.children && check(perm.children)) return true;
-    }
-    return false;
-  };
-  return check(permissions);
-};
 
 export default function ProjectDocumentsPage() {
   const router = useRouter();

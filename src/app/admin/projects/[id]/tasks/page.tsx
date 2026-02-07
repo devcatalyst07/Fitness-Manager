@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Plus, Settings } from "lucide-react";
 
 // Components
@@ -24,9 +24,13 @@ import { useTaskManagement } from "@/hooks/useTaskManagement";
 export default function ProjectTasksPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const hasOpenedFromQuery = useRef(false);
 
   // View Mode State - add 'phase' as an option
-  const [viewMode, setViewMode] = useState<"list" | "board" | "timeline" | "phase">(
+  const [viewMode, setViewMode] = useState<
+    "list" | "board" | "timeline" | "phase"
+  >(
     "phase", // Default to phase view
   );
   const [isEditing, setIsEditing] = useState(false);
@@ -77,6 +81,21 @@ export default function ProjectTasksPage() {
     updatePhase,
     deletePhase,
   } = useTaskManagement(params.id as string);
+
+  useEffect(() => {
+    const taskId = searchParams.get("taskId");
+
+    if (loading || !taskId || hasOpenedFromQuery.current) return;
+
+    const matchedTask = tasks.find((task) => task._id === taskId);
+
+    if (matchedTask) {
+      openTaskDetails(matchedTask);
+    }
+
+    hasOpenedFromQuery.current = true;
+    router.replace(`/admin/projects/${params.id}/tasks`);
+  }, [searchParams, tasks, loading, openTaskDetails, router, params.id]);
 
   // Loading State
   if (!isVerified || loading) {

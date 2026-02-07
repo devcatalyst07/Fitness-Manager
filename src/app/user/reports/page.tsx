@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { FileDown, FileText, Folder, Download, Info } from 'lucide-react';
-import AdminSidebar from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
-import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { FileDown, FileText, Folder, Download, Info } from "lucide-react";
+import AdminSidebar from "@/components/AdminSidebar";
+import AdminHeader from "@/components/AdminHeader";
+import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import { hasPermission } from "@/utils/permissions";
 import {
   generatePortfolioPDF,
   generateProjectPDF,
@@ -13,9 +14,10 @@ import {
   type PortfolioReportData,
   type ProjectReportData,
   type BrandReportData,
-} from '@/utils/pdfGenerator';
+} from "@/utils/pdfGenerator";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface Project {
   _id: string;
@@ -42,23 +44,9 @@ interface RoleData {
   permissions: Permission[];
 }
 
-const hasPermission = (
-  permissionId: string,
-  permissions: Permission[],
-): boolean => {
-  const check = (perms: Permission[]): boolean => {
-    for (const perm of perms) {
-      if (perm.id === permissionId && perm.checked) return true;
-      if (perm.children && check(perm.children)) return true;
-    }
-    return false;
-  };
-  return check(permissions);
-};
-
 export default function userReportsPage() {
   const router = useRouter();
-  const [pathname, setPathname] = useState('/user/reports');
+  const [pathname, setPathname] = useState("/user/reports");
   const [isVerified, setIsVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [roleData, setRoleData] = useState<RoleData | null>(null);
@@ -120,14 +108,14 @@ export default function userReportsPage() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       const [projectsRes, brandsRes] = await Promise.all([
         fetch(`${API_URL}/api/admin/reports/projects`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${API_URL}/api/admin/reports/brands`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
 
@@ -141,56 +129,62 @@ export default function userReportsPage() {
         setBrands(brandsData);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const downloadPortfolioCSV = async () => {
-    setGeneratingReport('portfolio-csv');
+    setGeneratingReport("portfolio-csv");
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/reports/portfolio/csv`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/portfolio/csv`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `portfolio-report-${Date.now()}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
       } else {
-        alert('Failed to generate CSV report');
+        alert("Failed to generate CSV report");
       }
     } catch (error) {
-      console.error('Download CSV error:', error);
-      alert('Failed to download CSV report');
+      console.error("Download CSV error:", error);
+      alert("Failed to download CSV report");
     } finally {
       setGeneratingReport(null);
     }
   };
 
   const generatePortfolioPDFReport = async () => {
-    setGeneratingReport('portfolio-pdf');
+    setGeneratingReport("portfolio-pdf");
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/reports/portfolio/pdf-data`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/portfolio/pdf-data`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const data: PortfolioReportData = await response.json();
         generatePortfolioPDF(data);
       } else {
-        alert('Failed to generate PDF report');
+        alert("Failed to generate PDF report");
       }
     } catch (error) {
-      console.error('Generate PDF error:', error);
-      alert('Failed to generate PDF report');
+      console.error("Generate PDF error:", error);
+      alert("Failed to generate PDF report");
     } finally {
       setGeneratingReport(null);
     }
@@ -199,25 +193,28 @@ export default function userReportsPage() {
   const downloadProjectCSV = async (projectId: string, projectName: string) => {
     setGeneratingReport(`project-csv-${projectId}`);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/reports/project/${projectId}/csv`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/project/${projectId}/csv`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `${projectName}-report-${Date.now()}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
       } else {
-        alert('Failed to generate CSV report');
+        alert("Failed to generate CSV report");
       }
     } catch (error) {
-      console.error('Download CSV error:', error);
-      alert('Failed to download CSV report');
+      console.error("Download CSV error:", error);
+      alert("Failed to download CSV report");
     } finally {
       setGeneratingReport(null);
     }
@@ -226,20 +223,23 @@ export default function userReportsPage() {
   const generateProjectPDFReport = async (projectId: string) => {
     setGeneratingReport(`project-pdf-${projectId}`);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/reports/project/${projectId}/pdf-data`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/project/${projectId}/pdf-data`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const data: ProjectReportData = await response.json();
         generateProjectPDF(data);
       } else {
-        alert('Failed to generate PDF report');
+        alert("Failed to generate PDF report");
       }
     } catch (error) {
-      console.error('Generate PDF error:', error);
-      alert('Failed to generate PDF report');
+      console.error("Generate PDF error:", error);
+      alert("Failed to generate PDF report");
     } finally {
       setGeneratingReport(null);
     }
@@ -248,25 +248,28 @@ export default function userReportsPage() {
   const downloadBrandCSV = async (brandName: string) => {
     setGeneratingReport(`brand-csv-${brandName}`);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/csv`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/csv`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
         a.download = `${brandName}-report-${Date.now()}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
       } else {
-        alert('Failed to generate CSV report');
+        alert("Failed to generate CSV report");
       }
     } catch (error) {
-      console.error('Download CSV error:', error);
-      alert('Failed to download CSV report');
+      console.error("Download CSV error:", error);
+      alert("Failed to download CSV report");
     } finally {
       setGeneratingReport(null);
     }
@@ -275,20 +278,23 @@ export default function userReportsPage() {
   const generateBrandPDFReport = async (brandName: string) => {
     setGeneratingReport(`brand-pdf-${brandName}`);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/pdf-data`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/pdf-data`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         const data: BrandReportData = await response.json();
         generateBrandPDF(data);
       } else {
-        alert('Failed to generate PDF report');
+        alert("Failed to generate PDF report");
       }
     } catch (error) {
-      console.error('Generate PDF error:', error);
-      alert('Failed to generate PDF report');
+      console.error("Generate PDF error:", error);
+      alert("Failed to generate PDF report");
     } finally {
       setGeneratingReport(null);
     }
@@ -296,22 +302,22 @@ export default function userReportsPage() {
 
   if (!isVerified || loading) {
     return <FitoutLoadingSpinner />;
-    }
-    
-    if (!roleData) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              No Permissions
-            </h2>
-            <p className="text-gray-600">Contact administrator.</p>
-          </div>
-        </div>
-      );
-    }
+  }
 
-    const permissions = roleData.permissions;
+  if (!roleData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Permissions
+          </h2>
+          <p className="text-gray-600">Contact administrator.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const permissions = roleData.permissions;
 
   return (
     <div className="min-h-screen bg-gray-50">

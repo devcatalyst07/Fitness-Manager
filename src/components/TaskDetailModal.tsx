@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, Calendar, Flag, Users, FileText, Clock, Send } from "lucide-react";
 import { Task, Comment, ActivityLog, TeamMember } from "@/types/task.types";
 import {
@@ -27,7 +27,7 @@ interface TaskDetailModalProps {
   selectedFiles?: File[];
   onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveFile?: (index: number) => void;
-  canEdit?: boolean; // ✅ ADD THIS - Permission to edit task
+  canEdit?: boolean;
 }
 
 export default function TaskDetailModal({
@@ -52,13 +52,6 @@ export default function TaskDetailModal({
 }: TaskDetailModalProps) {
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
 
-  if (!isOpen || !task) return null;
-
-  const handleEdit = () => {
-    setEditedTask(task);
-    setIsEditing?.(true);
-  };
-
   const handleSave = () => {
     if (onUpdateTask && editedTask._id) {
       onUpdateTask(editedTask._id, editedTask);
@@ -70,6 +63,15 @@ export default function TaskDetailModal({
     setEditedTask({});
     setIsEditing?.(false);
   };
+
+  useEffect(() => {
+    if (isOpen && task && canEdit && setIsEditing) {
+      setEditedTask(task);
+      setIsEditing(true);
+    }
+  }, [isOpen, task, canEdit, setIsEditing]);
+
+  if (!isOpen || !task) return null;
 
   const currentTask = isEditing ? editedTask : task;
 
@@ -111,14 +113,6 @@ export default function TaskDetailModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {!isEditing && setIsEditing && canEdit && (
-                <button
-                  onClick={handleEdit}
-                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-all text-sm font-medium"
-                >
-                  Edit
-                </button>
-              )}
               <button
                 onClick={onClose}
                 className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-all"

@@ -36,23 +36,27 @@ export const hasPermission = (
   permissions: Permission[],
 ): boolean => {
   // Helper function to recursively search through permission tree
-  const checkPermission = (perms: Permission[]): boolean => {
+  const checkPermission = (
+    perms: Permission[],
+    ancestorsChecked: boolean,
+  ): boolean => {
     for (const perm of perms) {
+      const isAllowed = ancestorsChecked && perm.checked;
       // Direct match - check if this permission is checked
       if (perm.id === permissionId) {
-        return perm.checked;
+        return isAllowed;
       }
 
       // Recursively check children
       if (perm.children && perm.children.length > 0) {
-        const found = checkPermission(perm.children);
+        const found = checkPermission(perm.children, isAllowed);
         if (found) return true;
       }
     }
     return false;
   };
 
-  return checkPermission(permissions);
+  return checkPermission(permissions, true);
 };
 
 /**

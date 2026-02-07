@@ -111,26 +111,21 @@ function EditProfileModal({
   };
 
   const handleSubmit = async () => {
-    if (
-      !form.firstName.trim() ||
-      !form.lastName.trim() ||
-      !form.username.trim() ||
-      !form.email.trim()
-    ) {
-      setError("All fields are required.");
-      return;
-    }
     setIsLoading(true);
     setError("");
     try {
       const token = localStorage.getItem("token");
+      const firstName = form.firstName.trim() || profile.firstName;
+      const lastName = form.lastName.trim() || profile.lastName;
+      const username = form.username.trim() || profile.username;
+      const email = form.email.trim() || profile.email;
 
       // Build FormData — text fields + optional file
       const formData = new FormData();
-      formData.append("firstName", form.firstName.trim());
-      formData.append("lastName", form.lastName.trim());
-      formData.append("username", form.username.trim());
-      formData.append("email", form.email.trim());
+      if (firstName) formData.append("firstName", firstName);
+      if (lastName) formData.append("lastName", lastName);
+      if (username) formData.append("username", username);
+      if (email) formData.append("email", email);
       if (selectedFile) {
         formData.append("profilePhoto", selectedFile); // multer picks this up
       }
