@@ -1,39 +1,42 @@
-import React, { useState } from "react";
-import { X, Calendar, Flag, Users, FileText, Clock, Send } from "lucide-react";
-import { Task, Comment, ActivityLog, TeamMember } from "@/types/task.types";
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Flag, Users, FileText, MessageSquare, Activity, Clock, Layers, Link2, AlertCircle, Edit2, Save } from 'lucide-react';
+import { Task, Comment, ActivityLog, Phase } from '@/types/task.types';
 import {
   getPriorityBadge,
   getStatusBadge,
   formatDate,
-  formatRelativeTime,
   getInitials,
-} from "@/utils/taskHelpers";
+} from '@/utils/taskHelpers';
 
 interface TaskDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
-  activeTab: "details" | "comments" | "activity";
-  setActiveTab: (tab: "details" | "comments" | "activity") => void;
+  onUpdate: (taskId: string, updates: Partial<Task>) => void;
+  onDelete: (taskId: string) => void;
+  activeTab: 'details' | 'comments' | 'activity';
+  setActiveTab: (tab: 'details' | 'comments' | 'activity') => void;
   comments: Comment[];
   activityLogs: ActivityLog[];
   newComment: string;
   setNewComment: (comment: string) => void;
   onAddComment: () => void;
-  onUpdateTask?: (taskId: string, data: Partial<Task>) => void;
-  teamMembers?: TeamMember[];
-  isEditing?: boolean;
-  setIsEditing?: (editing: boolean) => void;
-  selectedFiles?: File[];
-  onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onRemoveFile?: (index: number) => void;
-  canEdit?: boolean; // ✅ ADD THIS - Permission to edit task
+  selectedFiles: File[];
+  setSelectedFiles: (files: File[]) => void;
+  handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  uploadingFiles: boolean;
+  phases: Phase[];
+  allTasks: Task[];
 }
 
 export default function TaskDetailModal({
   isOpen,
   onClose,
   task,
+  onUpdate,
+  onDelete,
   activeTab,
   setActiveTab,
   comments,
@@ -41,87 +44,162 @@ export default function TaskDetailModal({
   newComment,
   setNewComment,
   onAddComment,
-  onUpdateTask,
-  teamMembers = [],
-  isEditing = false,
-  setIsEditing,
-  selectedFiles = [],
-  onFileSelect,
-  onRemoveFile,
-  canEdit = false, // ✅ ADD THIS - Default false
+  selectedFiles,
+  setSelectedFiles,
+  handleFileSelect,
+  uploadingFiles,
+  phases,
+  allTasks,
 }: TaskDetailModalProps) {
+  const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
+
+  useEffect(() => {
+    if (task) {
+      setEditedTask({
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        taskType: task.taskType || 'Task',
+        duration: task.duration || 1,
+        startDate: task.startDate,
+        dueDate: task.dueDate,
+        progress: task.progress,
+        phaseId: task.phaseId,
+        dependencies: task.dependencies || [],
+      });
+    }
+  }, [task]);
 
   if (!isOpen || !task) return null;
 
-  const handleEdit = () => {
-    setEditedTask(task);
-    setIsEditing?.(true);
-  };
-
   const handleSave = () => {
-    if (onUpdateTask && editedTask._id) {
-      onUpdateTask(editedTask._id, editedTask);
-      setIsEditing?.(false);
+    if (editedTask.taskType === 'Milestone' && (editedTask.duration || 0) > 1) {
+      alert('Milestone tasks can have a maximum duration of 1 day');
+      return;
     }
+
+    onUpdate(task._id, editedTask);
+    setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    setEditedTask({});
-    setIsEditing?.(false);
+  const handleAddDependency = () => {
+    setEditedTask({
+      ...editedTask,
+      dependencies: [
+        ...(editedTask.dependencies || []),
+        { taskId: '', type: 'FS' as const }
+      ]
+    });
   };
 
-  const currentTask = isEditing ? editedTask : task;
+  const handleRemoveDependency = (index: number) => {
+    setEditedTask({
+      ...editedTask,
+      dependencies: (editedTask.dependencies || []).filter((_, i) => i !== index)
+    });
+  };
+
+  const handleDependencyChange = (
+    index: number,
+    field: 'taskId' | 'type',
+    value: string
+  ) => {
+    const updated = [...(editedTask.dependencies || [])];
+    if (field === 'taskId') {
+      updated[index].taskId = value;
+    } else {
+      updated[index].type = value as 'FS' | 'SS';
+    }
+    setEditedTask({
+      ...editedTask,
+      dependencies: updated
+    });
+  };
+
+  const getTaskTypeBadge = (taskType: string) => {
+    const badges: Record<string, string> = {
+      Task: 'bg-blue-100 text-blue-700 border-blue-200',
+      Deliverable: 'bg-purple-100 text-purple-700 border-purple-200',
+      Milestone: 'bg-green-100 text-green-700 border-green-200',
+    };
+    return badges[taskType] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const getTaskTypeIcon = (taskType: string) => {
+    const icons: Record<string, string> = {
+      Task: '📋',
+      Deliverable: '📦',
+      Milestone: '🎯',
+    };
+    return icons[taskType] || '📋';
+  };
+
+  const getDependencyTypeLabel = (type: string) => {
+    return type === 'FS' ? 'Finish → Start' : 'Start → Start';
+  };
+
+  const getAvailableTasks = (currentIndex: number) => {
+    const selectedTaskIds = (editedTask.dependencies || [])
+      .filter((_, i) => i !== currentIndex)
+      .map(d => d.taskId);
+    
+    return allTasks.filter(t => 
+      t._id !== task._id && !selectedTaskIds.includes(t._id)
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-5">
+      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
+        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="flex-1">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedTask.title || ""}
-                    onChange={(e) =>
-                      setEditedTask({ ...editedTask, title: e.target.value })
-                    }
-                    className="text-xl font-semibold text-gray-900 px-3 py-1 rounded border border-gray-300 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {task.title}
-                  </h2>
-                )}
-                <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">{getTaskTypeIcon(task.taskType || 'Task')}</span>
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-white">
+                  {task.title}
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(currentTask.status || task.status)}`}
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getTaskTypeBadge(task.taskType || 'Task')}`}
                   >
-                    {currentTask.status || task.status}
+                    {task.taskType || 'Task'}
                   </span>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityBadge(currentTask.priority || task.priority)}`}
-                  >
-                    {currentTask.priority || task.priority}
-                  </span>
+                  {task.duration && (
+                    <span className="text-white/80 text-xs flex items-center gap-1">
+                      <Clock size={12} />
+                      {task.duration} working day{task.duration !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {!isEditing && setIsEditing && canEdit && (
+              {!isEditing ? (
                 <button
-                  onClick={handleEdit}
-                  className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 rounded-lg transition-all text-sm font-medium"
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all flex items-center gap-2"
                 >
+                  <Edit2 size={16} />
                   Edit
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-all flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  Save
                 </button>
               )}
               <button
                 onClick={onClose}
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded-lg transition-all"
+                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all"
               >
                 <X size={24} />
               </button>
@@ -129,87 +207,88 @@ export default function TaskDetailModal({
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex gap-1 px-6">
+          <div className="flex px-8">
             <button
-              onClick={() => setActiveTab("details")}
-              className={`px-4 py-3 text-sm font-medium transition-all ${
-                activeTab === "details"
-                  ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                  : "text-gray-600 hover:text-gray-900"
+              onClick={() => setActiveTab('details')}
+              className={`px-6 py-4 font-medium transition-all ${
+                activeTab === 'details'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
+              <FileText size={18} className="inline mr-2" />
               Details
             </button>
             <button
-              onClick={() => setActiveTab("comments")}
-              className={`px-4 py-3 text-sm font-medium transition-all ${
-                activeTab === "comments"
-                  ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                  : "text-gray-600 hover:text-gray-900"
+              onClick={() => setActiveTab('comments')}
+              className={`px-6 py-4 font-medium transition-all ${
+                activeTab === 'comments'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
+              <MessageSquare size={18} className="inline mr-2" />
               Comments ({comments.length})
             </button>
             <button
-              onClick={() => setActiveTab("activity")}
-              className={`px-4 py-3 text-sm font-medium transition-all ${
-                activeTab === "activity"
-                  ? "text-blue-600 border-b-2 border-blue-600 bg-white"
-                  : "text-gray-600 hover:text-gray-900"
+              onClick={() => setActiveTab('activity')}
+              className={`px-6 py-4 font-medium transition-all ${
+                activeTab === 'activity'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Activity ({activityLogs.length})
+              <Activity size={18} className="inline mr-2" />
+              Activity
             </button>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === "details" && (
+        <div className="flex-1 overflow-y-auto p-8">
+          {activeTab === 'details' && (
             <div className="space-y-6">
-              {/* Description */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <FileText size={16} />
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Task Title
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedTask.title || ''}
+                    onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <p className="text-gray-900 font-medium">{task.title}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Description
                 </label>
                 {isEditing ? (
                   <textarea
-                    value={editedTask.description || ""}
-                    onChange={(e) =>
-                      setEditedTask({
-                        ...editedTask,
-                        description: e.target.value,
-                      })
-                    }
+                    value={editedTask.description || ''}
+                    onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 ) : (
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-xl">
-                    {task.description || "No description provided"}
-                  </p>
+                  <p className="text-gray-700">{task.description || 'No description provided'}</p>
                 )}
               </div>
 
-              {/* Status & Priority */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Flag size={16} />
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Status
                   </label>
                   {isEditing ? (
                     <select
-                      value={editedTask.status || task.status}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          status: e.target.value as any,
-                        })
-                      }
+                      value={editedTask.status || ''}
+                      onChange={(e) => setEditedTask({ ...editedTask, status: e.target.value as any })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Backlog">Backlog</option>
@@ -218,234 +297,276 @@ export default function TaskDetailModal({
                       <option value="Done">Done</option>
                     </select>
                   ) : (
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded-xl">
+                    <span
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getStatusBadge(task.status)}`}
+                    >
                       {task.status}
-                    </p>
+                    </span>
                   )}
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Flag size={16} />
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Priority
                   </label>
                   {isEditing ? (
                     <select
-                      value={editedTask.priority || task.priority}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          priority: e.target.value as any,
-                        })
-                      }
+                      value={editedTask.priority || ''}
+                      onChange={(e) => setEditedTask({ ...editedTask, priority: e.target.value as any })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Low">🟢 Low</option>
-                      <option value="Medium">🟡 Medium</option>
-                      <option value="High">🟠 High</option>
-                      <option value="Critical">🔴 Critical</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
                     </select>
                   ) : (
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded-xl">
-                      {task.priority}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Calendar size={16} />
-                    Start Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={
-                        editedTask.startDate
-                          ? editedTask.startDate.split("T")[0]
-                          : task.startDate
-                            ? task.startDate.split("T")[0]
-                            : ""
-                      }
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          startDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded-xl">
-                      {formatDate(task.startDate)}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Calendar size={16} />
-                    Due Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={
-                        editedTask.dueDate
-                          ? editedTask.dueDate.split("T")[0]
-                          : task.dueDate
-                            ? task.dueDate.split("T")[0]
-                            : ""
-                      }
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          dueDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-700 bg-gray-50 p-3 rounded-xl">
-                      {formatDate(task.dueDate)}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Assignees */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Users size={16} />
-                  Assignees
-                </label>
-
-                {isEditing ? (
-                  <div>
-                    {/* Add assignee dropdown */}
-                    <select
-                      onChange={(e) => {
-                        const selectedMember = teamMembers?.find(
-                          (member) => member.userId.email === e.target.value,
-                        );
-
-                        if (selectedMember) {
-                          const currentAssignees =
-                            editedTask.assignees || task.assignees || [];
-                          const alreadyAssigned = currentAssignees.some(
-                            (a) => a.email === selectedMember.userId.email,
-                          );
-
-                          if (alreadyAssigned) {
-                            alert("This member is already assigned!");
-                            return;
-                          }
-
-                          const newAssignee = {
-                            email: selectedMember.userId.email,
-                            name: selectedMember.userId.name,
-                          };
-
-                          setEditedTask({
-                            ...editedTask,
-                            assignees: [...currentAssignees, newAssignee],
-                          });
-                        }
-
-                        e.target.value = "";
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                    <span
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getPriorityBadge(task.priority)}`}
                     >
-                      <option value="">+ Add team member</option>
-                      {teamMembers
-                        ?.filter((member) => member.status === "active")
-                        .map((member) => (
-                          <option key={member._id} value={member.userId.email}>
-                            {member.userId.name}
+                      {task.priority}
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Task Type
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={editedTask.taskType || 'Task'}
+                      onChange={(e) => {
+                        const newType = e.target.value as 'Task' | 'Deliverable' | 'Milestone';
+                        setEditedTask({ 
+                          ...editedTask, 
+                          taskType: newType,
+                          duration: newType === 'Milestone' ? 1 : editedTask.duration
+                        });
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="Task">Task</option>
+                      <option value="Deliverable">Deliverable</option>
+                      <option value="Milestone">Milestone</option>
+                    </select>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getTaskTypeBadge(task.taskType || 'Task')}`}
+                    >
+                      {getTaskTypeIcon(task.taskType || 'Task')} {task.taskType || 'Task'}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Phase
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={editedTask.phaseId || ''}
+                      onChange={(e) => setEditedTask({ ...editedTask, phaseId: e.target.value || null })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">No Phase (Unassigned)</option>
+                      {phases
+                        .sort((a, b) => a.order - b.order)
+                        .map((phase) => (
+                          <option key={phase._id} value={phase._id}>
+                            {phase.name}
                           </option>
                         ))}
                     </select>
+                  ) : (
+                    <p className="text-gray-900">
+                      {task.phaseId
+                        ? phases.find((p) => p._id === task.phaseId)?.name || 'Unknown Phase'
+                        : 'No Phase (Unassigned)'}
+                    </p>
+                  )}
+                </div>
 
-                    {/* Display assignees with remove button */}
-                    {(editedTask.assignees || task.assignees) &&
-                    (editedTask.assignees || task.assignees).length > 0 ? (
-                      <div className="space-y-2">
-                        {(editedTask.assignees || task.assignees).map(
-                          (assignee, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                  {getInitials(assignee.name)}
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900">
-                                    {assignee.name}
-                                  </p>
-                                  <p className="text-sm text-gray-600">
-                                    {assignee.email}
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  const currentAssignees =
-                                    editedTask.assignees || task.assignees;
-                                  const updated = currentAssignees.filter(
-                                    (_, i) => i !== idx,
-                                  );
-                                  setEditedTask({
-                                    ...editedTask,
-                                    assignees: updated,
-                                  });
-                                }}
-                                className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
-                              >
-                                <X size={18} />
-                              </button>
-                            </div>
-                          ),
-                        )}
-                      </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Duration (Working Days)
+                  </label>
+                  {isEditing ? (
+                    <div>
+                      <input
+                        type="number"
+                        min="0"
+                        max={editedTask.taskType === 'Milestone' ? 1 : undefined}
+                        value={editedTask.duration || 1}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 0;
+                          const maxValue = editedTask.taskType === 'Milestone' ? 1 : value;
+                          setEditedTask({ ...editedTask, duration: Math.min(value, maxValue) });
+                        }}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      {editedTask.taskType === 'Milestone' && (
+                        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                          <AlertCircle size={12} />
+                          Milestones can have a maximum duration of 1 day
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-900 flex items-center gap-2">
+                      <Clock size={16} className="text-gray-500" />
+                      {task.duration || 1} working day{(task.duration || 1) !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Link2 size={16} className="text-gray-500" />
+                    Dependencies
+                  </label>
+                  {isEditing && (
+                    <button
+                      onClick={handleAddDependency}
+                      className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+
+                {isEditing ? (
+                  <div className="space-y-2">
+                    {(editedTask.dependencies || []).length === 0 ? (
+                      <p className="text-sm text-gray-500">No dependencies</p>
                     ) : (
-                      <p className="text-sm text-gray-500 py-4">
-                        No team members assigned yet
-                      </p>
+                      (editedTask.dependencies || []).map((dep, index) => (
+                        <div key={index} className="flex gap-2 items-center">
+                          <select
+                            value={dep.taskId}
+                            onChange={(e) => handleDependencyChange(index, 'taskId', e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          >
+                            <option value="">-- Select Task --</option>
+                            {getAvailableTasks(index).map((t) => (
+                              <option key={t._id} value={t._id}>
+                                {t.title} ({t.taskType})
+                              </option>
+                            ))}
+                          </select>
+
+                          <select
+                            value={dep.type}
+                            onChange={(e) => handleDependencyChange(index, 'type', e.target.value)}
+                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          >
+                            <option value="FS">Finish→Start</option>
+                            <option value="SS">Start→Start</option>
+                          </select>
+
+                          <button
+                            onClick={() => handleRemoveDependency(index)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {task.assignees && task.assignees.length > 0 ? (
-                      task.assignees.map((assignee, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
-                        >
-                          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                            {getInitials(assignee.name)}
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">
-                            {assignee.name}
-                          </span>
-                        </div>
-                      ))
+                  <div className="space-y-2">
+                    {(!task.dependencies || task.dependencies.length === 0) ? (
+                      <p className="text-sm text-gray-500">No dependencies</p>
                     ) : (
-                      <p className="text-gray-500 text-sm">No assignees</p>
+                      task.dependencies.map((dep, index) => {
+                        const depTask = allTasks.find(t => t._id === dep.taskId);
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                          >
+                            <Link2 size={14} className="text-gray-400" />
+                            <span className="text-sm text-gray-700 flex-1">
+                              {depTask?.title || 'Unknown Task'}
+                            </span>
+                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                              {getDependencyTypeLabel(dep.type)}
+                            </span>
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Progress */}
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Clock size={16} />
-                  Progress: {currentTask.progress || task.progress}%
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Assigned To
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {task.assignees && task.assignees.length > 0 ? (
+                    task.assignees.map((assignee, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
+                      >
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                          {getInitials(assignee.name)}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {assignee.name}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No assignees</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Start Date
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      value={editedTask.startDate || ''}
+                      onChange={(e) => setEditedTask({ ...editedTask, startDate: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">{formatDate(task.startDate)}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Due Date
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      value={editedTask.dueDate || ''}
+                      onChange={(e) => setEditedTask({ ...editedTask, dueDate: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="text-gray-900">{formatDate(task.dueDate)}</p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Progress: {isEditing ? editedTask.progress : task.progress}%
                 </label>
                 {isEditing ? (
                   <div className="flex items-center gap-4">
@@ -453,212 +574,164 @@ export default function TaskDetailModal({
                       type="range"
                       min="0"
                       max="100"
-                      value={editedTask.progress || task.progress}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          progress: parseInt(e.target.value),
-                        })
-                      }
-                      className="flex-1"
+                      value={editedTask.progress || 0}
+                      onChange={(e) => setEditedTask({ ...editedTask, progress: parseInt(e.target.value) })}
+                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                     <input
                       type="number"
                       min="0"
                       max="100"
-                      value={editedTask.progress || task.progress}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          progress: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center"
+                      value={editedTask.progress || 0}
+                      onChange={(e) => setEditedTask({ ...editedTask, progress: parseInt(e.target.value) })}
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                ) : null}
-                <div className="mt-3 bg-gray-100 rounded-full h-3 overflow-hidden">
-                  <div
-                    className="bg-blue-600 h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${currentTask.progress || task.progress}%`,
-                    }}
-                  />
-                </div>
+                ) : (
+                  <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full"
+                      style={{ width: `${task.progress}%` }}
+                    />
+                  </div>
+                )}
               </div>
+
+              {!isEditing && (
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this task?')) {
+                        onDelete(task._id);
+                        onClose();
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Delete Task
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
-          {activeTab === "comments" && (
-            <div className="space-y-4">
-              {/* Comment Input */}
-              <div className="sticky top-0 bg-white pb-4 border-b">
-                <div className="flex gap-3 mb-3">
-                  <input
-                    type="text"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (
-                        e.key === "Enter" &&
-                        (newComment.trim() || selectedFiles?.length > 0)
-                      ) {
-                        onAddComment();
-                      }
-                    }}
-                    placeholder="Write a comment..."
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    onClick={onAddComment}
-                    disabled={
-                      !newComment.trim() &&
-                      (!selectedFiles || selectedFiles.length === 0)
-                    }
-                    className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-                  >
-                    <Send size={18} />
-                  </button>
-                </div>
+          {activeTab === 'comments' && (
+            <div className="space-y-6">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+                
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selectedFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-2 rounded-lg text-sm"
+                      >
+                        <span className="text-gray-700">{file.name}</span>
+                        <button
+                          onClick={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== index))}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                {/* File Attachment */}
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors text-sm">
-                    <FileText size={16} />
-                    <span>Attach Files</span>
+                <div className="flex items-center justify-between mt-3">
+                  <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700">
                     <input
                       type="file"
                       multiple
-                      onChange={(e) => {
-                        const files = e.target.files;
-                        if (files && onFileSelect) {
-                          onFileSelect(e as any);
-                        }
-                      }}
+                      onChange={handleFileSelect}
                       className="hidden"
                     />
+                    📎 Attach files
                   </label>
-
-                  {selectedFiles && selectedFiles.length > 0 && (
-                    <div className="flex-1 flex flex-wrap gap-2">
-                      {Array.from(selectedFiles).map(
-                        (file: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg text-sm"
-                          >
-                            <span className="truncate max-w-[150px]">
-                              {file.name}
-                            </span>
-                            <button
-                              onClick={() => {
-                                if (onRemoveFile) {
-                                  onRemoveFile(idx);
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  )}
+                  <button
+                    onClick={onAddComment}
+                    disabled={uploadingFiles || (!newComment.trim() && selectedFiles.length === 0)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-sm font-medium"
+                  >
+                    {uploadingFiles ? 'Uploading...' : 'Post Comment'}
+                  </button>
                 </div>
               </div>
 
-              {/* Comments List */}
               <div className="space-y-4">
                 {comments.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <p>No comments yet. Be the first to comment!</p>
-                  </div>
+                  <p className="text-center text-gray-500 py-8">No comments yet</p>
                 ) : (
-                  comments.map((comment) => (
-                    <div
-                      key={comment._id}
-                      className="flex gap-3 bg-gray-50 p-4 rounded-xl"
-                    >
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                        {getInitials(comment.userId.name)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-gray-900">
-                            {comment.userId.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatRelativeTime(comment.createdAt)}
-                          </span>
-                        </div>
-                        <p className="text-gray-700 mb-2">{comment.comment}</p>
-
-                        {/* File Attachments */}
-                        {(comment as any).attachments &&
-                          (comment as any).attachments.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <p className="text-xs font-medium text-gray-600 mb-2">
-                                Attachments (
-                                {(comment as any).attachments.length}):
-                              </p>
-                              <div className="space-y-1">
-                                {(comment as any).attachments.map(
-                                  (file: any, idx: number) => (
-                                    <a
-                                      key={idx}
-                                      href={file.fileUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                                    >
-                                      <FileText
-                                        size={16}
-                                        className="flex-shrink-0"
-                                      />
-                                      <span className="truncate">
-                                        {file.fileName}
-                                      </span>
-                                    </a>
-                                  ),
-                                )}
-                              </div>
+                  <React.Fragment>
+                    {comments.map((comment) => (
+                      <div key={comment._id} className="bg-white border border-gray-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                            {getInitials(comment.userId.name)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-semibold text-gray-900">
+                                {comment.userId.name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(comment.createdAt).toLocaleString()}
+                              </span>
                             </div>
-                          )}
+                            <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                              {comment.comment}
+                            </p>
+                            {comment.attachments && comment.attachments.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {comment.attachments.map((file, index) => {
+                                  if (!file || !file.url) return null;
+                                  return (
+                                    <button
+                                      key={index}
+                                      onClick={() => window.open(file.url, '_blank')}
+                                      className="text-xs px-2 py-1 bg-gray-100 text-blue-600 rounded hover:bg-gray-200"
+                                    >
+                                      📎 {file.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </React.Fragment>
                 )}
               </div>
             </div>
           )}
 
-          {activeTab === "activity" && (
-            <div className="space-y-3">
+          {activeTab === 'activity' && (
+            <div className="space-y-4">
               {activityLogs.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>No activity yet</p>
-                </div>
+                <p className="text-center text-gray-500 py-8">No activity yet</p>
               ) : (
                 activityLogs.map((log) => (
-                  <div
-                    key={log._id}
-                    className="flex gap-3 items-start bg-gray-50 p-4 rounded-xl"
-                  >
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                      {log.user && log.user.name
-                        ? getInitials(log.user.name)
-                        : "??"}
+                  <div key={log._id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
+                      {getInitials(log.user.name)}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-gray-700">{log.description}</p>
-                      <span className="text-xs text-gray-500">
-                        {log.timestamp
-                          ? formatRelativeTime(log.timestamp)
-                          : log.createdAt
-                            ? formatRelativeTime(log.createdAt)
-                            : "No date"}
-                      </span>
+                      <p className="text-sm text-gray-900">
+                        <span className="font-semibold">{log.user.name}</span>{' '}
+                        {log.description}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 ))
@@ -666,26 +739,6 @@ export default function TaskDetailModal({
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        {isEditing && (
-          <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handleCancel}
-                className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all"
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

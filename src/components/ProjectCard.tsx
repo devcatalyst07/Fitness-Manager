@@ -1,9 +1,8 @@
-import React, { useState } from "react";
-import { Building2, MapPin, Calendar, Trash2, Edit, Eye } from "lucide-react";
-import { useRouter } from "next/navigation";
+'use client';
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import React from 'react';
+import Link from 'next/link';
+import { Calendar, DollarSign, AlertTriangle } from 'lucide-react';
 
 interface Project {
   _id: string;
@@ -11,199 +10,124 @@ interface Project {
   brand: string;
   scope: string;
   workflow: string;
-  projectCode?: string;
-  description?: string;
-  location?: string;
-  startDate?: string;
-  endDate?: string;
+  status: string;
   budget: number;
   spent: number;
-  status: "Planning" | "In Progress" | "Completed" | "On Hold";
-  userId: {
-    name: string;
-    email: string;
-  };
-  createdBy: "user" | "admin";
-  createdAt: string;
+  startDate?: string;
+  endDate?: string;
+  calculatedStartDate?: string;
+  calculatedEndDate?: string;
+  isAtRisk?: boolean;
+  riskReason?: string;
 }
 
 interface ProjectCardProps {
   project: Project;
-  onUpdate: () => void;
-  canViewDetails?: boolean;
-  canDelete?: boolean;
-  userRole?: "admin" | "user";
 }
 
-export function ProjectCard({
-  project,
-  onUpdate,
-  canViewDetails = true,
-  canDelete = true,
-  userRole = "admin",
-}: ProjectCardProps) {
-  const router = useRouter();
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const budgetUtilization =
-    project.budget > 0 ? (project.spent / project.budget) * 100 : 0;
-
-  const statusColors: { [key: string]: string } = {
-    Planning: "bg-orange-100 text-orange-700",
-    "In Progress": "bg-blue-100 text-blue-700",
-    Completed: "bg-green-100 text-green-700",
-    "On Hold": "bg-gray-100 text-gray-700",
+export default function ProjectCard({ project }: ProjectCardProps) {
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, string> = {
+      Planning: 'bg-blue-100 text-blue-700 border-blue-200',
+      'In Progress': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      'On Hold': 'bg-gray-100 text-gray-700 border-gray-200',
+      Completed: 'bg-green-100 text-green-700 border-green-200',
+      Cancelled: 'bg-red-100 text-red-700 border-red-200',
+    };
+    return badges[status] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const handleDelete = async () => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${project.projectName}"? This action cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-
-    setIsDeleting(true);
-
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/projects/${project._id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete project");
-      }
-
-      alert("Project deleted successfully!");
-      onUpdate(); // Refresh the project list
-    } catch (error) {
-      console.error("Delete error:", error);
-      alert("Failed to delete project. Please try again.");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleViewDetails = () => {
-    // Dynamic route based on userRole
-    const basePath = userRole === "admin" ? "/admin" : "/user";
-    router.push(`${basePath}/projects/${project._id}`);
-  };
+  const budgetPercentage = project.budget > 0 
+    ? Math.min((project.spent / project.budget) * 100, 100) 
+    : 0;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-bold text-gray-900 line-clamp-2">
-          {project.projectName}
-        </h3>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusColors[project.status]}`}
-        >
-          {project.status}
-        </span>
-      </div>
-
-      {project.description && (
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-          {project.description}
-        </p>
-      )}
-
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center text-sm text-gray-600">
-          <Building2 size={16} className="mr-2" />
-          <span>{project.brand}</span>
+    <Link href={`/admin/projects/${project._id}`}>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+              {project.projectName}
+            </h3>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm text-gray-600">{project.brand}</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-sm text-gray-600">{project.scope}</span>
+            </div>
+          </div>
+          
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(project.status)}`}
+          >
+            {project.status}
+          </span>
         </div>
-        {project.location && (
-          <div className="flex items-center text-sm text-gray-600">
-            <MapPin size={16} className="mr-2" />
-            <span>{project.location}</span>
+
+        {/* Risk Warning */}
+        {project.isAtRisk && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+            <AlertTriangle size={16} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-yellow-800">⚠️ At Risk</p>
+              <p className="text-xs text-yellow-700 mt-0.5">{project.riskReason}</p>
+            </div>
           </div>
         )}
-        <div className="flex items-center text-sm text-gray-600">
-          <Calendar size={16} className="mr-2" />
-          <span>
-            {formatDate(project.startDate)} - {formatDate(project.endDate)}
+
+        <div className="space-y-3">
+          {/* Dates */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Calendar size={16} className="text-gray-400" />
+            <span>
+              {project.calculatedStartDate 
+                ? new Date(project.calculatedStartDate).toLocaleDateString()
+                : project.startDate 
+                  ? new Date(project.startDate).toLocaleDateString()
+                  : 'No start date'
+              }
+              {' → '}
+              {project.calculatedEndDate 
+                ? new Date(project.calculatedEndDate).toLocaleDateString()
+                : project.endDate 
+                  ? new Date(project.endDate).toLocaleDateString()
+                  : 'No end date'
+              }
+            </span>
+          </div>
+
+          {/* Budget */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <DollarSign size={16} className="text-gray-400" />
+                <span>Budget</span>
+              </div>
+              <span className="text-sm font-semibold text-gray-900">
+                ${project.spent.toLocaleString()} / ${project.budget.toLocaleString()}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  budgetPercentage > 90
+                    ? 'bg-red-500'
+                    : budgetPercentage > 75
+                      ? 'bg-yellow-500'
+                      : 'bg-green-500'
+                }`}
+                style={{ width: `${budgetPercentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+          <span>Workflow: {project.workflow}</span>
+          <span className="text-blue-600 group-hover:text-blue-700 font-medium">
+            View Details →
           </span>
         </div>
       </div>
-
-      <div className="space-y-2 mb-4">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Budget</span>
-          <span className="font-semibold">
-            {formatCurrency(project.budget)}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600">Spent</span>
-          <span className="font-semibold">{formatCurrency(project.spent)}</span>
-        </div>
-        <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-600">Budget Utilization</span>
-          <span className="font-semibold">{budgetUtilization.toFixed(0)}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className={`h-2 rounded-full ${
-              budgetUtilization >= 100
-                ? "bg-red-500"
-                : budgetUtilization >= 75
-                  ? "bg-orange-500"
-                  : "bg-green-500"
-            }`}
-            style={{ width: `${Math.min(budgetUtilization, 100)}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="flex gap-2 mt-4">
-        {canViewDetails && (
-          <button
-            onClick={handleViewDetails}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors border border-gray-300"
-          >
-            <Eye size={16} />
-            <span>View Details</span>
-          </button>
-        )}
-        {canDelete && (
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-sm bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            <Trash2 size={16} />
-            <span>{isDeleting ? "Deleting..." : "Delete"}</span>
-          </button>
-        )}
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500">
-        Created by: {project.userId.name}
-      </div>
-    </div>
+    </Link>
   );
 }

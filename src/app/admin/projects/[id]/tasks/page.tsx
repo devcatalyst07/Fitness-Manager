@@ -11,7 +11,6 @@ import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import TaskCreateModal from "@/components/TaskCreateModal";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import TaskStats from "@/components/TaskStats";
-import TaskViewToggle from "@/components/TaskViewToggle";
 import TaskListView from "@/components/TaskListView";
 import TaskBoardView from "@/components/TaskBoardView";
 import TaskPhaseView from "@/components/TaskPhaseView";
@@ -25,11 +24,10 @@ export default function ProjectTasksPage() {
   const router = useRouter();
   const params = useParams();
 
-  // View Mode State - add 'phase' as an option
+  // View Mode State
   const [viewMode, setViewMode] = useState<"list" | "board" | "timeline" | "phase">(
-    "phase", // Default to phase view
+    "phase"
   );
-  const [isEditing, setIsEditing] = useState(false);
 
   // Custom Hook - ALL business logic
   const {
@@ -37,13 +35,11 @@ export default function ProjectTasksPage() {
     isVerified,
     projectName,
     tasks,
-    fetchTasks,
     isCreateModalOpen,
     setIsCreateModalOpen,
     isDetailModalOpen,
     setIsDetailModalOpen,
     selectedTask,
-    setSelectedTask,
     activeTab,
     setActiveTab,
     formData,
@@ -69,6 +65,7 @@ export default function ProjectTasksPage() {
     selectedFiles,
     setSelectedFiles,
     handleFileSelect,
+    uploadingFiles,
     // Phase management
     phases,
     isPhaseModalOpen,
@@ -164,7 +161,7 @@ export default function ProjectTasksPage() {
         {/* Stats */}
         <TaskStats tasks={tasks} />
 
-        {/* View Toggle - Updated to include Phase view */}
+        {/* View Toggle */}
         <div className="mb-6">
           <div className="inline-flex bg-white border border-gray-200 rounded-lg p-1">
             <button
@@ -227,9 +224,7 @@ export default function ProjectTasksPage() {
             tasks={tasks}
             onTaskClick={openTaskDetails}
             onEdit={(task) => {
-              setSelectedTask(task);
-              setIsDetailModalOpen(true);
-              setIsEditing(true);
+              openTaskDetails(task);
             }}
             onDelete={deleteTask}
             openDropdown={openDropdown}
@@ -272,6 +267,7 @@ export default function ProjectTasksPage() {
           setSelectedAssignees={setSelectedAssignees}
           teamMembers={teamMembers}
           phases={phases}
+          tasks={tasks}
           onSubmit={createTask}
           saving={saving}
           checkMemberHasActiveTask={checkMemberHasActiveTask}
@@ -282,10 +278,10 @@ export default function ProjectTasksPage() {
           isOpen={isDetailModalOpen}
           onClose={() => {
             setIsDetailModalOpen(false);
-            setSelectedTask(null);
-            setIsEditing(false);
           }}
           task={selectedTask}
+          onUpdate={updateTask}
+          onDelete={deleteTask}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           comments={comments}
@@ -293,16 +289,12 @@ export default function ProjectTasksPage() {
           newComment={newComment}
           setNewComment={setNewComment}
           onAddComment={addComment}
-          onUpdateTask={updateTask}
-          teamMembers={teamMembers}
-          isEditing={isEditing}
-          setIsEditing={setIsEditing}
           selectedFiles={selectedFiles}
-          onFileSelect={handleFileSelect}
-          onRemoveFile={(index) => {
-            setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
-          }}
-          canEdit={true}
+          setSelectedFiles={setSelectedFiles}
+          handleFileSelect={handleFileSelect}
+          uploadingFiles={uploadingFiles}
+          phases={phases}
+          allTasks={tasks}
         />
       </main>
     </div>

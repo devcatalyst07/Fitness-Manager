@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, AlertTriangle, Calendar } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
@@ -39,6 +39,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     description: '',
     location: '',
     region: '',
+    scheduleFrom: 'start' as 'start' | 'end', // NEW
     startDate: '',
     endDate: '',
     budget: '',
@@ -72,7 +73,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       const selectedScope = scopes.find(s => s.name === formData.scope);
       if (selectedScope) {
         setAvailableWorkflows(selectedScope.workflows);
-        // Auto-select first workflow if available
         if (selectedScope.workflows.length > 0 && !formData.workflow) {
           setFormData(prev => ({ 
             ...prev, 
@@ -100,7 +100,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       if (response.ok) {
         const data = await response.json();
         setBrands(data);
-        // Set first brand as default if available
         if (data.length > 0 && !formData.brand) {
           setFormData(prev => ({ ...prev, brand: data[0].name }));
         }
@@ -125,7 +124,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       if (response.ok) {
         const data = await response.json();
         setScopes(data);
-        // Auto-select first scope if available
         if (data.length > 0 && !formData.scope) {
           setFormData(prev => ({ ...prev, scope: data[0].name }));
         }
@@ -167,6 +165,19 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       return;
     }
 
+    // Validate anchor date based on scheduleFrom
+    if (formData.scheduleFrom === 'start' && !formData.startDate) {
+      setError('Start date is required when scheduling from start');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.scheduleFrom === 'end' && !formData.endDate) {
+      setError('End date is required when scheduling from end');
+      setLoading(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/api/projects`, {
@@ -189,6 +200,11 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
         return;
       }
 
+      // Show risk warning if applicable
+      if (data.project?.isAtRisk) {
+        alert(`⚠️ Project created but flagged as AT RISK:\n${data.project.riskReason}`);
+      }
+
       onSuccess();
       onClose();
       setFormData({
@@ -200,6 +216,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
         description: '',
         location: '',
         region: '',
+        scheduleFrom: 'start',
         startDate: '',
         endDate: '',
         budget: '',
@@ -228,12 +245,13 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
             <h2 className="text-2xl font-bold text-black">Create New Project</h2>
           </div>
           <p className="text-sm text-gray-600 mb-6">
-            Create a new fitout project to start managing budgets, RFQs, and approvals.
+            Create a new fitout project with automatic task scheduling
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-              {error}
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm flex items-start gap-2">
+              <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -339,6 +357,80 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               )}
             </div>
 
+            {/* NEW - Schedule From Section */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                <Calendar size={16} className="inline mr-2" />
+                Schedule From <span className="text-red-500">*</span>
+              </label>
+              
+              <div className="space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="scheduleFrom"
+                    value="start"
+                    checked={formData.scheduleFrom === 'start'}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      scheduleFrom: 'start',
+                      endDate: '' // Clear end date when switching
+                    })}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">Start Date</div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Project will be scheduled forward from the start date. End date will be calculated automatically.
+                    </div>
+                    {formData.scheduleFrom === 'start' && (
+                      <input
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="scheduleFrom"
+                    value="end"
+                    checked={formData.scheduleFrom === 'end'}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      scheduleFrom: 'end',
+                      startDate: '' // Clear start date when switching
+                    })}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">End Date</div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Project will be scheduled backward from the end date. Start date will be calculated automatically.
+                    </div>
+                    {formData.scheduleFrom === 'end' && (
+                      <input
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              {formData.scheduleFrom === 'end' && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                  ⚠️ If the end date is not achievable, the project will be created and flagged as "At risk"
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Project Code (Optional)
@@ -350,7 +442,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 placeholder="e.g., WFC-L2-2024"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <p className="text-xs text-gray-500 mt-1">A unique identifier for internal tracking</p>
             </div>
 
             <div>
@@ -377,31 +468,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 placeholder="e.g., NSW, Victoria"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
             </div>
 
             <div>

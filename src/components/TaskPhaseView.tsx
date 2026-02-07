@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task } from '@/types/task.types';
-import { ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoreVertical, Clock } from 'lucide-react';
 import {
   getPriorityBadge,
   getStatusBadge,
@@ -48,19 +48,36 @@ export default function TaskPhaseView({
     });
   };
 
+  // Get task type badge
+  const getTaskTypeBadge = (taskType: string) => {
+    const badges: Record<string, string> = {
+      Task: 'bg-blue-100 text-blue-700 border-blue-200',
+      Deliverable: 'bg-purple-100 text-purple-700 border-purple-200',
+      Milestone: 'bg-green-100 text-green-700 border-green-200',
+    };
+    return badges[taskType] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  // Get task type icon
+  const getTaskTypeIcon = (taskType: string) => {
+    const icons: Record<string, string> = {
+      Task: '📋',
+      Deliverable: '📦',
+      Milestone: '🎯',
+    };
+    return icons[taskType] || '📋';
+  };
+
   // Group tasks by phase
   const tasksByPhase = React.useMemo(() => {
     const grouped: Record<string, Task[]> = {};
     
-    // Initialize with all phases
     phases.forEach((phase) => {
       grouped[phase._id] = [];
     });
     
-    // Add unassigned phase
     grouped['unassigned'] = [];
 
-    // Distribute tasks
     tasks.forEach((task) => {
       if (task.phaseId) {
         if (grouped[task.phaseId]) {
@@ -71,15 +88,11 @@ export default function TaskPhaseView({
       }
     });
 
-    // Sort tasks in each group by nearest deadline (ascending)
     Object.keys(grouped).forEach((phaseId) => {
       grouped[phaseId].sort((a, b) => {
-        // Tasks without due dates go to the end
         if (!a.dueDate && !b.dueDate) return 0;
         if (!a.dueDate) return 1;
         if (!b.dueDate) return -1;
-        
-        // Sort by date (nearest first)
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       });
     });
@@ -111,12 +124,32 @@ export default function TaskPhaseView({
       {/* Task Title */}
       <td className="px-6 py-4">
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-gray-900">
-            {task.title}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{getTaskTypeIcon(task.taskType || 'Task')}</span>
+            <span className="text-sm font-medium text-gray-900">
+              {task.title}
+            </span>
+          </div>
           {task.description && (
             <span className="text-xs text-gray-500 mt-1 line-clamp-1">
               {task.description}
+            </span>
+          )}
+        </div>
+      </td>
+
+      {/* Task Type & Duration - NEW COLUMN */}
+      <td className="px-6 py-4">
+        <div className="flex flex-col gap-1">
+          <span
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border w-fit ${getTaskTypeBadge(task.taskType || 'Task')}`}
+          >
+            {task.taskType || 'Task'}
+          </span>
+          {task.duration && (
+            <span className="text-xs text-gray-600 flex items-center gap-1">
+              <Clock size={12} />
+              {task.duration} day{task.duration !== 1 ? 's' : ''}
             </span>
           )}
         </div>
@@ -306,6 +339,9 @@ export default function TaskPhaseView({
                           Task
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                          Type & Duration
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                           Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -374,6 +410,9 @@ export default function TaskPhaseView({
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Task
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Type & Duration
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                       Status

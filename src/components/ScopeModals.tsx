@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Edit2, AlertCircle, CheckCircle, Loader, Upload } from 'lucide-react';
-import { ExcelUploadModal } from './ExcelUploadModal';
+import ExcelUploadModal from './ExcelUploadModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
@@ -1102,6 +1102,7 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
 
       {showExcelUpload && (
         <ExcelUploadModal
+          isOpen={showExcelUpload}  // ✅ ADD THIS LINE
           scopeId={scopeId}
           workflowId={workflowId}
           onClose={() => setShowExcelUpload(false)}

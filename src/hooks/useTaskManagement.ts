@@ -23,9 +23,7 @@ export function useTaskManagement(projectId: string) {
   const [projectName, setProjectName] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
 
-  // ============================================
-  // PHASE MANAGEMENT - NEW
-  // ============================================
+  // Phase Management
   const [phases, setPhases] = useState<Phase[]>([]);
   const [isPhaseModalOpen, setIsPhaseModalOpen] = useState(false);
   const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
@@ -34,40 +32,43 @@ export function useTaskManagement(projectId: string) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "details" | "comments" | "activity"
-  >("details");
+  const [activeTab, setActiveTab] = useState<"details" | "comments" | "activity">("details");
 
-  // Form Data - UPDATED to include phaseId
-// Form Data - UPDATED to include phaseId
+
+  // Form Data - UPDATED with new fields
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
     status: string;
     priority: string;
+    taskType: 'Task' | 'Deliverable' | 'Milestone'; // NEW
     assignees: { email: string; name: string }[];
     startDate: string;
     dueDate: string;
     progress: number;
+    duration: number; // NEW
     phaseId: string | null;
+    dependencies: { taskId: string; type: 'FS' | 'SS' }[]; // NEW
   }>({
     title: "",
     description: "",
     status: "",
     priority: "",
+    taskType: "Task", // NEW - Default
     assignees: [],
     startDate: "",
     dueDate: "",
     progress: 0,
+    duration: 1, // NEW - Default
     phaseId: null,
+    dependencies: [], // NEW - Default
   });
   const [saving, setSaving] = useState(false);
 
   // Team & Assignees
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<
-    { email: string; name: string }[]
-  >([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<{ email: string; name: string }[]>([]);
+
 
   // Comments & Activity
   const [comments, setComments] = useState<Comment[]>([]);
@@ -81,33 +82,26 @@ export function useTaskManagement(projectId: string) {
   // Dropdown
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  // ============================================
-  // AUTHENTICATION CHECK
-  // ============================================
+  // Authentication Check
   useEffect(() => {
-    // Auto-detect role from localStorage (don't use requiredRole param)
     const token = localStorage.getItem("token");
     const userRole = localStorage.getItem("userRole");
 
     if (!token || !userRole) {
-      // No token or role, don't redirect here - let the page handle it
       console.warn("No authentication found in useTaskManagement");
       setIsVerified(false);
       setLoading(false);
       return;
     }
 
-    // Valid authentication found
     setIsVerified(true);
     fetchProject();
     fetchTasks();
     fetchTeamMembers();
-    fetchPhases(); // NEW - Fetch phases on mount
+    fetchPhases();
   }, [projectId, router]);
 
-  // ============================================
-  // CLICK OUTSIDE HANDLER
-  // ============================================
+  // Click Outside Handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -122,10 +116,7 @@ export function useTaskManagement(projectId: string) {
     };
   }, []);
 
-  // ============================================
-  // FETCH OPERATIONS
-  // ============================================
-
+  // Fetch Operations
   const fetchProject = async () => {
     try {
       const data = await projectService.getProject(projectId);
@@ -139,21 +130,16 @@ export function useTaskManagement(projectId: string) {
     try {
       const data = await taskService.getTasks(projectId);
       
-      // ✅ FIX: Extract allTasks array from the response with proper typing
-      // The API returns: { phases: [...], unassignedTasks: [...], allTasks: [...] }
-      // We need just the allTasks array
       if (data && typeof data === 'object' && 'allTasks' in data) {
         const allTasks = (data as { allTasks?: Task[] }).allTasks;
         setTasks(Array.isArray(allTasks) ? allTasks : []);
       } else if (Array.isArray(data)) {
-        // Fallback: if the API returns an array directly
         setTasks(data as Task[]);
       } else {
         console.warn('Unexpected tasks data structure:', data);
         setTasks([]);
       }
     } catch (error) {
-      // Handle 403 from backend (e.g., "Admins only") with a user-friendly message
       const err: any = error;
       if (err?.status === 403) {
         console.warn("Access denied when fetching tasks:", err.message || err);
@@ -181,7 +167,6 @@ export function useTaskManagement(projectId: string) {
           "Access denied when fetching team members:",
           err.message || err,
         );
-        // don't spam console; show a single alert
         alert(
           "You don't have access to view team members for this project. Contact your administrator.",
         );
@@ -210,10 +195,7 @@ export function useTaskManagement(projectId: string) {
     }
   };
 
-  // ============================================
-  // PHASE OPERATIONS - NEW
-  // ============================================
-
+  // Phase Operations
   const fetchPhases = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -321,7 +303,7 @@ export function useTaskManagement(projectId: string) {
 
       if (response.ok) {
         await fetchPhases();
-        await fetchTasks(); // Refresh tasks since they've been updated
+        await fetchTasks();
         return true;
       }
 
@@ -335,13 +317,16 @@ export function useTaskManagement(projectId: string) {
     }
   };
 
-  // ============================================
-  // TASK OPERATIONS
-  // ============================================
-
+  // Task Operations
   const createTask = async () => {
     if (!formData.title || formData.assignees.length === 0) {
       alert("Please fill in required fields");
+      return;
+    }
+
+    // Validate milestone duration
+    if (formData.taskType === 'Milestone' && formData.duration > 1) {
+      alert("Milestone tasks can have a maximum duration of 1 day");
       return;
     }
 
@@ -353,11 +338,14 @@ export function useTaskManagement(projectId: string) {
         description: formData.description,
         status: (formData.status as any) || "Backlog",
         priority: (formData.priority as any) || "Medium",
+        taskType: formData.taskType, // NEW
         assignees: formData.assignees,
         startDate: formData.startDate,
         dueDate: formData.dueDate,
         progress: formData.progress,
-        phaseId: formData.phaseId, // NEW - Include phaseId
+        duration: formData.duration, // NEW
+        dependencies: formData.dependencies, // NEW
+        phaseId: formData.phaseId,
       });
 
       alert("Task created successfully!");
@@ -411,10 +399,7 @@ export function useTaskManagement(projectId: string) {
     }
   };
 
-  // ============================================
-  // COMMENT OPERATIONS
-  // ============================================
-
+  // Comment Operations
   const addComment = async () => {
     if (!selectedTask || (!newComment.trim() && selectedFiles.length === 0))
       return;
@@ -422,13 +407,11 @@ export function useTaskManagement(projectId: string) {
     setUploadingFiles(true);
 
     try {
-      // Upload files first
       let attachments: any[] = [];
       if (selectedFiles.length > 0) {
         attachments = await uploadFiles(selectedFiles);
       }
 
-      // Then create comment with attachments
       const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/tasks/${selectedTask._id}/comments`,
@@ -462,10 +445,7 @@ export function useTaskManagement(projectId: string) {
     }
   };
 
-  // ============================================
-  // FILE OPERATIONS
-  // ============================================
-
+  // File Operations
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -495,7 +475,6 @@ export function useTaskManagement(projectId: string) {
 
         if (response.ok) {
           const data = await response.json();
-          // Push the entire file object from backend (exactly like old code)
           uploadedFiles.push(data.file);
         } else {
           console.error("Failed to upload:", file.name);
@@ -509,10 +488,7 @@ export function useTaskManagement(projectId: string) {
     return uploadedFiles;
   };
 
-  // ============================================
-  // HELPER FUNCTIONS
-  // ============================================
-
+  // Helper Functions
   const checkMemberHasActiveTask = (memberEmail: string): boolean => {
     return tasks.some(
       (task) =>
@@ -527,11 +503,14 @@ export function useTaskManagement(projectId: string) {
       description: "",
       status: "",
       priority: "",
+      taskType: "Task", // NEW - Reset to default
       assignees: [],
       startDate: "",
       dueDate: "",
       progress: 0,
-      phaseId: null, // NEW - Reset phaseId
+      duration: 1, // NEW - Reset to default
+      phaseId: null,
+      dependencies: [], // NEW - Reset to empty
     });
     setSelectedAssignees([]);
     setSelectedFiles([]);
@@ -545,10 +524,7 @@ export function useTaskManagement(projectId: string) {
     fetchActivityLogs(task._id);
   };
 
-  // ============================================
-  // RETURN ALL STATES & FUNCTIONS
-  // ============================================
-
+  // Return all states & functions
   return {
     // Authentication & Loading
     loading,
@@ -608,9 +584,7 @@ export function useTaskManagement(projectId: string) {
     changeTaskStatus,
     openTaskDetails,
 
-    // ============================================
-    // PHASE MANAGEMENT - NEW RETURNS
-    // ============================================
+    // Phase Management
     phases,
     isPhaseModalOpen,
     setIsPhaseModalOpen,

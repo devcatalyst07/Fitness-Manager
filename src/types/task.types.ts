@@ -2,10 +2,17 @@
 
 export type TaskStatus = "Backlog" | "In Progress" | "Blocked" | "Done";
 export type TaskPriority = "Low" | "Medium" | "High" | "Critical";
+export type TaskType = "Task" | "Deliverable" | "Milestone"; // NEW
+export type DependencyType = "FS" | "SS"; // NEW - Finish-Start or Start-Start
 
 export interface Assignee {
   email: string;
   name: string;
+}
+
+export interface TaskDependency {
+  taskId: string;
+  type: DependencyType;
 }
 
 export interface Task {
@@ -14,6 +21,7 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: TaskPriority;
+  taskType: TaskType; // NEW
   assigneeEmail?: string;
   assigneeName?: string;
   assignees: Assignee[];
@@ -21,6 +29,8 @@ export interface Task {
   dueDate?: string;
   progress: number;
   estimateHours?: number;
+  duration?: number; // NEW - Duration in working days
+  dependencies: TaskDependency[]; // NEW
   projectId?: string;
   createdBy?: string;
   createdAt?: string;
@@ -33,11 +43,14 @@ export interface CreateTaskData {
   description: string;
   status: TaskStatus;
   priority: TaskPriority;
+  taskType: TaskType; // NEW
   assignees: Assignee[];
   startDate: string;
   dueDate: string;
   progress: number;
   estimateHours?: number;
+  duration?: number; // NEW
+  dependencies?: TaskDependency[]; // NEW
   phaseId?: string | null;
 }
 
@@ -111,4 +124,23 @@ export interface Phase {
   order: number;
   color?: string;
   projectId: string;
+}
+
+// NEW - Project interfaces
+export interface Project {
+  _id: string;
+  projectName: string;
+  brand: string;
+  scope: string;
+  workflow: string;
+  scheduleFrom: 'start' | 'end';
+  startDate?: string;
+  endDate?: string;
+  calculatedStartDate?: string;
+  calculatedEndDate?: string;
+  isAtRisk: boolean;
+  riskReason?: string;
+  status: string;
+  budget: number;
+  spent: number;
 }

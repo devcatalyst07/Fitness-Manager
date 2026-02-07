@@ -15,21 +15,7 @@ import {
   subDays,
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-interface Task {
-  _id: string;
-  title: string;
-  description?: string;
-  status: "Backlog" | "In Progress" | "Blocked" | "Done";
-  priority: "Low" | "Medium" | "High" | "Critical";
-  assigneeEmail?: string;
-  assigneeName?: string;
-  assignees: Array<{ name: string; email: string }>;
-  startDate?: string;
-  dueDate?: string;
-  progress: number;
-  estimateHours?: number;
-}
+import { Task } from "@/types/task.types";
 
 interface TimelineHeaderProps {
   currentDate: Date;
@@ -180,6 +166,15 @@ export function TimelineGrid({
     return colors[status] || "bg-gray-100 text-gray-700";
   };
 
+  const getTaskTypeIcon = (taskType: string) => {
+    const icons: Record<string, string> = {
+      Task: "📋",
+      Deliverable: "📦",
+      Milestone: "🎯",
+    };
+    return icons[taskType] || "📋";
+  };
+
   const getTaskPosition = (task: Task) => {
     const taskStart = new Date(task.startDate!);
     const taskEnd = new Date(task.dueDate!);
@@ -241,6 +236,7 @@ export function TimelineGrid({
           visibleTasks.map((task) => {
             const position = getTaskPosition(task);
             const assigneeCount = task.assignees?.length || 0;
+            const dependencyCount = task.dependencies?.length || 0;
 
             return (
               <div
@@ -251,12 +247,13 @@ export function TimelineGrid({
                 {/* Left: Task Info */}
                 <div className="p-3 border-r">
                   <div
-                    className="font-medium text-sm mb-1 truncate"
+                    className="font-medium text-sm mb-1 truncate flex items-center gap-1"
                     title={task.title}
                   >
-                    {task.title}
+                    <span>{getTaskTypeIcon(task.taskType || 'Task')}</span>
+                    <span>{task.title}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs">
+                  <div className="flex items-center gap-1.5 text-xs flex-wrap">
                     <span
                       className={`px-2 py-0.5 rounded-full font-medium ${getPriorityBadge(task.priority)}`}
                     >
@@ -267,9 +264,14 @@ export function TimelineGrid({
                     >
                       {task.status}
                     </span>
-                    {assigneeCount > 0 && (
+                    {task.duration && (
                       <span className="text-gray-500">
-                        {assigneeCount} {assigneeCount === 1 ? "dep" : "deps"}
+                        {task.duration}d
+                      </span>
+                    )}
+                    {dependencyCount > 0 && (
+                      <span className="text-gray-500">
+                        {dependencyCount} {dependencyCount === 1 ? "dep" : "deps"}
                       </span>
                     )}
                   </div>
@@ -289,7 +291,7 @@ export function TimelineGrid({
                     </div>
                   )}
 
-                  {/* Task Bar - THIN! */}
+                  {/* Task Bar */}
                   <div
                     onClick={() => onTaskClick(task)}
                     className={`absolute h-7 rounded cursor-pointer hover:opacity-90 transition-opacity ${getPriorityColor(task.priority)} flex items-center justify-between px-3 text-white text-xs font-medium shadow`}
