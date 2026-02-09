@@ -1,7 +1,8 @@
+"use client";
+
 import React, { useState } from "react";
 import { X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { hasPermission } from "@/utils/permissions";
+import { useAuth } from "@/context/AuthContext";
 
 type LoginType = "user" | "admin";
 type ModalType = "login" | "register" | null;
@@ -13,16 +14,13 @@ interface AuthModalProps {
   onSwitchToRegister: () => void;
 }
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
-
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   modalType,
   onSwitchToRegister,
 }) => {
-  const router = useRouter();
+  const { login, register } = useAuth();
   const [activeTab, setActiveTab] = useState<LoginType>("user");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,144 +51,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           return;
         }
 
-        const response = await fetch(`${API_URL}/api/auth/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            subscriptionType,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          setError(data.message || "Registration failed");
-          setLoading(false);
-          return;
-        }
-
-        // Store token and redirect
-        const normalizedRole = String(data.role || "").toLowerCase();
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userRole", normalizedRole);
-        localStorage.setItem("userName", data.name);
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("roleId", data.roleId);
-
-        // Get redirect path based on permissions
-        const redirectPath = await getRedirectPath(data.roleId, normalizedRole);
-        router.push(redirectPath);
+        // Register using auth context
+        await register(name, email, password);
         onClose();
+        // Redirect happens automatically via AuthContext
       } else {
-        // Login
-        const response = await fetch(`${API_URL}/api/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email,
-            password,
-            type: activeTab,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            setError("Invalid credentials. Please try again.");
-          } else {
-            setError(data.message || "Login failed");
-          }
-          setLoading(false);
-          return;
-        }
-
-        if (String(data.role || "").toLowerCase() !== activeTab) {
-          setError("Invalid credentials. Please try again.");
-          setLoading(false);
-          return;
-        }
-
-        const normalizedRole = String(data.role || "").toLowerCase();
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userRole", normalizedRole);
-        localStorage.setItem("userName", data.name);
-        localStorage.setItem("userEmail", email);
-        localStorage.setItem("roleId", data.roleId);
-
-        if (normalizedRole === "admin") {
-          router.push("/admin/dashboard");
-        } else {
-          // Get redirect path based on permissions for users
-          const redirectPath = await getRedirectPath(
-            data.roleId,
-            normalizedRole,
-          );
-          router.push(redirectPath);
-        }
-
+        // Login using auth context
+        await login(email, password, false);
         onClose();
+        // Redirect happens automatically via AuthContext
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Auth error:", err);
-      setError("Unable to connect to server. Please try again.");
+      if (err?.response?.status === 403 || err?.response?.status === 401) {
+        setError("Invalid credentials. Please try again.");
+      } else {
+        setError(err?.response?.data?.message || err.message || "Authentication failed");
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getRedirectPath = async (
-    roleId: string,
-    role: string,
-  ): Promise<string> => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const roleData = await response.json();
-        const permissions = roleData.permissions || [];
-
-        try {
-          localStorage.setItem("rolePermissions", JSON.stringify(permissions));
-        } catch {
-          // Ignore storage errors
-        }
-
-        // Define available pages and their permission IDs
-        const availablePages = [
-          { path: `/user/dashboard`, permissionId: "dashboard" },
-          { path: `/user/projects`, permissionId: "projects" },
-          { path: `/user/finance`, permissionId: "finance" },
-          { path: `/user/documents`, permissionId: "documents" },
-          { path: `/user/reports`, permissionId: "reports" },
-        ];
-
-        // Find first available page based on permissions
-        for (const page of availablePages) {
-          if (hasPermission(page.permissionId, permissions)) {
-            return page.path;
-          }
-        }
-
-        // If no specific page found, return default based on role
-        return role === "admin" ? "/admin/dashboard" : "/user/dashboard";
-      }
-
-      // Fallback if fetch fails
-      return role === "admin" ? "/admin/dashboard" : "/user/dashboard";
-    } catch (error) {
-      console.error("Error fetching role permissions:", error);
-      return role === "admin" ? "/admin/dashboard" : "/user/dashboard";
     }
   };
 
@@ -302,6 +181,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 focus:outline-none focus:border-black transition-colors"
+                placeholder={activeTab === "admin" ? "" : ""}
               />
             </div>
 

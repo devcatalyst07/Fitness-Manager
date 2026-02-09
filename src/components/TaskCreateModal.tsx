@@ -162,9 +162,6 @@ export default function TaskCreateModal({
         <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 sm:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <FileText className="text-white" size={20} />
-              </div>
               <div>
                 <h2 className="text-xl sm:text-2xl font-semibold text-white">
                   Create New Task
@@ -273,9 +270,9 @@ export default function TaskCreateModal({
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
                 >
-                  <option value="Task">📋 Task</option>
-                  <option value="Deliverable">📦 Deliverable</option>
-                  <option value="Milestone">🎯 Milestone</option>
+                  <option value="Task">Task</option>
+                  <option value="Deliverable">Deliverable</option>
+                  <option value="Milestone">Milestone</option>
                 </select>
               </div>
             </div>

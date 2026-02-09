@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { AuthModal } from '../components/AuthModal';
 import { PricingCard } from '../components/PricingCards';
@@ -9,15 +11,25 @@ import FitoutLoadingSpinner from '../components/FitoutLoadingSpinner';
 type ModalType = 'login' | 'register' | null;
 
 export default function Home() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<ModalType>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Auto-redirect if user is logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      const dashboardPath = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
+      router.push(dashboardPath);
+    }
+  }, [user, authLoading, router]);
 
   // Show loading spinner on page load
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1500); // Show spinner for 1.5 seconds
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -41,8 +53,13 @@ export default function Home() {
     setTimeout(() => setModalType(null), 300);
   };
 
-  // Show loading spinner
-  if (isLoading) {
+  // Show loading spinner while checking auth or initial load
+  if (isLoading || authLoading) {
+    return <FitoutLoadingSpinner />;
+  }
+
+  // Don't show landing page if user is logged in (will redirect)
+  if (user) {
     return <FitoutLoadingSpinner />;
   }
 

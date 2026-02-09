@@ -3,15 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Filter } from "lucide-react";
-
-// Components
+import { useAuth } from "@/context/AuthContext";
+import SessionGuard from "@/components/SessionGuard";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import ProjectCard from "@/components/ProjectCard";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { apiClient } from "@/lib/axios";
 
 interface Project {
   _id: string;
@@ -32,41 +31,32 @@ interface Project {
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Role-based redirect
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userRole = localStorage.getItem("userRole");
-
-    if (!token || userRole !== "admin") {
-      router.push("/");
-      return;
+    if (!authLoading && user && user.role !== 'admin') {
+      console.log('⚠️ User role is not admin, redirecting');
+      router.replace('/user/projects');
     }
+  }, [user, authLoading, router]);
 
-    setIsVerified(true);
-    fetchProjects();
-  }, [router]);
+  // Fetch data when user is ready
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      fetchProjects();
+    }
+  }, [user]);
 
   const fetchProjects = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/projects`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data);
-      } else {
-        console.error("Failed to fetch projects");
-      }
+      const data = await apiClient.get<Project[]>('/api/projects');
+      setProjects(data);
     } catch (error) {
       console.error("Error fetching projects:", error);
     } finally {
@@ -91,134 +81,140 @@ export default function ProjectsPage() {
     setIsCreateModalOpen(false);
   };
 
-  if (!isVerified || loading) {
+  if (authLoading || (loading && user?.role === 'admin')) {
+    return <FitoutLoadingSpinner />;
+  }
+
+  if (user && user.role !== 'admin') {
     return <FitoutLoadingSpinner />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminSidebar />
-      <AdminHeader />
+    <SessionGuard>
+      <div className="min-h-screen bg-gray-50">
+        <AdminSidebar userRole="admin" />
+        <AdminHeader />
 
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                Projects
-              </h1>
-              <p className="text-sm text-gray-600">
-                Manage all your fitout projects
-              </p>
-            </div>
+        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+          {/* Page Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Projects
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Manage all your fitout projects
+                </p>
+              </div>
 
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={20} />
-              <span>New Project</span>
-            </button>
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Total Projects</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {projects.length}
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">In Progress</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {projects.filter((p) => p.status === "In Progress").length}
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">At Risk</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {projects.filter((p) => p.isAtRisk).length}
-              </p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-1">Completed</p>
-              <p className="text-2xl font-bold text-green-600">
-                {projects.filter((p) => p.status === "Completed").length}
-              </p>
-            </div>
-          </div>
-
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Search projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Filter size={20} className="text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="all">All Status</option>
-                <option value="Planning">Planning</option>
-                <option value="In Progress">In Progress</option>
-                <option value="On Hold">On Hold</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Projects Grid */}
-        {filteredProjects.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No projects found
-            </h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery || statusFilter !== "all"
-                ? "Try adjusting your search or filters"
-                : "Get started by creating your first project"}
-            </p>
-            {!searchQuery && statusFilter === "all" && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Create Project
+                <Plus size={20} />
+                <span>New Project</span>
               </button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
-              <ProjectCard key={project._id} project={project} />
-            ))}
-          </div>
-        )}
-      </main>
+            </div>
 
-      {/* Create Project Modal */}
-      <CreateProjectModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleProjectCreated}
-      />
-    </div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Total Projects</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {projects.length}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">In Progress</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {projects.filter((p) => p.status === "In Progress").length}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">At Risk</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {projects.filter((p) => p.isAtRisk).length}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Completed</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {projects.filter((p) => p.status === "Completed").length}
+                </p>
+              </div>
+            </div>
+
+            {/* Search and Filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Filter size={20} className="text-gray-400" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="all">All Status</option>
+                  <option value="Planning">Planning</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="On Hold">On Hold</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Projects Grid */}
+          {filteredProjects.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                No projects found
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {searchQuery || statusFilter !== "all"
+                  ? "Try adjusting your search or filters"
+                  : "Get started by creating your first project"}
+              </p>
+              {!searchQuery && statusFilter === "all" && (
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Create Project
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredProjects.map((project) => (
+                <ProjectCard key={project._id} project={project} />
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* Create Project Modal */}
+        <CreateProjectModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={handleProjectCreated}
+        />
+      </div>
+    </SessionGuard>
   );
 }
