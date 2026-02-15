@@ -24,7 +24,6 @@ export default function ProjectOverviewPage() {
   const router = useRouter();
   const params = useParams();
 
-  // ✅ FIXED: Use useAuth() instead of localStorage for auth check
   const { user, loading: authLoading } = useAuth();
 
   const [pathname, setPathname] = useState("/admin/projects");
@@ -36,7 +35,6 @@ export default function ProjectOverviewPage() {
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [deadlineDays, setDeadlineDays] = useState(7);
 
-  // ✅ FIXED: Role-based redirect using useAuth() instead of localStorage
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/");
@@ -48,7 +46,6 @@ export default function ProjectOverviewPage() {
     }
   }, [user, authLoading, router]);
 
-  // ✅ FIXED: Fetch data when user is authenticated
   useEffect(() => {
     if (user && user.role === "admin" && params.id) {
       fetchAllData();
@@ -67,7 +64,6 @@ export default function ProjectOverviewPage() {
     setLoading(false);
   };
 
-  // ✅ FIXED: All fetch functions now use apiClient instead of localStorage token + fetch
   const fetchProject = async () => {
     try {
       const data = await apiClient.get(`/api/projects/${params.id}`);
@@ -121,10 +117,8 @@ export default function ProjectOverviewPage() {
     }
   };
 
-  // Show loading while auth is resolving or data is loading
   if (authLoading || loading) return <FitoutLoadingSpinner />;
 
-  // Not authenticated or wrong role — will be redirected by useEffect
   if (!user || user.role !== "admin") return <FitoutLoadingSpinner />;
 
   return (
@@ -154,7 +148,7 @@ export default function ProjectOverviewPage() {
         {/* Tab Navigation */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto">
           <div className="flex gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Documents", "Team"].map((tab) => (
+            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map((tab) => (
               <button
                 key={tab}
                 className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
@@ -167,6 +161,8 @@ export default function ProjectOverviewPage() {
                     router.push(`/admin/projects/${params.id}/tasks`);
                   if (tab === "Budget")
                     router.push(`/admin/projects/${params.id}/budget`);
+                  if (tab === "Tender")
+                    router.push(`/admin/projects/${params.id}/tender`);
                   if (tab === "Documents")
                     router.push(`/admin/projects/${params.id}/documents`);
                   if (tab === "Team")

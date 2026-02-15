@@ -395,7 +395,7 @@ export default function AdminProjectTenderPage() {
 
           {tenders.length === 0 ? (
             <div className="p-12 text-center">
-              <div className="text-gray-400 mb-4 text-4xl">📋</div>
+              
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 No tenders yet
               </h3>

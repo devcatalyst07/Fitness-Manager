@@ -128,7 +128,7 @@ export default function ProjectTasksPage() {
         {/* Project Navigation Tabs */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto">
           <div className="flex gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Documents", "Team"].map((tab) => (
+            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map((tab) => (
               <button
                 key={tab}
                 className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
@@ -141,6 +141,8 @@ export default function ProjectTasksPage() {
                     router.push(`/admin/projects/${params.id}`);
                   if (tab === "Budget")
                     router.push(`/admin/projects/${params.id}/budget`);
+                  if (tab === "Tender")
+                    router.push(`/admin/projects/${params.id}/tender`);
                   if (tab === "Documents")
                     router.push(`/admin/projects/${params.id}/documents`);
                   if (tab === "Team")

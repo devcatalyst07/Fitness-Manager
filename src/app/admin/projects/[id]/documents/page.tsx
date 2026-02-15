@@ -129,21 +129,22 @@ export default function ProjectDocumentsPage() {
           </div>
         </div>
 
-        <div className="mb-6 border-b border-gray-200">
-          <div className="flex gap-6">
-            {['Overview', 'Tasks', 'Budget', 'Documents', 'Team'].map((tab) => (
-              <button key={tab}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'Documents' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-                onClick={() => {
-                  if (tab === 'Overview') router.push(`/admin/projects/${params.id}`);
-                  if (tab === 'Tasks') router.push(`/admin/projects/${params.id}/tasks`);
-                  if (tab === 'Budget') router.push(`/admin/projects/${params.id}/budget`);
-                  if (tab === 'Team') router.push(`/admin/projects/${params.id}/team`);
-                }}
-              >{tab}</button>
-            ))}
-          </div>
-        </div>
+      <div className="mb-6 border-b border-gray-200">
+  <div className="flex gap-6">
+    {['Overview', 'Tasks', 'Budget', 'Tender', 'Documents', 'Team'].map((tab) => (
+      <button key={tab}
+        className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'Documents' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+        onClick={() => {
+          if (tab === 'Overview') router.push(`/admin/projects/${params.id}`);
+          if (tab === 'Tasks') router.push(`/admin/projects/${params.id}/tasks`);
+          if (tab === 'Budget') router.push(`/admin/projects/${params.id}/budget`);
+          if (tab === 'Tender') router.push(`/admin/projects/${params.id}/tender`);
+          if (tab === 'Team') router.push(`/admin/projects/${params.id}/team`);
+        }}
+      >{tab}</button>
+    ))}
+  </div>
+</div>
 
         <div className="mb-6">
           <div className="relative">

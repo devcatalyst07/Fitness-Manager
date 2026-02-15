@@ -38,7 +38,6 @@ export default function UserProjectOverviewPage() {
   const router = useRouter();
   const params = useParams();
 
-  // ✅ FIXED: Use useAuth() instead of localStorage for auth check
   const { user, loading: authLoading } = useAuth();
 
   const [pathname, setPathname] = useState("/user/projects");
@@ -51,7 +50,6 @@ export default function UserProjectOverviewPage() {
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [deadlineDays, setDeadlineDays] = useState(7);
 
-  // ✅ FIXED: Role-based redirect using useAuth()
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/");
@@ -63,34 +61,27 @@ export default function UserProjectOverviewPage() {
     }
   }, [user, authLoading, router, params.id]);
 
-  // ✅ FIXED: Fetch permissions + data when user is ready
   useEffect(() => {
     if (user && user.role === "user" && params.id) {
       fetchRolePermissions();
     }
   }, [user, params.id]);
 
-  // Refetch deadlines when filter changes
   useEffect(() => {
     if (user && roleData && params.id) {
       fetchDeadlines();
     }
   }, [deadlineDays]);
 
-  // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const fetchRolePermissions = async () => {
     try {
-      // Get roleId from user object — the auth context should provide this
-      // If user.roleId is not available, try fetching user profile
       let roleId = (user as any)?.roleId;
 
       if (!roleId) {
-        // Fallback: fetch user profile to get roleId
         try {
           const profile = await apiClient.get('/api/auth/me');
           roleId = profile?.roleId;
         } catch {
-          // If /api/auth/me doesn't return roleId, try /api/users/me
           try {
             const profileAlt = await apiClient.get('/api/users/me');
             roleId = profileAlt?.roleId;
@@ -102,7 +93,6 @@ export default function UserProjectOverviewPage() {
 
       if (!roleId) {
         console.warn("No roleId found on user object. Loading page without permission checks.");
-        // Still load the page data - the API will enforce permissions server-side
         await fetchAllData();
         setLoading(false);
         return;
@@ -121,8 +111,6 @@ export default function UserProjectOverviewPage() {
       await fetchAllData();
     } catch (error) {
       console.error("Error fetching permissions:", error);
-      // Don't redirect on error — try to load page anyway
-      // Server-side will enforce permissions
       await fetchAllData();
     } finally {
       setLoading(false);
@@ -139,7 +127,6 @@ export default function UserProjectOverviewPage() {
     ]);
   };
 
-  // ✅ FIXED: All fetch functions now use apiClient
   const fetchProject = async () => {
     try {
       const data = await apiClient.get(`/api/projects/${params.id}`);
@@ -193,19 +180,16 @@ export default function UserProjectOverviewPage() {
     }
   };
 
-  // Show loading while auth is resolving or data is loading
   if (authLoading || loading) return <FitoutLoadingSpinner />;
 
-  // Not authenticated or wrong role
   if (!user || user.role !== "user") return <FitoutLoadingSpinner />;
 
-  // If roleData couldn't be loaded, show page with all tabs visible
-  // (server-side will still enforce permissions on API calls)
   const permissions = roleData?.permissions || [];
   const hasRoleData = !!roleData;
 
   const canViewTasks = !hasRoleData || hasPermission("projects-view-details-task", permissions);
   const canViewBudget = !hasRoleData || hasPermission("projects-view-details-budget", permissions);
+  const canViewTender = !hasRoleData || hasPermission("projects-view-details-tender", permissions);
   const canViewDocuments = !hasRoleData || hasPermission("projects-view-details-documents", permissions);
   const canViewTeam = !hasRoleData || hasPermission("projects-view-details-team", permissions);
   const canViewOverview = !hasRoleData || hasPermission("projects-view-details-overview", permissions);
@@ -262,6 +246,16 @@ export default function UserProjectOverviewPage() {
                 className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               >
                 Budget
+              </button>
+            )}
+            {canViewTender && (
+              <button
+                onClick={() =>
+                  router.push(`/user/projects/${params.id}/tender`)
+                }
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Tender
               </button>
             )}
             {canViewDocuments && (
