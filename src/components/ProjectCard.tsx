@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Calendar, DollarSign, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface Project {
   _id: string;
@@ -26,6 +27,12 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project }: ProjectCardProps) {
+  // ✅ FIXED: Determine link path based on user role
+  // Previously hardcoded to /admin/projects/... which caused
+  // non-admin users to be redirected to dashboard by ProtectedRoute
+  const { user } = useAuth();
+  const basePath = user?.role === 'admin' ? '/admin' : '/user';
+
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
       Planning: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -42,7 +49,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
     : 0;
 
   return (
-    <Link href={`/admin/projects/${project._id}`}>
+    <Link href={`${basePath}/projects/${project._id}`}>
       <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -68,7 +75,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
             <AlertTriangle size={16} className="text-yellow-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-xs font-semibold text-yellow-800">⚠️ At Risk</p>
+              <p className="text-xs font-semibold text-yellow-800">At Risk</p>
               <p className="text-xs text-yellow-700 mt-0.5">{project.riskReason}</p>
             </div>
           </div>

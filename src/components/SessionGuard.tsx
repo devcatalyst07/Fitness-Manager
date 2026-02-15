@@ -2,84 +2,78 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/'];
+
+/**
+ * SessionGuard — SOLE OWNER of auth-based redirects
+ *
+ * AuthContext NEVER redirects. Only SessionGuard does.
+ * This eliminates competing redirect deadlocks.
+ *
+ * Logic:
+ * - While loading → show spinner
+ * - No user + protected page → redirect to /
+ * - User + auth page → redirect to dashboard
+ * - Otherwise → render children
+ */
 export default function SessionGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const hasRedirected = useRef(false);
-  const lastPathname = useRef(pathname);
+  const redirectingTo = useRef<string | null>(null);
 
-  // Reset redirect flag when pathname actually changes
-  useEffect(() => {
-    if (lastPathname.current !== pathname) {
-      hasRedirected.current = false;
-      lastPathname.current = pathname;
-    }
-  }, [pathname]);
+  // Track whether we should show content
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
+    // Still checking auth — wait
     if (loading) {
-      console.log('🔄 SessionGuard: Still loading...');
+      setShowContent(false);
       return;
     }
 
-    // Prevent multiple redirects
-    if (hasRedirected.current) {
-      console.log('⏭️ SessionGuard: Already redirected, skipping');
-      return;
-    }
+    const isPublicPath = PUBLIC_PATHS.includes(pathname);
 
-    const publicPaths = ['/login', '/register', '/forgot-password', '/'];
-    const isPublicPath = publicPaths.includes(pathname);
-
-    console.log('SessionGuard Check:', {
-      pathname,
-      isPublicPath,
-      hasUser: !!user,
-      userRole: user?.role,
-      loading,
-    });
-
-    // Redirect authenticated users away from auth pages (but not from home)
-    if (user && isPublicPath && pathname !== '/') {
-      console.log('User logged in on auth page, redirecting to dashboard');
-      const dashboardPath = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
-      hasRedirected.current = true;
-      router.push(dashboardPath);
-      return;
-    }
-
-    // Redirect unauthenticated users away from protected pages
+    // Case 1: No user on a protected route → send to login
     if (!user && !isPublicPath) {
-      console.log('Not authenticated, redirecting to home');
-      hasRedirected.current = true;
-      router.push('/');
+      // Prevent duplicate redirects to same destination
+      if (redirectingTo.current !== '/') {
+        redirectingTo.current = '/';
+        console.log('No session, redirecting to /');
+        router.replace('/');
+      }
+      setShowContent(false);
       return;
     }
 
-    console.log('Auth check passed for:', pathname);
-  }, [user, loading, pathname]); // Removed 'router' from dependencies
+    // Case 2: Logged-in user on an auth page (login/register) → send to dashboard
+    if (user && isPublicPath && pathname !== '/') {
+      const dest = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
+      if (redirectingTo.current !== dest) {
+        redirectingTo.current = dest;
+        console.log('Authenticated, redirecting to', dest);
+        router.replace(dest);
+      }
+      setShowContent(false);
+      return;
+    }
 
-  if (loading) {
+    // Case 3: Valid state — show the page content
+    redirectingTo.current = null;
+    setShowContent(true);
+  }, [user, loading, pathname, router]);
+
+  // Show loading spinner while checking auth or redirecting
+  if (loading || !showContent) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Loading session...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state only for unauthenticated users on protected pages
-  if (!user && pathname !== '/' && !pathname.startsWith('/login') && !pathname.startsWith('/register')) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400 font-medium">Redirecting...</p>
+          <p className="text-gray-600 dark:text-gray-400 font-medium">
+            {loading ? 'Loading...' : 'Redirecting...'}
+          </p>
         </div>
       </div>
     );

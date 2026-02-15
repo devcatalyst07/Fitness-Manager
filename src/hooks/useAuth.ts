@@ -6,11 +6,9 @@ import { AuthContext } from '@/context/AuthContext';
  */
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-
   return context;
 }
 
@@ -22,16 +20,10 @@ export function useRole(requiredRole: 'user' | 'admin') {
   return user?.role === requiredRole;
 }
 
-/**
- * Hook to check if user is admin
- */
 export function useIsAdmin() {
   return useRole('admin');
 }
 
-/**
- * Hook to check if user is regular user
- */
 export function useIsUser() {
   return useRole('user');
 }

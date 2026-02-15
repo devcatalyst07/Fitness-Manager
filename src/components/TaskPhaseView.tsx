@@ -1,6 +1,5 @@
 import React from 'react';
 import { Task } from '@/types/task.types';
-import { ChevronDown, ChevronRight, MoreVertical, Clock } from 'lucide-react';
 import {
   getPriorityBadge,
   getStatusBadge,
@@ -56,16 +55,6 @@ export default function TaskPhaseView({
       Milestone: 'bg-green-100 text-green-700 border-green-200',
     };
     return badges[taskType] || 'bg-gray-100 text-gray-700 border-gray-200';
-  };
-
-  // Get task type icon
-  const getTaskTypeIcon = (taskType: string) => {
-    const icons: Record<string, string> = {
-      Task: '📋',
-      Deliverable: '📦',
-      Milestone: '🎯',
-    };
-    return icons[taskType] || '📋';
   };
 
   // Group tasks by phase
@@ -125,7 +114,6 @@ export default function TaskPhaseView({
       <td className="px-6 py-4">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{getTaskTypeIcon(task.taskType || 'Task')}</span>
             <span className="text-sm font-medium text-gray-900">
               {task.title}
             </span>
@@ -138,7 +126,7 @@ export default function TaskPhaseView({
         </div>
       </td>
 
-      {/* Task Type & Duration - NEW COLUMN */}
+      {/* Task Type & Duration */}
       <td className="px-6 py-4">
         <div className="flex flex-col gap-1">
           <span
@@ -147,8 +135,7 @@ export default function TaskPhaseView({
             {task.taskType || 'Task'}
           </span>
           {task.duration && (
-            <span className="text-xs text-gray-600 flex items-center gap-1">
-              <Clock size={12} />
+            <span className="text-xs text-gray-600">
               {task.duration} day{task.duration !== 1 ? 's' : ''}
             </span>
           )}
@@ -232,9 +219,9 @@ export default function TaskPhaseView({
                 openDropdown === task._id ? null : task._id,
               );
             }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-3 py-1 text-xs hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
           >
-            <MoreVertical size={16} className="text-gray-600" />
+            Actions
           </button>
 
           {openDropdown === task._id && (
@@ -259,7 +246,7 @@ export default function TaskPhaseView({
                   onTaskClick(task);
                   setOpenDropdown(null);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg"
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg"
               >
                 View Details
               </button>
@@ -276,7 +263,7 @@ export default function TaskPhaseView({
                     }
                     setOpenDropdown(null);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-lg"
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 rounded-b-lg"
                 >
                   Delete
                 </button>
@@ -303,8 +290,8 @@ export default function TaskPhaseView({
               onClick={() => togglePhase(phase._id)}
             >
               <div className="flex items-center gap-3">
-                <button className="text-gray-600">
-                  {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
+                <button className="text-gray-600 text-xs font-medium px-2 py-1">
+                  {isCollapsed ? 'Expand' : 'Collapse'}
                 </button>
                 <div
                   className="w-4 h-4 rounded-full"
@@ -382,12 +369,8 @@ export default function TaskPhaseView({
             onClick={() => togglePhase('unassigned')}
           >
             <div className="flex items-center gap-3">
-              <button className="text-gray-600">
-                {collapsedPhases.has('unassigned') ? (
-                  <ChevronRight size={20} />
-                ) : (
-                  <ChevronDown size={20} />
-                )}
+              <button className="text-gray-600 text-xs font-medium px-2 py-1">
+                {collapsedPhases.has('unassigned') ? 'Expand' : 'Collapse'}
               </button>
               <div className="w-4 h-4 rounded-full bg-gray-400" />
               <div>

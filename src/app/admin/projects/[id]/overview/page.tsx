@@ -9,6 +9,8 @@ import {
   Users,
   AlertCircle,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/axios";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
@@ -18,15 +20,15 @@ import { DeadlinesContainer } from "@/components/DeadlineComponents";
 import { ActivityContainer } from "@/components/ActivityComponents";
 import CalendarWidget from "@/components/CalendarWidget";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
-
 export default function ProjectOverviewPage() {
   const router = useRouter();
   const params = useParams();
+
+  // ✅ FIXED: Use useAuth() instead of localStorage for auth check
+  const { user, loading: authLoading } = useAuth();
+
   const [pathname, setPathname] = useState("/admin/projects");
   const [loading, setLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [stats, setStats] = useState<any>(null);
   const [insights, setInsights] = useState<any[]>([]);
@@ -34,18 +36,24 @@ export default function ProjectOverviewPage() {
   const [upcomingDeadlines, setUpcomingDeadlines] = useState<any[]>([]);
   const [deadlineDays, setDeadlineDays] = useState(7);
 
+  // ✅ FIXED: Role-based redirect using useAuth() instead of localStorage
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("userRole");
-
-    if (!token || role !== "admin") {
-      localStorage.clear();
+    if (!authLoading && !user) {
       router.replace("/");
-    } else {
-      setIsVerified(true);
+      return;
+    }
+    if (!authLoading && user && user.role !== "admin") {
+      router.replace("/user/projects");
+      return;
+    }
+  }, [user, authLoading, router]);
+
+  // ✅ FIXED: Fetch data when user is authenticated
+  useEffect(() => {
+    if (user && user.role === "admin" && params.id) {
       fetchAllData();
     }
-  }, [params.id, router, deadlineDays]);
+  }, [user, params.id, deadlineDays]);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -59,16 +67,11 @@ export default function ProjectOverviewPage() {
     setLoading(false);
   };
 
+  // ✅ FIXED: All fetch functions now use apiClient instead of localStorage token + fetch
   const fetchProject = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/projects/${params.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setProjectName(data.projectName);
-      }
+      const data = await apiClient.get(`/api/projects/${params.id}`);
+      setProjectName(data.projectName);
     } catch (error) {
       console.error("Error fetching project:", error);
     }
@@ -76,15 +79,10 @@ export default function ProjectOverviewPage() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/overview/stats`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await apiClient.get(
+        `/api/projects/${params.id}/overview/stats`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
+      setStats(data);
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
@@ -92,15 +90,10 @@ export default function ProjectOverviewPage() {
 
   const fetchInsights = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/insights`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await apiClient.get(
+        `/api/projects/${params.id}/insights`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setInsights(data);
-      }
+      setInsights(data);
     } catch (error) {
       console.error("Error fetching insights:", error);
     }
@@ -108,15 +101,10 @@ export default function ProjectOverviewPage() {
 
   const fetchActivity = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/activity?limit=10`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await apiClient.get(
+        `/api/projects/${params.id}/activity?limit=10`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setRecentActivity(data);
-      }
+      setRecentActivity(data);
     } catch (error) {
       console.error("Error fetching activity:", error);
     }
@@ -124,21 +112,20 @@ export default function ProjectOverviewPage() {
 
   const fetchDeadlines = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const data = await apiClient.get(
+        `/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setUpcomingDeadlines(data);
-      }
+      setUpcomingDeadlines(data);
     } catch (error) {
       console.error("Error fetching deadlines:", error);
     }
   };
 
-  if (!isVerified || loading) return <FitoutLoadingSpinner />;
+  // Show loading while auth is resolving or data is loading
+  if (authLoading || loading) return <FitoutLoadingSpinner />;
+
+  // Not authenticated or wrong role — will be redirected by useEffect
+  if (!user || user.role !== "admin") return <FitoutLoadingSpinner />;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -195,10 +182,10 @@ export default function ProjectOverviewPage() {
         {/* Calendar Widget */}
         <div className="mb-6">
           <CalendarWidget
-                      projectId={params.id as string}
-                      canAddEvent={true}
-                      userRole="admin"
-                    />
+            projectId={params.id as string}
+            canAddEvent={true}
+            userRole="admin"
+          />
         </div>
 
         {/* Stats Grid */}
@@ -237,7 +224,6 @@ export default function ProjectOverviewPage() {
 
         {/* Bottom Section: Upcoming Deadlines & Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Upcoming Deadlines */}
           <DeadlinesContainer
             deadlines={upcomingDeadlines}
             currentDays={deadlineDays}
@@ -246,8 +232,6 @@ export default function ProjectOverviewPage() {
               router.push(`/admin/projects/${params.id}/tasks`)
             }
           />
-
-          {/* Recent Activity */}
           <ActivityContainer activities={recentActivity} loading={loading} />
         </div>
 

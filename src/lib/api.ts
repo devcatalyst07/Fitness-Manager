@@ -1,40 +1,47 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+/**
+ * Legacy API helper — FIXED
+ *
+ * KEY CHANGE: Delegates to apiClient from lib/axios.ts
+ * This maintains backward compatibility for any code still importing fetchWithAuth
+ * while using the unified cookie-based auth system.
+ */
 
+import { apiClient } from './axios';
+
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+
+/**
+ * Fetch with authentication — now uses cookie-based apiClient
+ *
+ * @deprecated Prefer importing `apiClient` from `@/lib/axios` directly
+ */
 export async function fetchWithAuth<T = any>(
   endpoint: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<T> {
-  // Only access localStorage in the browser
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const method = (options.method || 'GET').toLowerCase();
 
-  // Explicitly type headers as Record<string, string>
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string>),
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  // Parse body if it's a string
+  let data: any = undefined;
+  if (options.body && typeof options.body === 'string') {
+    try {
+      data = JSON.parse(options.body);
+    } catch {
+      data = options.body;
+    }
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  // Handle unauthorized (401) only in the browser
-  if (typeof window !== "undefined" && response.status === 401) {
-    // Remove only auth related keys to avoid wiping other app state
-    localStorage.removeItem("token");
-    localStorage.removeItem("roleId");
-    localStorage.removeItem("userRole");
-    window.location.href = "/";
-    return Promise.reject(new Error("Unauthorized"));
+  switch (method) {
+    case 'post':
+      return apiClient.post<T>(endpoint, data);
+    case 'put':
+      return apiClient.put<T>(endpoint, data);
+    case 'delete':
+      return apiClient.delete<T>(endpoint);
+    case 'patch':
+      return apiClient.patch<T>(endpoint, data);
+    default:
+      return apiClient.get<T>(endpoint);
   }
-
-  // Parse JSON response
-  const data: T = await response.json();
-  return data;
 }

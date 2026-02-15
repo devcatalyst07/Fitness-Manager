@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, AlertTriangle, Calendar } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+import { apiClient } from '@/lib/axios';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -39,7 +38,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     description: '',
     location: '',
     region: '',
-    scheduleFrom: 'start' as 'start' | 'end', // NEW
+    scheduleFrom: 'start' as 'start' | 'end',
     startDate: '',
     endDate: '',
     budget: '',
@@ -88,21 +87,13 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     }
   }, [formData.scope, scopes]);
 
+  // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const fetchBrands = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/brands`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBrands(data);
-        if (data.length > 0 && !formData.brand) {
-          setFormData(prev => ({ ...prev, brand: data[0].name }));
-        }
+      const data = await apiClient.get('/api/brands');
+      setBrands(data);
+      if (data.length > 0 && !formData.brand) {
+        setFormData(prev => ({ ...prev, brand: data[0].name }));
       }
     } catch (error) {
       console.error('Error fetching brands:', error);
@@ -111,22 +102,14 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     }
   };
 
+  // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const fetchScopesForBrand = async (brandName: string) => {
     setLoadingScopes(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/scopes/for-brand/${encodeURIComponent(brandName)}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setScopes(data);
-        if (data.length > 0 && !formData.scope) {
-          setFormData(prev => ({ ...prev, scope: data[0].name }));
-        }
+      const data = await apiClient.get(`/api/scopes/for-brand/${encodeURIComponent(brandName)}`);
+      setScopes(data);
+      if (data.length > 0 && !formData.scope) {
+        setFormData(prev => ({ ...prev, scope: data[0].name }));
       }
     } catch (error) {
       console.error('Error fetching scopes:', error);
@@ -137,6 +120,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
 
   if (!isOpen) return null;
 
+  // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const handleSubmit = async () => {
     setError('');
     setLoading(true);
@@ -165,7 +149,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       return;
     }
 
-    // Validate anchor date based on scheduleFrom
     if (formData.scheduleFrom === 'start' && !formData.startDate) {
       setError('Start date is required when scheduling from start');
       setLoading(false);
@@ -179,26 +162,10 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/projects`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...formData,
-          budget: parseFloat(formData.budget) || 0,
-        }),
+      const data = await apiClient.post('/api/projects', {
+        ...formData,
+        budget: parseFloat(formData.budget) || 0,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || 'Failed to create project');
-        setLoading(false);
-        return;
-      }
 
       // Show risk warning if applicable
       if (data.project?.isAtRisk) {
@@ -221,9 +188,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
         endDate: '',
         budget: '',
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Create project error:', err);
-      setError('Failed to create project');
+      setError(err?.response?.data?.message || 'Failed to create project');
     } finally {
       setLoading(false);
     }
@@ -357,7 +324,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               )}
             </div>
 
-            {/* NEW - Schedule From Section */}
+            {/* Schedule From Section */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <label className="block text-sm font-semibold text-gray-900 mb-3">
                 <Calendar size={16} className="inline mr-2" />
@@ -374,7 +341,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                     onChange={(e) => setFormData({ 
                       ...formData, 
                       scheduleFrom: 'start',
-                      endDate: '' // Clear end date when switching
+                      endDate: ''
                     })}
                     className="mt-1"
                   />
@@ -403,7 +370,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                     onChange={(e) => setFormData({ 
                       ...formData, 
                       scheduleFrom: 'end',
-                      startDate: '' // Clear start date when switching
+                      startDate: ''
                     })}
                     className="mt-1"
                   />
@@ -426,7 +393,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
 
               {formData.scheduleFrom === 'end' && (
                 <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                  ⚠️ If the end date is not achievable, the project will be created and flagged as "At risk"
+                  If the end date is not achievable, the project will be created and flagged as &quot;At risk&quot;
                 </div>
               )}
             </div>
@@ -463,7 +430,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               </label>
               <input
                 type="text"
-                value={formData.region}
+                value={formData.location}
                 onChange={(e) => setFormData({ ...formData, region: e.target.value })}
                 placeholder="e.g., NSW, Victoria"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

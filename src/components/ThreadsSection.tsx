@@ -11,9 +11,8 @@ import CreateThreadModal from "./CreateThreadModal";
 import ThreadCard from "./ThreadCard";
 import ThreadDetailModal from "./ThreadDetailModal";
 import { hasPermission } from "@/utils/permissions";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/axios";
 
 interface Permission {
   id: string;
@@ -66,6 +65,7 @@ export default function ThreadsSection({
   userRole = "admin",
   userAssignedProjects = [],
 }: ThreadsSectionProps) {
+  const { user } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [filteredThreads, setFilteredThreads] = useState<Thread[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -89,8 +89,8 @@ export default function ThreadsSection({
 
   const fetchUserPermissions = async () => {
     try {
-      const roleId = localStorage.getItem("roleId");
-      const token = localStorage.getItem("token");
+      // Try to get roleId from user object if available
+      const roleId = (user as any)?.roleId;
 
       if (!roleId) {
         // Admin or no specific role
@@ -98,14 +98,8 @@ export default function ThreadsSection({
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPermissions(data.permissions || []);
-      }
+      const data = await apiClient.get(`/api/roles/${roleId}`);
+      setPermissions(data.permissions || []);
     } catch (error) {
       console.error("Error fetching permissions:", error);
     }
@@ -114,17 +108,8 @@ export default function ThreadsSection({
   const fetchThreads = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/brands/${brandId}/threads`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setThreads(data);
-      } else {
-        console.error("Failed to fetch threads:", response.status);
-      }
+      const data = await apiClient.get(`/api/brands/${brandId}/threads`);
+      setThreads(data);
     } catch (error) {
       console.error("Error fetching threads:", error);
     } finally {
@@ -134,18 +119,8 @@ export default function ThreadsSection({
 
   const fetchProjects = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/brands/${brandId}/projects`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data);
-      }
+      const data = await apiClient.get(`/api/brands/${brandId}/projects`);
+      setProjects(data);
     } catch (error) {
       console.error("Error fetching projects:", error);
     }
@@ -154,30 +129,23 @@ export default function ThreadsSection({
   const filterThreads = () => {
     let filtered = [...threads];
 
-    // Filter by project
     if (selectedProjectFilter !== "all") {
       if (selectedProjectFilter === "general") {
-        // Show only threads without a project (general brand threads)
         filtered = filtered.filter((t) => !t.projectId);
       } else {
-        // Show only threads for the selected project
         filtered = filtered.filter(
           (t) => t.projectId === selectedProjectFilter,
         );
       }
     }
 
-    // FILTER BY USER'S ASSIGNED PROJECTS
     if (userRole === "user" && userAssignedProjects.length > 0) {
       filtered = filtered.filter((t) => {
-        // Show general threads (no projectId)
         if (!t.projectId) return true;
-        // Show only threads from user's assigned projects
         return userAssignedProjects.includes(t.projectId);
       });
     }
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -205,12 +173,10 @@ export default function ThreadsSection({
     setSelectedThread(null);
   };
 
-  // Calculate stats (use filteredThreads instead of threads for user)
   const displayThreads = userRole === "user" ? filteredThreads : threads;
   const generalThreadsCount = displayThreads.filter((t) => !t.projectId).length;
   const projectThreadsCount = displayThreads.filter((t) => t.projectId).length;
 
-  // Determine if user can add threads
   const canAddThread =
     userRole === "admin"
       ? true
@@ -253,7 +219,6 @@ export default function ThreadsSection({
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        {/* Search */}
         <div className="flex-1 relative">
           <Search
             size={18}
@@ -268,7 +233,6 @@ export default function ThreadsSection({
           />
         </div>
 
-        {/* Project Filter */}
         <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 min-w-[200px]">
           <Filter size={16} className="text-gray-500" />
           <select
@@ -282,7 +246,6 @@ export default function ThreadsSection({
             </option>
             {projects
               .filter((project) => {
-                // ✅ Admin sees all projects, User sees only assigned projects
                 if (userRole === "admin") return true;
                 return userAssignedProjects.includes(project._id);
               })
@@ -374,6 +337,7 @@ export default function ThreadsSection({
             <ThreadCard
               key={thread._id}
               thread={thread}
+              currentUserId={user?._id || ""}
               onClick={() => setSelectedThread(thread)}
               onUpdate={handleThreadUpdated}
               onDelete={handleThreadDeleted}
@@ -397,6 +361,7 @@ export default function ThreadsSection({
       {selectedThread && (
         <ThreadDetailModal
           thread={selectedThread}
+          currentUserId={user?._id || ""}
           onClose={() => setSelectedThread(null)}
           onUpdate={handleThreadUpdated}
           onDelete={handleThreadDeleted}

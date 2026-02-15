@@ -1,76 +1,30 @@
-// Brand Service - API calls for brand management
+/**
+ * Brand Service — FIXED
+ *
+ * KEY CHANGE: Uses apiClient (cookie auth) instead of localStorage Bearer tokens
+ */
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { apiClient } from '@/lib/axios';
 
-const getHeaders = () => {
-  const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-};
-
-// Get brand analytics (for line graph and stats)
 export const getBrandAnalytics = async (brandId: string) => {
-  const response = await fetch(`${API_URL}/api/admin/dashboard/stats`, {
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch brand analytics");
-  }
-
-  const data = await response.json();
-
-  // Find the specific brand's analytics
-  const brandAnalytics = data.brandAnalytics.find(
-    (b: any) => b.brandId === brandId,
+  const data = await apiClient.get('/api/admin/dashboard/stats');
+  const brandAnalytics = data.brandAnalytics?.find(
+    (b: any) => b.brandId === brandId
   );
-
   return brandAnalytics || null;
 };
 
-// Get projects for a specific brand
 export const getBrandProjects = async (brandName: string) => {
-  const response = await fetch(`${API_URL}/api/projects`, {
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch projects");
-  }
-
-  const allProjects = await response.json();
-
-  // Filter projects by brand name
+  const allProjects = await apiClient.get('/api/projects');
   return allProjects.filter((project: any) => project.brand === brandName);
 };
 
-// Get brand details
 export const getBrand = async (brandId: string) => {
-  const response = await fetch(`${API_URL}/api/brands/${brandId}`, {
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch brand");
-  }
-
-  return response.json();
+  return apiClient.get(`/api/brands/${brandId}`);
 };
 
-// Get all brands
 export const getAllBrands = async () => {
-  const response = await fetch(`${API_URL}/api/brands/all`, {
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch brands");
-  }
-
-  return response.json();
+  return apiClient.get('/api/brands/all');
 };
 
 export const brandService = {

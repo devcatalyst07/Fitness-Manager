@@ -2,9 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Clock, AlertCircle, CheckCircle2, ChevronDown } from "lucide-react";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/axios";
 
 interface TaskAssignee {
   email: string;
@@ -36,6 +35,9 @@ interface MyTaskProps {
 type TabType = "upcoming" | "overdue" | "completed";
 
 export default function MyTask({ onTaskClick }: MyTaskProps) {
+  // ✅ FIXED: Get user email from useAuth() instead of localStorage
+  const { user } = useAuth();
+
   const [activeTab, setActiveTab] = useState<TabType>("upcoming");
   const [selectedBrand, setSelectedBrand] = useState<string>("All");
   const [tasks, setTasks] = useState<DashboardTask[]>([]);
@@ -46,23 +48,19 @@ export default function MyTask({ onTaskClick }: MyTaskProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    fetchMyTasks();
-  }, []);
+    if (user) {
+      fetchMyTasks();
+    }
+  }, [user]);
 
   const fetchMyTasks = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const userEmail = (localStorage.getItem("userEmail") || "").toLowerCase();
+      // ✅ FIXED: Get email from useAuth() user object
+      const userEmail = (user?.email || "").toLowerCase();
 
-      const projectsRes = await fetch(`${API_URL}/api/projects`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // ✅ FIXED: Use apiClient instead of localStorage token + fetch
+      const projects = await apiClient.get('/api/projects');
 
-      if (!projectsRes.ok) {
-        throw new Error("Failed to fetch projects");
-      }
-
-      const projects = await projectsRes.json();
       const now = new Date();
       const isCompletedStatus = (status?: string) => {
         const normalized = (status || "").toLowerCase();
@@ -78,69 +76,67 @@ export default function MyTask({ onTaskClick }: MyTaskProps) {
           const projectId = project._id;
           if (!projectId) return [] as DashboardTask[];
 
-          const tasksRes = await fetch(
-            `${API_URL}/api/projects/${projectId}/tasks`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            },
-          );
+          try {
+            // ✅ FIXED: Use apiClient
+            const tasksData = await apiClient.get(
+              `/api/projects/${projectId}/tasks`
+            );
 
-          if (!tasksRes.ok) {
+            const tasksList = Array.isArray(tasksData)
+              ? tasksData
+              : Array.isArray(tasksData?.allTasks)
+                ? tasksData.allTasks
+                : Array.isArray(tasksData?.tasks)
+                  ? tasksData.tasks
+                  : [];
+
+            const brandName =
+              project?.brand?.name || project?.brandName || project?.brand || "";
+            const projectName = project?.projectName || project?.name || "";
+
+            return (tasksList || []).map((task: any) => {
+              const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+              const completedAt =
+                task.completedAt || task.completedDate || task.updatedAt || null;
+              const category: TabType = isCompletedStatus(task.status)
+                ? "completed"
+                : dueDate && dueDate < now
+                  ? "overdue"
+                  : "upcoming";
+
+              const assignees = Array.isArray(task.assignees)
+                ? task.assignees
+                : task.assigneeEmail
+                  ? [
+                      {
+                        email: task.assigneeEmail,
+                        name: task.assigneeName || task.assigneeEmail,
+                      },
+                    ]
+                  : [];
+
+              return {
+                _id: task._id,
+                title: task.title,
+                description: task.description,
+                status: task.status,
+                priority: task.priority,
+                dueDate: task.dueDate,
+                completedAt: completedAt || undefined,
+                progress: task.progress ?? 0,
+                assignees,
+                brand: brandName,
+                projectName,
+                projectId,
+                category,
+                createdAt: task.createdAt,
+                updatedAt: task.updatedAt,
+              } as DashboardTask;
+            });
+          } catch {
+            // If a project's tasks fail (e.g., 403), skip gracefully
             return [] as DashboardTask[];
           }
-
-          const tasksData = await tasksRes.json();
-          const tasksList = Array.isArray(tasksData)
-            ? tasksData
-            : Array.isArray(tasksData?.allTasks)
-              ? tasksData.allTasks
-              : Array.isArray(tasksData?.tasks)
-                ? tasksData.tasks
-                : [];
-
-          const brandName =
-            project?.brand?.name || project?.brandName || project?.brand || "";
-          const projectName = project?.projectName || project?.name || "";
-
-          return (tasksList || []).map((task: any) => {
-            const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-            const completedAt =
-              task.completedAt || task.completedDate || task.updatedAt || null;
-            const category: TabType = isCompletedStatus(task.status)
-              ? "completed"
-              : dueDate && dueDate < now
-                ? "overdue"
-                : "upcoming";
-
-            const assignees = Array.isArray(task.assignees)
-              ? task.assignees
-              : task.assigneeEmail
-                ? [
-                    {
-                      email: task.assigneeEmail,
-                      name: task.assigneeName || task.assigneeEmail,
-                    },
-                  ]
-                : [];
-
-            return {
-              _id: task._id,
-              title: task.title,
-              description: task.description,
-              status: task.status,
-              priority: task.priority,
-              dueDate: task.dueDate,
-              completedAt: completedAt || undefined,
-              progress: task.progress ?? 0,
-              assignees,
-              brand: brandName,
-              projectName,
-              projectId,
-              category,
-              createdAt: task.createdAt,
-              updatedAt: task.updatedAt,
-            } as DashboardTask;
-          });
         }),
       );
 

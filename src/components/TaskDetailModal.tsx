@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Flag, Users, FileText, MessageSquare, Activity, Clock, Layers, Link2, AlertCircle, Edit2, Save, Send } from 'lucide-react';
 import { Task, Comment, ActivityLog, Phase, TeamMember } from '@/types/task.types';
 import {
   getPriorityBadge,
@@ -29,7 +28,6 @@ interface TaskDetailModalProps {
   uploadingFiles: boolean;
   phases: Phase[];
   allTasks: Task[];
-  // Additional optional props from remote
   onUpdateTask?: (taskId: string, data: Partial<Task>) => void;
   teamMembers?: TeamMember[];
   isEditing?: boolean;
@@ -69,7 +67,6 @@ export default function TaskDetailModal({
   const [internalIsEditing, setInternalIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
 
-  // Use external editing state if provided, otherwise use internal
   const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
   const setIsEditing = externalSetIsEditing || setInternalIsEditing;
 
@@ -106,7 +103,6 @@ export default function TaskDetailModal({
       return;
     }
 
-    // Use onUpdateTask if provided, otherwise use onUpdate
     if (onUpdateTask && task._id) {
       onUpdateTask(task._id, editedTask);
     } else {
@@ -158,17 +154,8 @@ export default function TaskDetailModal({
     return badges[taskType] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  const getTaskTypeIcon = (taskType: string) => {
-    const icons: Record<string, string> = {
-      Task: '📋',
-      Deliverable: '📦',
-      Milestone: '🎯',
-    };
-    return icons[taskType] || '📋';
-  };
-
   const getDependencyTypeLabel = (type: string) => {
-    return type === 'FS' ? 'Finish → Start' : 'Start → Start';
+    return type === 'FS' ? 'Finish to Start' : 'Start to Start';
   };
 
   const getAvailableTasks = (currentIndex: number) => {
@@ -181,20 +168,15 @@ export default function TaskDetailModal({
     );
   };
 
-  const currentTask = isEditing ? editedTask : task;
-
-  // Use onFileSelect if provided, otherwise use handleFileSelect
   const fileSelectHandler = onFileSelect || handleFileSelect;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
+        {/* Header */}
         <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                <span className="text-2xl">{getTaskTypeIcon(task.taskType || 'Task')}</span>
-              </div>
               <div>
                 <h2 className="text-2xl font-semibold text-white">
                   {task.title}
@@ -206,8 +188,7 @@ export default function TaskDetailModal({
                     {task.taskType || 'Task'}
                   </span>
                   {task.duration && (
-                    <span className="text-white/80 text-xs flex items-center gap-1">
-                      <Clock size={12} />
+                    <span className="text-white/80 text-xs">
                       {task.duration} working day{task.duration !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -220,31 +201,30 @@ export default function TaskDetailModal({
                 !isEditing ? (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all flex items-center gap-2"
+                    className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all"
                   >
-                    <Edit2 size={16} />
                     Edit
                   </button>
                 ) : (
                   <button
                     onClick={handleSave}
-                    className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-all flex items-center gap-2"
+                    className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-all"
                   >
-                    <Save size={16} />
                     Save
                   </button>
                 )
               )}
               <button
                 onClick={onClose}
-                className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all"
+                className="text-white/80 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-all"
               >
-                <X size={24} />
+                Close
               </button>
             </div>
           </div>
         </div>
 
+        {/* Tabs */}
         <div className="border-b border-gray-200 bg-gray-50">
           <div className="flex px-8">
             <button
@@ -255,7 +235,6 @@ export default function TaskDetailModal({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <FileText size={18} className="inline mr-2" />
               Details
             </button>
             <button
@@ -266,7 +245,6 @@ export default function TaskDetailModal({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <MessageSquare size={18} className="inline mr-2" />
               Comments ({comments.length})
             </button>
             <button
@@ -277,12 +255,12 @@ export default function TaskDetailModal({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Activity size={18} className="inline mr-2" />
               Activity
             </button>
           </div>
         </div>
 
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === 'details' && (
             <div className="space-y-6">
@@ -392,7 +370,7 @@ export default function TaskDetailModal({
                     <span
                       className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getTaskTypeBadge(task.taskType || 'Task')}`}
                     >
-                      {getTaskTypeIcon(task.taskType || 'Task')} {task.taskType || 'Task'}
+                      {task.taskType || 'Task'}
                     </span>
                   )}
                 </div>
@@ -446,15 +424,13 @@ export default function TaskDetailModal({
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       {editedTask.taskType === 'Milestone' && (
-                        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                          <AlertCircle size={12} />
+                        <p className="text-xs text-gray-500 mt-1">
                           Milestones can have a maximum duration of 1 day
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-gray-900 flex items-center gap-2">
-                      <Clock size={16} className="text-gray-500" />
+                    <p className="text-gray-900">
                       {task.duration || 1} working day{(task.duration || 1) !== 1 ? 's' : ''}
                     </p>
                   )}
@@ -463,8 +439,7 @@ export default function TaskDetailModal({
 
               <div className="border border-gray-200 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <Link2 size={16} className="text-gray-500" />
+                  <label className="text-sm font-semibold text-gray-700">
                     Dependencies
                   </label>
                   {isEditing && (
@@ -472,7 +447,7 @@ export default function TaskDetailModal({
                       onClick={handleAddDependency}
                       className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
                     >
-                      + Add
+                      Add Dependency
                     </button>
                   )}
                 </div>
@@ -489,7 +464,7 @@ export default function TaskDetailModal({
                             onChange={(e) => handleDependencyChange(index, 'taskId', e.target.value)}
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           >
-                            <option value="">-- Select Task --</option>
+                            <option value="">Select Task</option>
                             {getAvailableTasks(index).map((t) => (
                               <option key={t._id} value={t._id}>
                                 {t.title} ({t.taskType})
@@ -502,15 +477,15 @@ export default function TaskDetailModal({
                             onChange={(e) => handleDependencyChange(index, 'type', e.target.value)}
                             className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           >
-                            <option value="FS">Finish→Start</option>
-                            <option value="SS">Start→Start</option>
+                            <option value="FS">Finish to Start</option>
+                            <option value="SS">Start to Start</option>
                           </select>
 
                           <button
                             onClick={() => handleRemoveDependency(index)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
                           >
-                            <X size={16} />
+                            Remove
                           </button>
                         </div>
                       ))
@@ -526,10 +501,9 @@ export default function TaskDetailModal({
                         return (
                           <div
                             key={index}
-                            className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
                           >
-                            <Link2 size={14} className="text-gray-400" />
-                            <span className="text-sm text-gray-700 flex-1">
+                            <span className="text-sm text-gray-700">
                               {depTask?.title || 'Unknown Task'}
                             </span>
                             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
@@ -680,9 +654,9 @@ export default function TaskDetailModal({
                               setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
                             }
                           }}
-                          className="text-gray-400 hover:text-red-600"
+                          className="text-gray-400 hover:text-red-600 px-1"
                         >
-                          <X size={14} />
+                          Remove
                         </button>
                       </div>
                     ))}
@@ -697,7 +671,7 @@ export default function TaskDetailModal({
                       onChange={fileSelectHandler}
                       className="hidden"
                     />
-                    📎 Attach files
+                    Attach files
                   </label>
                   <button
                     onClick={onAddComment}
@@ -742,7 +716,7 @@ export default function TaskDetailModal({
                                       onClick={() => window.open(file.url, '_blank')}
                                       className="text-xs px-2 py-1 bg-gray-100 text-blue-600 rounded hover:bg-gray-200"
                                     >
-                                      📎 {file.name}
+                                      {file.name}
                                     </button>
                                   );
                                 })}

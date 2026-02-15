@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { X, Settings } from 'lucide-react';
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+import { apiClient } from '@/lib/axios';
 
 interface EACPolicyModalProps {
   isOpen: boolean;
@@ -31,34 +29,22 @@ export default function EACPolicyModal({
   const handleApply = async () => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${API_URL}/api/finance/projects/${projectId}/eac-settings`,
+      // ✅ FIXED: Use apiClient instead of localStorage token + fetch
+      await apiClient.put(
+        `/api/finance/projects/${projectId}/eac-settings`,
         {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            eacPolicyType: policyType,
-            eacFactor: factor / 100,
-            manualForecast:
-              policyType === 'manual' ? manualForecast : undefined,
-          }),
+          eacPolicyType: policyType,
+          eacFactor: factor / 100,
+          manualForecast:
+            policyType === 'manual' ? manualForecast : undefined,
         }
       );
 
-      if (response.ok) {
-        onUpdate();
-        onClose();
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Failed to update EAC settings');
-      }
-    } catch (error) {
+      onUpdate();
+      onClose();
+    } catch (error: any) {
       console.error('Update EAC settings error:', error);
-      alert('Failed to update EAC settings');
+      alert(error?.response?.data?.message || 'Failed to update EAC settings');
     } finally {
       setSaving(false);
     }
@@ -225,7 +211,6 @@ export default function EACPolicyModal({
               disabled={saving}
               className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm sm:text-base disabled:bg-gray-300"
             >
-              {/* Save! */}
               {saving ? 'Applying...' : 'Apply Settings'}
             </button>
           </div>

@@ -2,88 +2,98 @@ import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 
 /**
- * Create React Query client with global error handling
+ * React Query Client — FIXED
+ *
+ * KEY CHANGES:
+ * - 401/403: NEVER retry (axios interceptor handles auth)
+ * - 429: Retry with delay (rate limit is temporary)
+ * - 5xx: Retry up to 2 times (server hiccup)
+ * - Other 4xx: NEVER retry (client error, won't fix itself)
  */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Stale time - data stays fresh for 5 minutes
-      staleTime: 5 * 60 * 1000,
-      
-      // Cache time - data stays in cache for 10 minutes
-      gcTime: 10 * 60 * 1000,
-      
-      // Retry failed requests
+      staleTime: 5 * 60 * 1000,   // 5 minutes
+      gcTime: 10 * 60 * 1000,     // 10 minutes
+
       retry: (failureCount, error) => {
         const axiosError = error as AxiosError;
-        
-        // Don't retry on 4xx errors (client errors)
-        if (axiosError.response?.status && axiosError.response.status < 500) {
-          return false;
-        }
-        
-        // Retry up to 2 times for 5xx errors
+        const status = axiosError.response?.status;
+
+        // 401/403: Axios interceptor handles these — don't duplicate
+        if (status === 401 || status === 403) return false;
+
+        // 429: Rate limited — the axios interceptor already retries once
+        // with Retry-After. If it still fails, React Query should NOT
+        // pile on with more retries (that makes the rate limit worse)
+        if (status === 429) return false;
+
+        // Other 4xx: Client errors — retrying won't help
+        if (status && status >= 400 && status < 500) return false;
+
+        // 5xx: Server errors — retry up to 2 times
         return failureCount < 2;
       },
-      
-      // Refetch on window focus (only if data is stale)
-      refetchOnWindowFocus: 'always',
-      
-      // Refetch on reconnect
-      refetchOnReconnect: 'always',
-      
-      // Refetch on mount only if data is stale
-      refetchOnMount: 'always',
+
+      // Reduce refetch aggressiveness to lower request volume
+      refetchOnWindowFocus: true,    // Refetch stale queries on tab focus
+      refetchOnReconnect: true,      // Refetch on network reconnect
+      refetchOnMount: true,          // Refetch on component mount if stale
     },
+
     mutations: {
-      // Retry mutations once
-      retry: 1,
+      retry: (failureCount, error) => {
+        const axiosError = error as AxiosError;
+        const status = axiosError.response?.status;
+
+        // Never retry client errors or rate limits for mutations
+        if (status && status >= 400 && status < 500) return false;
+
+        return failureCount < 1;
+      },
     },
   },
-  
+
   queryCache: new QueryCache({
     onError: (error, query) => {
       const axiosError = error as AxiosError;
-      
-      // Log errors for debugging
-      console.error('Query error:', {
-        queryKey: query.queryKey,
-        error: axiosError.message,
-        status: axiosError.response?.status,
-      });
-      
-      // Handle auth errors globally
-      if (axiosError.response?.status === 401) {
-        // Session expired - handled by axios interceptor
-        console.log('Auth error in query - session expired');
+      const status = axiosError.response?.status;
+
+      // Only log unexpected errors (not 401 which is handled by interceptor)
+      if (status !== 401) {
+        console.error('Query error:', {
+          queryKey: query.queryKey,
+          status,
+          message: axiosError.message,
+        });
       }
     },
   }),
-  
+
   mutationCache: new MutationCache({
     onError: (error, variables, context, mutation) => {
       const axiosError = error as AxiosError;
-      
-      console.error('Mutation error:', {
-        mutationKey: mutation.options.mutationKey,
-        error: axiosError.message,
-        status: axiosError.response?.status,
-      });
+      const status = axiosError.response?.status;
+
+      if (status !== 401) {
+        console.error('Mutation error:', {
+          mutationKey: mutation.options.mutationKey,
+          status,
+          message: axiosError.message,
+        });
+      }
     },
   }),
 });
 
 /**
- * Query keys factory for organized cache management
+ * Query keys factory
  */
 export const queryKeys = {
-  // Auth
   auth: {
     me: ['auth', 'me'] as const,
     session: ['auth', 'session'] as const,
   },
-  
-  // Projects
   projects: {
     all: ['projects'] as const,
     list: (filters?: any) => ['projects', 'list', filters] as const,
@@ -94,33 +104,23 @@ export const queryKeys = {
     team: (id: string) => ['projects', id, 'team'] as const,
     documents: (id: string) => ['projects', id, 'documents'] as const,
   },
-  
-  // Dashboard
   dashboard: {
     stats: ['dashboard', 'stats'] as const,
     analytics: ['dashboard', 'analytics'] as const,
   },
-  
-  // Finance
   finance: {
     overview: (filters?: any) => ['finance', 'overview', filters] as const,
   },
-  
-  // Documents
   documents: {
-    list: (projectId?: string) => 
-      projectId ? ['documents', 'project', projectId] : ['documents', 'all'] as const,
+    list: (projectId?: string) =>
+      projectId ? ['documents', 'project', projectId] : (['documents', 'all'] as const),
     folders: ['documents', 'folders'] as const,
   },
-  
-  // Tasks
   tasks: {
     list: (projectId: string) => ['tasks', 'project', projectId] as const,
     detail: (taskId: string) => ['tasks', 'detail', taskId] as const,
     comments: (taskId: string) => ['tasks', taskId, 'comments'] as const,
   },
-  
-  // Brands
   brands: {
     all: ['brands'] as const,
     detail: (id: string) => ['brands', 'detail', id] as const,
@@ -132,26 +132,19 @@ export const queryKeys = {
  * Cache invalidation helpers
  */
 export const invalidateQueries = {
-  // Invalidate all project-related queries
   projects: () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.all });
   },
-  
-  // Invalidate specific project
   project: (id: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.detail(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.tasks(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.budget(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.projects.team(id) });
   },
-  
-  // Invalidate dashboard
   dashboard: () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.stats });
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.analytics });
   },
-  
-  // Invalidate all queries (use sparingly)
   all: () => {
     queryClient.invalidateQueries();
   },

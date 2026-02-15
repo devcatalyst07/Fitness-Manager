@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Plus, ChevronRight, Edit2, Trash2, Filter, X, Check } from 'lucide-react';
 import { CreateScopeModal, EditScopeModal, AddWorkflowModal, ManageTasksModal } from './ScopeModals';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+import { apiClient } from '@/lib/axios';
 
 interface Brand {
   _id: string;
@@ -59,10 +58,8 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
   const [scopes, setScopes] = useState<Scope[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
-  
   const [filterType, setFilterType] = useState<'all' | 'specific'>('all');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('');
-  
   const [expandedScope, setExpandedScope] = useState<string | null>(null);
   const [expandedWorkflow, setExpandedWorkflow] = useState<string | null>(null);
   const [isCreateScopeModalOpen, setIsCreateScopeModalOpen] = useState(false);
@@ -76,14 +73,8 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
 
   const fetchBrands = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/brands`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setBrands(data);
-      }
+      const data = await apiClient.get('/api/brands');
+      setBrands(data);
     } catch (error) {
       console.error('Error fetching brands:', error);
     }
@@ -92,62 +83,43 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
   const fetchScopes = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      let url = `${API_URL}/api/scopes`;
+      let url = '/api/scopes';
       const params = new URLSearchParams();
-      
+
       if (filterType === 'all') {
         params.append('brandFilter', 'all');
       } else if (filterType === 'specific' && selectedBrandFilter) {
         params.append('brandFilter', 'specific');
         params.append('brandId', selectedBrandFilter);
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const scopesData = await apiClient.get(url);
 
-      if (response.ok) {
-        const scopesData = await response.json();
-        
-        // Fetch workflows with full details for each scope
-        const scopesWithWorkflows = await Promise.all(
-          scopesData.map(async (scope: Scope) => {
-            const workflowsResponse = await fetch(
-              `${API_URL}/api/scopes/${scope._id}/workflows`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            
-            if (workflowsResponse.ok) {
-              const workflows = await workflowsResponse.json();
-              
-              // Fetch full details for each workflow
-              const fullWorkflows = await Promise.all(
-                workflows.map(async (wf: Workflow) => {
-                  const detailResponse = await fetch(
-                    `${API_URL}/api/scopes/${scope._id}/workflows/${wf._id}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  );
-                  if (detailResponse.ok) {
-                    return await detailResponse.json();
-                  }
+      const scopesWithWorkflows = await Promise.all(
+        scopesData.map(async (scope: Scope) => {
+          try {
+            const workflows = await apiClient.get(`/api/scopes/${scope._id}/workflows`);
+            const fullWorkflows = await Promise.all(
+              workflows.map(async (wf: Workflow) => {
+                try {
+                  return await apiClient.get(`/api/scopes/${scope._id}/workflows/${wf._id}`);
+                } catch {
                   return wf;
-                })
-              );
-              
-              return { ...scope, workflows: fullWorkflows };
-            }
+                }
+              })
+            );
+            return { ...scope, workflows: fullWorkflows };
+          } catch {
             return { ...scope, workflows: [] };
-          })
-        );
-        
-        setScopes(scopesWithWorkflows);
-      }
+          }
+        })
+      );
+
+      setScopes(scopesWithWorkflows);
     } catch (error) {
       console.error('Error fetching scopes:', error);
     } finally {
@@ -155,98 +127,56 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
     }
   };
 
-  // ✨ NEW: Optimized function to refresh a single workflow without reloading everything
   const refreshWorkflow = async (scopeId: string, workflowId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${API_URL}/api/scopes/${scopeId}/workflows/${workflowId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const updatedWorkflow = await apiClient.get(`/api/scopes/${scopeId}/workflows/${workflowId}`);
+      setScopes(prevScopes =>
+        prevScopes.map(scope => {
+          if (scope._id === scopeId) {
+            return { ...scope, workflows: scope.workflows.map(wf => wf._id === workflowId ? updatedWorkflow : wf) };
+          }
+          return scope;
+        })
       );
-      
-      if (response.ok) {
-        const updatedWorkflow = await response.json();
-        
-        // Update only the specific workflow in state
-        setScopes(prevScopes => 
-          prevScopes.map(scope => {
-            if (scope._id === scopeId) {
-              return {
-                ...scope,
-                workflows: scope.workflows.map(wf => 
-                  wf._id === workflowId ? updatedWorkflow : wf
-                )
-              };
-            }
-            return scope;
-          })
-        );
-      }
     } catch (error) {
       console.error('Error refreshing workflow:', error);
     }
   };
 
-  // ✨ NEW: Optimized function to add a workflow without full reload
   const handleAddWorkflow = async (scopeId: string, newWorkflow: Workflow) => {
     setScopes(prevScopes =>
       prevScopes.map(scope => {
         if (scope._id === scopeId) {
-          return {
-            ...scope,
-            workflows: [...scope.workflows, newWorkflow]
-          };
+          return { ...scope, workflows: [...scope.workflows, newWorkflow] };
         }
         return scope;
       })
     );
   };
 
-  // ✨ NEW: Optimized function to delete a workflow without full reload
   const handleDeleteWorkflow = async (scopeId: string, workflowId: string) => {
     if (!confirm('Delete this workflow?')) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/scopes/${scopeId}/workflows/${workflowId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      if (response.ok) {
-        // Remove workflow from state
-        setScopes(prevScopes =>
-          prevScopes.map(scope => {
-            if (scope._id === scopeId) {
-              return {
-                ...scope,
-                workflows: scope.workflows.filter(wf => wf._id !== workflowId)
-              };
-            }
-            return scope;
-          })
-        );
-      }
+      await apiClient.delete(`/api/scopes/${scopeId}/workflows/${workflowId}`);
+      setScopes(prevScopes =>
+        prevScopes.map(scope => {
+          if (scope._id === scopeId) {
+            return { ...scope, workflows: scope.workflows.filter(wf => wf._id !== workflowId) };
+          }
+          return scope;
+        })
+      );
     } catch (error) {
       console.error('Error:', error);
     }
   };
 
   const handleDeleteScope = async (scopeId: string) => {
-    if (!confirm('Delete this scope? This will delete all workflows, phases, and tasks.')) {
-      return;
-    }
-
+    if (!confirm('Delete this scope? This will delete all workflows, phases, and tasks.')) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/scopes/${scopeId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        fetchScopes();
-        if (onRefresh) onRefresh();
-      }
+      await apiClient.delete(`/api/scopes/${scopeId}`);
+      fetchScopes();
+      if (onRefresh) onRefresh();
     } catch (error) {
       console.error('Error deleting scope:', error);
     }
@@ -266,18 +196,11 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              Scope & Workflow Architecture
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Define project scopes, workflows, and task templates
-            </p>
+            <h2 className="text-xl font-bold text-gray-900">Scope & Workflow Architecture</h2>
+            <p className="text-sm text-gray-600 mt-1">Define project scopes, workflows, and task templates</p>
           </div>
         </div>
-        <button
-          onClick={() => setIsCreateScopeModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
+        <button onClick={() => setIsCreateScopeModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Plus size={20} />
           <span>Create Scope</span>
         </button>
@@ -289,43 +212,20 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
           <Filter size={20} className="text-gray-600" />
           <span className="text-sm font-medium text-gray-700">Filter by:</span>
         </div>
-        
         <div className="flex-1 flex flex-wrap gap-3">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="brandFilter"
-              value="all"
-              checked={filterType === 'all'}
-              onChange={() => { setFilterType('all'); setSelectedBrandFilter(''); }}
-              className="text-blue-600"
-            />
+            <input type="radio" name="brandFilter" value="all" checked={filterType === 'all'} onChange={() => { setFilterType('all'); setSelectedBrandFilter(''); }} className="text-blue-600" />
             <span className="text-sm text-gray-700">All Brands</span>
           </label>
-
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="brandFilter"
-              value="specific"
-              checked={filterType === 'specific'}
-              onChange={() => setFilterType('specific')}
-              className="text-blue-600"
-            />
+            <input type="radio" name="brandFilter" value="specific" checked={filterType === 'specific'} onChange={() => setFilterType('specific')} className="text-blue-600" />
             <span className="text-sm text-gray-700">Specific Brand</span>
           </label>
         </div>
-
         {filterType === 'specific' && (
-          <select
-            value={selectedBrandFilter}
-            onChange={(e) => setSelectedBrandFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
-          >
+          <select value={selectedBrandFilter} onChange={(e) => setSelectedBrandFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm">
             <option value="">Select Brand</option>
-            {brands.map((brand) => (
-              <option key={brand._id} value={brand._id}>{brand.name}</option>
-            ))}
+            {brands.map((brand) => (<option key={brand._id} value={brand._id}>{brand.name}</option>))}
           </select>
         )}
       </div>
@@ -340,16 +240,9 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
         <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
           <Settings size={48} className="mx-auto text-gray-400 mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No scopes found</h3>
-          <p className="text-gray-600 mb-4">
-            {filterType === 'specific' && !selectedBrandFilter
-              ? 'Please select a brand'
-              : 'Create your first scope'}
-          </p>
+          <p className="text-gray-600 mb-4">{filterType === 'specific' && !selectedBrandFilter ? 'Please select a brand' : 'Create your first scope'}</p>
           {!(filterType === 'specific' && !selectedBrandFilter) && (
-            <button
-              onClick={() => setIsCreateScopeModalOpen(true)}
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
-            >
+            <button onClick={() => setIsCreateScopeModalOpen(true)} className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
               <Plus size={20} />
               <span>Create Scope</span>
             </button>
@@ -376,22 +269,11 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
         </div>
       )}
 
-      {/* Modals */}
       {isCreateScopeModalOpen && (
-        <CreateScopeModal
-          brands={brands}
-          onClose={() => setIsCreateScopeModalOpen(false)}
-          onSuccess={() => { fetchScopes(); if (onRefresh) onRefresh(); }}
-        />
+        <CreateScopeModal brands={brands} onClose={() => setIsCreateScopeModalOpen(false)} onSuccess={() => { fetchScopes(); if (onRefresh) onRefresh(); }} />
       )}
-
       {isEditScopeModalOpen && selectedScope && (
-        <EditScopeModal
-          scope={selectedScope}
-          brands={brands}
-          onClose={() => { setIsEditScopeModalOpen(false); setSelectedScope(null); }}
-          onSuccess={() => { fetchScopes(); if (onRefresh) onRefresh(); }}
-        />
+        <EditScopeModal scope={selectedScope} brands={brands} onClose={() => { setIsEditScopeModalOpen(false); setSelectedScope(null); }} onSuccess={() => { fetchScopes(); if (onRefresh) onRefresh(); }} />
       )}
     </div>
   );
@@ -412,18 +294,7 @@ interface ScopeItemProps {
   onDeleteWorkflow: (scopeId: string, workflowId: string) => void;
 }
 
-function ScopeItem({ 
-  scope, 
-  isExpanded, 
-  expandedWorkflow, 
-  onToggle, 
-  onToggleWorkflow, 
-  onEdit, 
-  onDelete,
-  onRefreshWorkflow,
-  onAddWorkflow,
-  onDeleteWorkflow
-}: ScopeItemProps) {
+function ScopeItem({ scope, isExpanded, expandedWorkflow, onToggle, onToggleWorkflow, onEdit, onDelete, onRefreshWorkflow, onAddWorkflow, onDeleteWorkflow }: ScopeItemProps) {
   const [isAddWorkflowModalOpen, setIsAddWorkflowModalOpen] = useState(false);
 
   return (
@@ -440,7 +311,6 @@ function ScopeItem({
             </div>
           </div>
         </button>
-
         <div className="flex items-center gap-2">
           <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-2 text-gray-600 hover:text-blue-600 rounded"><Edit2 size={16} /></button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-2 text-gray-600 hover:text-red-600 rounded"><Trash2 size={16} /></button>
@@ -452,8 +322,7 @@ function ScopeItem({
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-semibold text-gray-700">Workflows</h4>
             <button onClick={() => setIsAddWorkflowModalOpen(true)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
-              <Plus size={14} />
-              <span>Add Workflow</span>
+              <Plus size={14} /><span>Add Workflow</span>
             </button>
           </div>
 
@@ -479,10 +348,7 @@ function ScopeItem({
             <AddWorkflowModal
               scopeId={scope._id}
               onClose={() => setIsAddWorkflowModalOpen(false)}
-              onSuccess={(newWorkflow) => {
-                onAddWorkflow(scope._id, newWorkflow);
-                setIsAddWorkflowModalOpen(false);
-              }}
+              onSuccess={(newWorkflow) => { onAddWorkflow(scope._id, newWorkflow); setIsAddWorkflowModalOpen(false); }}
             />
           )}
         </div>
@@ -519,14 +385,9 @@ function WorkflowItem({ workflow, scopeId, isExpanded, onToggle, onDelete, onRef
             </div>
           </div>
         </button>
-
         <div className="flex items-center gap-1">
-          <button onClick={(e) => { e.stopPropagation(); setIsManageTasksModalOpen(true); }} className="p-1.5 text-gray-600 hover:text-blue-600 rounded" title="Manage">
-            <Settings size={14} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-gray-600 hover:text-red-600 rounded">
-            <Trash2 size={14} />
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); setIsManageTasksModalOpen(true); }} className="p-1.5 text-gray-600 hover:text-blue-600 rounded" title="Manage"><Settings size={14} /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-gray-600 hover:text-red-600 rounded"><Trash2 size={14} /></button>
         </div>
       </div>
 
@@ -571,12 +432,7 @@ function WorkflowItem({ workflow, scopeId, isExpanded, onToggle, onDelete, onRef
       )}
 
       {isManageTasksModalOpen && (
-        <ManageTasksModal 
-          scopeId={scopeId} 
-          workflowId={workflow._id} 
-          onClose={() => setIsManageTasksModalOpen(false)} 
-          onSuccess={onRefresh} 
-        />
+        <ManageTasksModal scopeId={scopeId} workflowId={workflow._id} onClose={() => setIsManageTasksModalOpen(false)} onSuccess={onRefresh} />
       )}
     </div>
   );

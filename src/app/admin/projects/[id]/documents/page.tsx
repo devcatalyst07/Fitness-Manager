@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Upload, Search, FileText, Eye, Trash2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { apiClient } from '@/lib/axios';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
 interface Document {
   _id: string;
@@ -16,18 +16,16 @@ interface Document {
   fileSize: number;
   fileType: string;
   uploadedAt: string;
-  uploadedBy?: {
-    name: string;
-    email: string;
-  };
+  uploadedBy?: { name: string; email: string; };
 }
 
 export default function ProjectDocumentsPage() {
   const router = useRouter();
   const params = useParams();
+  const { user, loading: authLoading } = useAuth();
+
   const [pathname, setPathname] = useState('/admin/projects');
   const [loading, setLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [projectName, setProjectName] = useState('');
@@ -35,203 +33,114 @@ export default function ProjectDocumentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('userRole');
+    if (!authLoading && !user) { router.replace('/'); return; }
+    if (!authLoading && user && user.role !== 'admin') { router.replace('/user/projects'); return; }
+  }, [user, authLoading, router]);
 
-    if (!token || role !== 'admin') {
-      localStorage.clear();
-      router.replace('/');
-    } else {
-      setIsVerified(true);
+  useEffect(() => {
+    if (user && user.role === 'admin' && params.id) {
       fetchProject();
       fetchDocuments();
     }
-  }, [params.id, router]);
+  }, [user, params.id]);
 
   const fetchProject = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/projects/${params.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setProjectName(data.projectName);
-      }
-    } catch (error) {
-      console.error('Error fetching project:', error);
-    }
+      const data = await apiClient.get(`/api/projects/${params.id}`);
+      setProjectName(data.projectName);
+    } catch (error) { console.error('Error fetching project:', error); }
   };
 
   const fetchDocuments = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/documents/project/${params.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data);
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    } finally {
-      setLoading(false);
-    }
+      const data = await apiClient.get(`/api/documents/project/${params.id}`);
+      setDocuments(data);
+    } catch (error) { console.error('Error fetching documents:', error); }
+    finally { setLoading(false); }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
-                            'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                            'image/png', 'image/jpeg', 'image/jpg'];
-      
-      if (!allowedTypes.includes(file.type)) {
-        alert('Invalid file type. Only PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG are allowed');
-        return;
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB');
-        return;
-      }
-
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/png', 'image/jpeg', 'image/jpg'];
+      if (!allowedTypes.includes(file.type)) { alert('Invalid file type. Only PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, JPEG are allowed'); return; }
+      if (file.size > 10 * 1024 * 1024) { alert('File size must be less than 10MB'); return; }
       setSelectedFile(file);
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) {
-      alert('Please select a file');
-      return;
-    }
-
+    if (!selectedFile) { alert('Please select a file'); return; }
     setUploading(true);
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('projectId', params.id as string);
-
-      const response = await fetch(`${API_URL}/api/documents/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        await fetchDocuments();
-        setSelectedFile(null);
-        alert('Document uploaded successfully!');
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Failed to upload document');
-      }
-    } catch (error) {
+      await apiClient.post('/api/documents/upload', formData);
+      await fetchDocuments();
+      setSelectedFile(null);
+      alert('Document uploaded successfully!');
+    } catch (error: any) {
       console.error('Upload error:', error);
-      alert('Failed to upload document');
-    } finally {
-      setUploading(false);
-    }
+      alert(error?.response?.data?.message || 'Failed to upload document');
+    } finally { setUploading(false); }
   };
 
-  const handleViewDocument = (doc: Document) => {
-    window.open(doc.fileUrl, '_blank');
-  };
+  const handleViewDocument = (doc: Document) => { window.open(doc.fileUrl, '_blank'); };
 
   const handleDeleteDocument = async (docId: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
-
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/documents/${docId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        await fetchDocuments();
-        alert('Document deleted successfully!');
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Failed to delete document');
-      }
-    } catch (error) {
+      await apiClient.delete(`/api/documents/${docId}`);
+      await fetchDocuments();
+      alert('Document deleted successfully!');
+    } catch (error: any) {
       console.error('Delete error:', error);
-      alert('Failed to delete document');
+      alert(error?.response?.data?.message || 'Failed to delete document');
     }
   };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
+  const formatDate = (dateString: string): string => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-  const filteredDocuments = documents.filter(doc =>
-    doc.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredDocuments = documents.filter(doc => doc.fileName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  if (!isVerified || loading) {
-    return <FitoutLoadingSpinner />;
-  }
+  if (authLoading || loading) return <FitoutLoadingSpinner />;
+  if (!user || user.role !== 'admin') return <FitoutLoadingSpinner />;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <AdminSidebar pathname={pathname} setPathname={setPathname} />
       <AdminHeader />
-
       <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
         <div className="mb-6">
-          <button
-            onClick={() => router.push(`/admin/projects/${params.id}`)}
-            className="text-gray-600 hover:text-black mb-4 flex items-center gap-2"
-          >
-            <ArrowLeft size={20} />
-            <span>{projectName || 'Back to Project'}</span>
+          <button onClick={() => router.push(`/admin/projects/${params.id}`)} className="text-gray-600 hover:text-black mb-4 flex items-center gap-2">
+            <ArrowLeft size={20} /><span>{projectName || 'Back to Project'}</span>
           </button>
-
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Documents</h1>
-              <p className="text-sm text-gray-600">Document library for this project</p>
-            </div>
+            <div><h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Documents</h1><p className="text-sm text-gray-600">Document library for this project</p></div>
           </div>
         </div>
 
         <div className="mb-6 border-b border-gray-200">
           <div className="flex gap-6">
             {['Overview', 'Tasks', 'Budget', 'Documents', 'Team'].map((tab) => (
-              <button
-                key={tab}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                  tab === 'Documents' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'
-                }`}
+              <button key={tab}
+                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'Documents' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                 onClick={() => {
                   if (tab === 'Overview') router.push(`/admin/projects/${params.id}`);
                   if (tab === 'Tasks') router.push(`/admin/projects/${params.id}/tasks`);
                   if (tab === 'Budget') router.push(`/admin/projects/${params.id}/budget`);
                   if (tab === 'Team') router.push(`/admin/projects/${params.id}/team`);
                 }}
-              >
-                {tab}
-              </button>
+              >{tab}</button>
             ))}
           </div>
         </div>
@@ -239,73 +148,30 @@ export default function ProjectDocumentsPage() {
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search project documents..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-              {filteredDocuments.length} documents
-            </span>
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search project documents..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">{filteredDocuments.length} documents</span>
           </div>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Upload size={20} className="text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Upload Project Documents</h2>
-          </div>
+          <div className="flex items-center gap-3 mb-4"><Upload size={20} className="text-gray-600" /><h2 className="text-lg font-semibold text-gray-900">Upload Project Documents</h2></div>
           <p className="text-sm text-gray-600 mb-4">Upload files specific to this project</p>
-
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-gray-900">Attachments</h3>
-            </div>
+            <div className="flex items-center justify-between mb-3"><h3 className="font-medium text-gray-900">Attachments</h3></div>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
               <Upload size={48} className="mx-auto text-gray-400 mb-3" />
-              <p className="text-gray-700 mb-2">
-                <label className="text-blue-600 hover:text-blue-800 underline cursor-pointer">
-                  Browse files
-                  <input
-                    type="file"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.xlsx,.xls,.png,.jpg,.jpeg"
-                  />
-                </label>
-              </p>
-              <p className="text-xs text-gray-500">
-                Max 10MB • .pdf, .doc, .xlsx, .png, .jpg, .jpeg
-              </p>
+              <p className="text-gray-700 mb-2"><label className="text-blue-600 hover:text-blue-800 underline cursor-pointer">Browse files<input type="file" onChange={handleFileSelect} className="hidden" accept=".pdf,.doc,.docx,.xlsx,.xls,.png,.jpg,.jpeg" /></label></p>
+              <p className="text-xs text-gray-500">Max 10MB • .pdf, .doc, .xlsx, .png, .jpg, .jpeg</p>
             </div>
-            
             {selectedFile && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <FileText className="text-blue-600" size={24} />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
+                  <div><p className="text-sm font-medium text-gray-900">{selectedFile.name}</p><p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p></div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedFile(null)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    Remove
-                  </button>
-                  <button
-                    onClick={handleUpload}
-                    disabled={uploading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-                  >
-                    {uploading ? 'Uploading...' : 'Upload'}
-                  </button>
+                  <button onClick={() => setSelectedFile(null)} className="text-gray-400 hover:text-gray-600">Remove</button>
+                  <button onClick={handleUpload} disabled={uploading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">{uploading ? 'Uploading...' : 'Upload'}</button>
                 </div>
               </div>
             )}
@@ -313,80 +179,39 @@ export default function ProjectDocumentsPage() {
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <FileText size={20} className="text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Document Library</h2>
-          </div>
-
+          <div className="flex items-center gap-3 mb-4"><FileText size={20} className="text-gray-600" /><h2 className="text-lg font-semibold text-gray-900">Document Library</h2></div>
           {filteredDocuments.length === 0 ? (
             <div className="text-center py-12">
               <FileText size={64} className="mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {documents.length === 0 ? 'No project documents yet' : 'No documents found'}
-              </h3>
-              <p className="text-gray-600 mb-4">
-                {documents.length === 0 
-                  ? 'Upload your first project document to get started'
-                  : 'Try adjusting your search query'}
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{documents.length === 0 ? 'No project documents yet' : 'No documents found'}</h3>
+              <p className="text-gray-600 mb-4">{documents.length === 0 ? 'Upload your first project document to get started' : 'Try adjusting your search query'}</p>
             </div>
           ) : (
             <div className="space-y-3">
               {filteredDocuments.map((doc) => (
-                <div
-                  key={doc._id}
-                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-between"
-                >
+                <div key={doc._id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1">
                     <FileText className="text-blue-600" size={24} />
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{doc.fileName}</p>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>{formatFileSize(doc.fileSize)}</span>
-                        <span>•</span>
-                        <span>{formatDate(doc.uploadedAt)}</span>
-                        {doc.uploadedBy && (
-                          <>
-                            <span>•</span>
-                            <span>{doc.uploadedBy.name}</span>
-                          </>
-                        )}
+                        <span>{formatFileSize(doc.fileSize)}</span><span>•</span><span>{formatDate(doc.uploadedAt)}</span>
+                        {doc.uploadedBy && (<><span>•</span><span>{doc.uploadedBy.name}</span></>)}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleViewDocument(doc)}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
-                      title="View"
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDocument(doc._id)}
-                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <button onClick={() => handleViewDocument(doc)} className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye size={18} /></button>
+                    <button onClick={() => handleDeleteDocument(doc._id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 size={18} /></button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start gap-2">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <h4 className="font-medium text-blue-900 mb-1">Project Document Storage</h4>
-                <p className="text-sm text-blue-700">
-                  These documents are specific to this project and are isolated from other projects. 
-                  Access is controlled by your project role and permissions.
-                </p>
-              </div>
+              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <div><h4 className="font-medium text-blue-900 mb-1">Project Document Storage</h4><p className="text-sm text-blue-700">These documents are specific to this project and are isolated from other projects. Access is controlled by your project role and permissions.</p></div>
             </div>
           </div>
         </div>

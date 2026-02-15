@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Clock, AlertCircle, CheckCircle2, ChevronDown } from "lucide-react";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { apiClient } from "@/lib/axios";
 
 interface TaskAssignee {
   email: string;
@@ -49,18 +47,11 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
     fetchDashboardTasks();
   }, []);
 
+  // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const fetchDashboardTasks = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const projectsRes = await fetch(`${API_URL}/api/projects`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const projects = await apiClient.get("/api/projects");
 
-      if (!projectsRes.ok) {
-        throw new Error("Failed to fetch projects");
-      }
-
-      const projects = await projectsRes.json();
       const uniqueBrands = Array.from(
         new Set(
           (projects || []).map(
@@ -82,73 +73,75 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
           normalized === "complete"
         );
       };
+
+      // ✅ FIXED: Use apiClient for per-project task fetches too
       const taskResults = await Promise.all(
         (projects || []).map(async (project: any) => {
           const projectId = project._id;
           if (!projectId) return [] as DashboardTask[];
 
-          const tasksRes = await fetch(
-            `${API_URL}/api/projects/${projectId}/tasks`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            },
-          );
+          try {
+            const tasksData = await apiClient.get(
+              `/api/projects/${projectId}/tasks`
+            );
 
-          if (!tasksRes.ok) {
+            const tasksList = Array.isArray(tasksData)
+              ? tasksData
+              : Array.isArray(tasksData?.allTasks)
+                ? tasksData.allTasks
+                : Array.isArray(tasksData?.tasks)
+                  ? tasksData.tasks
+                  : [];
+
+            const brandName =
+              project?.brand?.name ||
+              project?.brandName ||
+              project?.brand ||
+              "";
+            const projectName = project?.projectName || project?.name || "";
+
+            return (tasksList || []).map((task: any) => {
+              const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+              const completedAt =
+                task.completedAt || task.completedDate || task.updatedAt || null;
+              const category: TabType = isCompletedStatus(task.status)
+                ? "completed"
+                : dueDate && dueDate < now
+                  ? "overdue"
+                  : "upcoming";
+
+              const assignees = Array.isArray(task.assignees)
+                ? task.assignees
+                : task.assigneeEmail
+                  ? [
+                      {
+                        email: task.assigneeEmail,
+                        name: task.assigneeName || task.assigneeEmail,
+                      },
+                    ]
+                  : [];
+
+              return {
+                _id: task._id,
+                title: task.title,
+                description: task.description,
+                status: task.status,
+                priority: task.priority,
+                dueDate: task.dueDate,
+                completedAt: completedAt || undefined,
+                progress: task.progress ?? 0,
+                assignees,
+                brand: brandName,
+                projectName,
+                projectId,
+                category,
+                createdAt: task.createdAt,
+                updatedAt: task.updatedAt,
+              } as DashboardTask;
+            });
+          } catch {
             return [] as DashboardTask[];
           }
-
-          const tasksData = await tasksRes.json();
-          const tasksList = Array.isArray(tasksData)
-            ? tasksData
-            : Array.isArray(tasksData?.allTasks)
-              ? tasksData.allTasks
-              : Array.isArray(tasksData?.tasks)
-                ? tasksData.tasks
-                : [];
-          const brandName =
-            project?.brand?.name || project?.brandName || project?.brand || "";
-          const projectName = project?.projectName || project?.name || "";
-
-          return (tasksList || []).map((task: any) => {
-            const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-            const completedAt =
-              task.completedAt || task.completedDate || task.updatedAt || null;
-            const category: TabType = isCompletedStatus(task.status)
-              ? "completed"
-              : dueDate && dueDate < now
-                ? "overdue"
-                : "upcoming";
-
-            const assignees = Array.isArray(task.assignees)
-              ? task.assignees
-              : task.assigneeEmail
-                ? [
-                    {
-                      email: task.assigneeEmail,
-                      name: task.assigneeName || task.assigneeEmail,
-                    },
-                  ]
-                : [];
-
-            return {
-              _id: task._id,
-              title: task.title,
-              description: task.description,
-              status: task.status,
-              priority: task.priority,
-              dueDate: task.dueDate,
-              completedAt: completedAt || undefined,
-              progress: task.progress ?? 0,
-              assignees,
-              brand: brandName,
-              projectName,
-              projectId,
-              category,
-              createdAt: task.createdAt,
-              updatedAt: task.updatedAt,
-            } as DashboardTask;
-          });
         }),
       );
 

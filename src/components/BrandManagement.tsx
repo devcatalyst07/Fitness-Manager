@@ -9,9 +9,7 @@ import {
 } from "lucide-react";
 import BrandDashboardModal from "@/components/BrandDashboardModal";
 import AccessControlModal from "@/components/Accesscontrolmodal";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { apiClient } from "@/lib/axios";
 
 interface Brand {
   _id: string;
@@ -55,10 +53,7 @@ export default function BrandManagement({
   const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
   const [isAccessControlOpen, setIsAccessControlOpen] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-  });
+  const [formData, setFormData] = useState({ name: "", description: "" });
   const [saving, setSaving] = useState(false);
 
   const handleCreateBrand = async () => {
@@ -69,28 +64,15 @@ export default function BrandManagement({
 
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/brands`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setIsCreateModalOpen(false);
-        setFormData({ name: "", description: "" });
-        onRefresh();
-        alert("Brand created successfully!");
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to create brand");
-      }
-    } catch (error) {
+      await apiClient.post('/api/brands', formData);
+      setIsCreateModalOpen(false);
+      setFormData({ name: "", description: "" });
+      onRefresh();
+      alert("Brand created successfully!");
+    } catch (error: any) {
       console.error("Create brand error:", error);
-      alert("Failed to create brand");
+      const message = error?.response?.data?.message || "Failed to create brand";
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -104,34 +86,18 @@ export default function BrandManagement({
 
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/brands/${selectedBrand._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: selectedBrand.name,
-            description: selectedBrand.description,
-          }),
-        },
-      );
-
-      if (response.ok) {
-        setIsEditModalOpen(false);
-        setSelectedBrand(null);
-        onRefresh();
-        alert("Brand updated successfully!");
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to update brand");
-      }
-    } catch (error) {
+      await apiClient.put(`/api/brands/${selectedBrand._id}`, {
+        name: selectedBrand.name,
+        description: selectedBrand.description,
+      });
+      setIsEditModalOpen(false);
+      setSelectedBrand(null);
+      onRefresh();
+      alert("Brand updated successfully!");
+    } catch (error: any) {
       console.error("Update brand error:", error);
-      alert("Failed to update brand");
+      const message = error?.response?.data?.message || "Failed to update brand";
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -139,34 +105,18 @@ export default function BrandManagement({
 
   const handleDeleteBrand = async (brandId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-
-    if (
-      !confirm(
-        "Are you sure you want to delete this brand? This action cannot be undone.",
-      )
-    ) {
+    if (!confirm("Are you sure you want to delete this brand? This action cannot be undone.")) {
       return;
     }
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/brands/${brandId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        onRefresh();
-        alert("Brand deleted successfully!");
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to delete brand");
-      }
-    } catch (error) {
+      await apiClient.delete(`/api/brands/${brandId}`);
+      onRefresh();
+      alert("Brand deleted successfully!");
+    } catch (error: any) {
       console.error("Delete brand error:", error);
-      alert("Failed to delete brand");
+      const message = error?.response?.data?.message || "Failed to delete brand";
+      alert(message);
     }
   };
 
@@ -190,9 +140,7 @@ export default function BrandManagement({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Brand Management
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900">Brand Management</h2>
           <p className="text-sm text-gray-500 mt-1">
             Select a brand to view threads or click dashboard icon for projects
           </p>
@@ -274,9 +222,7 @@ export default function BrandManagement({
                 </div>
               </div>
               {brand.description && (
-                <p className="text-sm text-gray-600 mb-3">
-                  {brand.description}
-                </p>
+                <p className="text-sm text-gray-600 mb-3">{brand.description}</p>
               )}
               <div className="text-xs text-gray-500">
                 <p>Created by {brand.createdBy?.name}</p>
@@ -302,14 +248,10 @@ export default function BrandManagement({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Create New Brand</h2>
-                <button
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="text-gray-400 hover:text-black"
-                >
+                <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-black">
                   <X size={24} />
                 </button>
               </div>
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
@@ -318,42 +260,25 @@ export default function BrandManagement({
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg"
                     placeholder="e.g., Westfield Group"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Description (Optional)
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Description (Optional)</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg"
                     rows={3}
                     placeholder="Brief description about the brand..."
                   />
                 </div>
               </div>
-
               <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateBrand}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                >
+                <button onClick={() => setIsCreateModalOpen(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button onClick={handleCreateBrand} disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400">
                   {saving ? "Creating..." : "Create Brand"}
                 </button>
               </div>
@@ -369,17 +294,10 @@ export default function BrandManagement({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Edit Brand</h2>
-                <button
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setSelectedBrand(null);
-                  }}
-                  className="text-gray-400 hover:text-black"
-                >
+                <button onClick={() => { setIsEditModalOpen(false); setSelectedBrand(null); }} className="text-gray-400 hover:text-black">
                   <X size={24} />
                 </button>
               </div>
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
@@ -388,49 +306,23 @@ export default function BrandManagement({
                   <input
                     type="text"
                     value={selectedBrand.name}
-                    onChange={(e) =>
-                      setSelectedBrand({
-                        ...selectedBrand,
-                        name: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setSelectedBrand({ ...selectedBrand, name: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Description (Optional)
-                  </label>
+                  <label className="block text-sm font-medium mb-1">Description (Optional)</label>
                   <textarea
                     value={selectedBrand.description || ""}
-                    onChange={(e) =>
-                      setSelectedBrand({
-                        ...selectedBrand,
-                        description: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setSelectedBrand({ ...selectedBrand, description: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg"
                     rows={3}
                   />
                 </div>
               </div>
-
               <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setSelectedBrand(null);
-                  }}
-                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpdateBrand}
-                  disabled={saving}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                >
+                <button onClick={() => { setIsEditModalOpen(false); setSelectedBrand(null); }} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button onClick={handleUpdateBrand} disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400">
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
@@ -439,20 +331,15 @@ export default function BrandManagement({
         </div>
       )}
 
-      {/* Brand Dashboard Modal */}
       {isDashboardModalOpen && selectedBrand && (
         <BrandDashboardModal
           brand={selectedBrand}
           isOpen={isDashboardModalOpen}
-          onClose={() => {
-            setIsDashboardModalOpen(false);
-            setSelectedBrand(null);
-          }}
+          onClose={() => { setIsDashboardModalOpen(false); setSelectedBrand(null); }}
           canAddUser={canAddUser}
         />
       )}
 
-      {/* Access Control Modal */}
       {isAccessControlOpen && (
         <AccessControlModal
           isOpen={isAccessControlOpen}

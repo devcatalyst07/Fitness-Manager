@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, FileText, AlertCircle } from "lucide-react";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+import { apiClient } from "@/lib/axios";
 
 interface Project {
   _id: string;
@@ -39,14 +37,8 @@ export function UploadDocumentModal({
 
   const fetchProjects = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/documents/projects`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch projects");
-
-      const data = await response.json();
+      // ✅ FIXED: Use apiClient instead of localStorage token + fetch
+      const data = await apiClient.get('/api/documents/projects');
       setProjects(data);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -152,56 +144,14 @@ export function UploadDocumentModal({
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
-
       for (const file of selectedFiles) {
-        // Debug: Log the request details
-        console.log("Upload Request Details:", {
-          url: `${API_URL}/api/documents/upload`,
-          projectId: selectedProject,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
-          hasToken: !!token,
-        });
-
         const formData = new FormData();
         formData.append("file", file);
         formData.append("projectId", selectedProject);
 
-        const response = await fetch(`${API_URL}/api/documents/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        });
-
-        // Debug: Log response details
-        console.log("Upload Response:", {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-        });
-
-        // Try to get error details
-        if (!response.ok) {
-          let errorMessage = "Upload failed";
-          try {
-            const errorData = await response.json();
-            console.error("Server Error Response:", errorData);
-            errorMessage = errorData.message || errorData.error || errorMessage;
-          } catch (e) {
-            // If response is not JSON, try to get text
-            const errorText = await response.text();
-            console.error("Server Error Text:", errorText);
-            errorMessage = errorText || `Server error: ${response.status}`;
-          }
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        console.log("Upload Success:", data);
+        // ✅ FIXED: Use apiClient instead of localStorage token + fetch
+        // apiClient auto-detects FormData and handles multipart/form-data
+        await apiClient.post('/api/documents/upload', formData);
       }
 
       const projectName =
@@ -216,14 +166,13 @@ export function UploadDocumentModal({
     } catch (error: any) {
       console.error("Upload error:", error);
 
-      // More detailed error messages
       let errorMsg = "Failed to upload document";
 
-      if (error.message.includes("Failed to fetch")) {
+      if (error.message?.includes("Failed to fetch") || error.message?.includes("Network Error")) {
         errorMsg =
           "Network error - Cannot connect to server. Check if API is running.";
-      } else if (error.message.includes("NetworkError")) {
-        errorMsg = "Network error - Check your internet connection";
+      } else if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
       } else if (error.message) {
         errorMsg = error.message;
       }

@@ -1,7 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import authService, { User } from '@/services/authService';
+import { tokenRefreshService } from '@/services/tokenRefreshService';
+import { sessionSync } from '@/lib/session';
 
 interface AuthContextType {
   user: User | null;
@@ -12,22 +14,35 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-// Export AuthContext so it can be imported by other files
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Prevent duplicate session checks
+  const hasCheckedSession = useRef(false);
+
+  /**
+   * Check existing session on mount — ONCE only
+   *
+   * KEY FIX: getCurrentUser() uses _skipAuthRefresh=true so if there's
+   * no valid session, it just fails quietly. No refresh cascade.
+   * No redirect here either — SessionGuard handles that.
+   */
   useEffect(() => {
+    if (hasCheckedSession.current) return;
+    hasCheckedSession.current = true;
+
     const checkSession = async () => {
       try {
-        console.log('🔍 Checking for existing session...');
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
-        console.log('✅ Session found:', currentUser.email, `(${currentUser.role})`);
-      } catch (error: any) {
-        console.log('❌ No active session');
+        // Only start refresh service after confirming we have a valid session
+        tokenRefreshService.start();
+      } catch {
+        // No valid session — that's fine. User will see login page.
+        // NO redirect here. NO refresh attempt. Just set state.
         setUser(null);
       } finally {
         setLoading(false);
@@ -37,56 +52,100 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
   }, []);
 
+  /**
+   * Handle session expiry events from axios interceptor
+   *
+   * KEY FIX: This ONLY clears state. It does NOT redirect.
+   * SessionGuard will see user=null and handle the redirect.
+   * This eliminates the competing redirect deadlock.
+   */
   useEffect(() => {
     const handleSessionExpired = () => {
-      console.log('⚠️ Session expired, logging out');
+      // Already logged out — nothing to do
+      if (!user) return;
+
+      console.log('🔒 Session expired, clearing auth state');
+      tokenRefreshService.stop();
       setUser(null);
+      sessionSync.broadcastLogout();
+      // NO router.replace() here! SessionGuard handles redirect.
     };
 
     window.addEventListener('session:expired', handleSessionExpired);
     return () => window.removeEventListener('session:expired', handleSessionExpired);
+  }, [user]);
+
+  /**
+   * Cross-tab session sync
+   */
+  useEffect(() => {
+    const handleSync = (event: string, data?: any) => {
+      if (event === 'logout' && user) {
+        tokenRefreshService.stop();
+        setUser(null);
+        // NO redirect — SessionGuard handles it
+      } else if (event === 'login' && !user && data) {
+        setUser(data);
+        tokenRefreshService.start();
+      }
+    };
+
+    const unsubscribe = sessionSync.addListener(handleSync);
+    return () => unsubscribe();
+  }, [user]);
+
+  /**
+   * Refresh token on tab re-focus (only if we have an active session)
+   */
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user && tokenRefreshService.isRunning()) {
+        tokenRefreshService.refreshNow().catch(() => {
+          // If refresh fails, the interceptor will handle it on next API call
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
+
+  /**
+   * Login
+   */
+  const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
+    const response = await authService.login({ email, password, rememberMe });
+    setUser(response.user);
+    tokenRefreshService.start();
+    sessionSync.broadcastLogin(response.user);
   }, []);
 
-  const login = async (email: string, password: string, rememberMe: boolean = false) => {
-    try {
-      const response = await authService.login({ email, password, rememberMe });
-      setUser(response.user);
-      console.log('✅ Login successful:', response.user.email, `(${response.user.role})`);
-    } catch (error: any) {
-      console.error('❌ Login error:', error);
-      throw error;
-    }
-  };
+  /**
+   * Register
+   */
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const response = await authService.register({ name, email, password });
+    setUser(response.user);
+    tokenRefreshService.start();
+    sessionSync.broadcastLogin(response.user);
+  }, []);
 
-  const register = async (name: string, email: string, password: string) => {
-    try {
-      const response = await authService.register({ name, email, password });
-      setUser(response.user);
-      console.log('✅ Registration successful:', response.user.email);
-    } catch (error: any) {
-      console.error('❌ Registration error:', error);
-      throw error;
-    }
-  };
+  /**
+   * Logout — intentional user action
+   */
+  const logout = useCallback(async () => {
+    tokenRefreshService.stop();
 
-  const logout = async () => {
     try {
-      console.log('🔄 Logging out...');
       await authService.logout();
-      setUser(null);
-      console.log('✅ Logout successful');
-      
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-      setUser(null);
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
+    } catch {
+      // Ignore logout API errors
     }
-  };
+
+    setUser(null);
+    sessionSync.broadcastLogout();
+    // NO redirect — SessionGuard handles it
+  }, []);
 
   return (
     <AuthContext.Provider

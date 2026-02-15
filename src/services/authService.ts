@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/axios';
+import api, { apiClient } from '@/lib/axios';
 
 export interface User {
   id: string;
@@ -21,64 +21,61 @@ export interface RegisterData {
 }
 
 const authService = {
+  /**
+   * Login — normal request, cookies will be set by backend
+   */
   async login(credentials: LoginCredentials): Promise<{ user: User; message: string }> {
-    const response = await apiClient.post<{ user: User; message: string }>(
+    return apiClient.post<{ user: User; message: string }>(
       '/api/auth/login',
       credentials
     );
-    return response;
   },
 
+  /**
+   * Register — normal request
+   */
   async register(data: RegisterData): Promise<{ user: User; message: string }> {
-    const response = await apiClient.post<{ user: User; message: string }>(
+    return apiClient.post<{ user: User; message: string }>(
       '/api/auth/register',
       data
     );
-    return response;
   },
 
+  /**
+   * Logout
+   */
   async logout(): Promise<void> {
     try {
       await apiClient.post('/api/auth/logout');
-      console.log('✅ Logout API call successful');
-    } catch (error) {
-      console.error('❌ Logout API call failed:', error);
+    } catch {
+      // Ignore — user is leaving anyway
     }
   },
 
-  async logoutAll(): Promise<void> {
-    await apiClient.post('/api/auth/logout-all');
-  },
-
+  /**
+   * Get current user — INITIAL SESSION CHECK
+   *
+   * KEY FIX: Uses _skipAuthRefresh = true
+   *
+   * On initial page load, we check if there's a valid session cookie.
+   * If the cookie is expired/missing, we get 401. In that case we should
+   * just return null — NOT try to refresh (there's nothing to refresh).
+   *
+   * Token refresh only makes sense AFTER the user has logged in and their
+   * access token expires mid-session.
+   */
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<{ user: User }>('/api/auth/me');
-    return response.user;
+    const response = await api.get('/api/auth/me', {
+      _skipAuthRefresh: true, // Don't trigger refresh cascade on initial check
+    } as any);
+    return response.data.user;
   },
 
-  async checkAuth(): Promise<{ user: User } | null> {
-    try {
-      const response = await apiClient.get<{ user: User }>('/api/auth/me');
-      return response;
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
-        return null;
-      }
-      throw error;
-    }
-  },
-
-  async getMe(): Promise<{ user: User }> {
-    const response = await apiClient.get<{ user: User }>('/api/auth/me');
-    return response;
-  },
-
+  /**
+   * Refresh token — explicit call
+   */
   async refresh(): Promise<void> {
     await apiClient.post('/api/auth/refresh');
-  },
-
-  isAuthenticated(): boolean {
-    return typeof window !== 'undefined' && 
-           document.cookie.includes('fitout_session');
   },
 };
 

@@ -15,8 +15,7 @@ import {
   MoreVertical,
   X as CloseIcon
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+import { apiClient } from '@/lib/axios';
 
 interface Thread {
   _id: string;
@@ -62,6 +61,7 @@ interface Comment {
 
 interface ThreadDetailModalProps {
   thread: Thread;
+  currentUserId: string;
   onClose: () => void;
   onUpdate: () => void;
   onDelete: (threadId: string) => void;
@@ -69,6 +69,7 @@ interface ThreadDetailModalProps {
 
 export default function ThreadDetailModal({
   thread,
+  currentUserId,
   onClose,
   onUpdate,
   onDelete,
@@ -86,7 +87,6 @@ export default function ThreadDetailModal({
   const [showThreadMenu, setShowThreadMenu] = useState(false);
   const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
 
-  const currentUserId = localStorage.getItem('userId');
   const isThreadOwner = thread.createdBy === currentUserId;
 
   useEffect(() => {
@@ -95,15 +95,8 @@ export default function ThreadDetailModal({
 
   const fetchComments = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/threads/${thread._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setComments(data.comments || []);
-      }
+      const data = await apiClient.get(`/api/threads/${thread._id}`);
+      setComments(data.comments || []);
     } catch (error) {
       console.error('Error fetching comments:', error);
     } finally {
@@ -129,23 +122,14 @@ export default function ThreadDetailModal({
       formData.append('file', file);
 
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/api/upload`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
+        const data = await apiClient.post('/api/upload', formData);
+        uploadedFiles.push({
+          fileName: data.file.fileName,
+          fileUrl: data.file.fileUrl,
+          fileType: file.type,
+          fileSize: file.size,
+          uploadedAt: new Date(),
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          uploadedFiles.push({
-            fileName: data.file.fileName,
-            fileUrl: data.file.fileUrl,
-            fileType: file.type,
-            fileSize: file.size,
-            uploadedAt: new Date(),
-          });
-        }
       } catch (error) {
         console.error('Upload error:', error);
       }
@@ -163,22 +147,15 @@ export default function ThreadDetailModal({
         attachments = await uploadFiles(selectedFiles);
       }
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/threads/${thread._id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: newComment, attachments }),
+      await apiClient.post(`/api/threads/${thread._id}/comments`, {
+        content: newComment,
+        attachments,
       });
 
-      if (response.ok) {
-        setNewComment('');
-        setSelectedFiles([]);
-        fetchComments();
-        onUpdate();
-      }
+      setNewComment('');
+      setSelectedFiles([]);
+      fetchComments();
+      onUpdate();
     } catch (error) {
       console.error('Add comment error:', error);
     } finally {
@@ -194,20 +171,12 @@ export default function ThreadDetailModal({
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/threads/${thread._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: editedTitle, content: editedContent }),
+      await apiClient.put(`/api/threads/${thread._id}`, {
+        title: editedTitle,
+        content: editedContent,
       });
-
-      if (response.ok) {
-        setIsEditingThread(false);
-        onUpdate();
-      }
+      setIsEditingThread(false);
+      onUpdate();
     } catch (error) {
       console.error('Update thread error:', error);
     } finally {
@@ -220,20 +189,11 @@ export default function ThreadDetailModal({
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/comments/${commentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: editedCommentContent }),
+      await apiClient.put(`/api/comments/${commentId}`, {
+        content: editedCommentContent,
       });
-
-      if (response.ok) {
-        setEditingCommentId(null);
-        fetchComments();
-      }
+      setEditingCommentId(null);
+      fetchComments();
     } catch (error) {
       console.error('Update comment error:', error);
     } finally {
@@ -245,16 +205,9 @@ export default function ThreadDetailModal({
     if (!confirm('Are you sure you want to delete this comment?')) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        fetchComments();
-        onUpdate();
-      }
+      await apiClient.delete(`/api/comments/${commentId}`);
+      fetchComments();
+      onUpdate();
     } catch (error) {
       console.error('Delete comment error:', error);
     }
@@ -262,11 +215,7 @@ export default function ThreadDetailModal({
 
   const handleLikeComment = async (commentId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await fetch(`${API_URL}/api/comments/${commentId}/like`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.post(`/api/comments/${commentId}/like`);
       fetchComments();
     } catch (error) {
       console.error('Like comment error:', error);
@@ -373,7 +322,6 @@ export default function ThreadDetailModal({
 
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {/* Thread Content */}
           <div className="mb-6">
             {isEditingThread ? (
               <div>
@@ -407,7 +355,6 @@ export default function ThreadDetailModal({
               <p className="text-gray-800 whitespace-pre-wrap text-sm sm:text-base">{thread.content}</p>
             )}
 
-            {/* Thread Attachments */}
             {thread.attachments && thread.attachments.length > 0 && (
               <div className="mt-4 space-y-2">
                 <p className="text-sm font-medium text-gray-700">Attachments:</p>
@@ -557,7 +504,7 @@ export default function ThreadDetailModal({
                           >
                             <Heart
                               size={14}
-                              className={comment.likes.includes(currentUserId!) ? 'fill-current text-red-600' : ''}
+                              className={comment.likes.includes(currentUserId) ? 'fill-current text-red-600' : ''}
                             />
                             <span>{comment.likes.length}</span>
                           </button>
@@ -571,7 +518,7 @@ export default function ThreadDetailModal({
           </div>
         </div>
 
-        {/* Add Comment - Fixed at bottom */}
+        {/* Add Comment */}
         <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="space-y-3">
             <textarea

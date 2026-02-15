@@ -15,24 +15,14 @@ export default function Home() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<ModalType>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Auto-redirect if user is logged in
+  // If user is logged in, redirect to their dashboard
   useEffect(() => {
     if (!authLoading && user) {
-      const dashboardPath = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
-      router.push(dashboardPath);
+      const dest = user.role === 'admin' ? '/admin/dashboard' : '/user/dashboard';
+      router.replace(dest);
     }
   }, [user, authLoading, router]);
-
-  // Show loading spinner on page load
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleLoginClick = () => {
     setModalType('login');
@@ -53,13 +43,8 @@ export default function Home() {
     setTimeout(() => setModalType(null), 300);
   };
 
-  // Show loading spinner while checking auth or initial load
-  if (isLoading || authLoading) {
-    return <FitoutLoadingSpinner />;
-  }
-
-  // Don't show landing page if user is logged in (will redirect)
-  if (user) {
+  // Show spinner while auth is loading or user is logged in (redirecting)
+  if (authLoading || user) {
     return <FitoutLoadingSpinner />;
   }
 
@@ -132,7 +117,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Pricing Cards Container */}
         <div className="flex flex-col sm:flex-row gap-6 max-w-6xl mx-auto rounded-2xl overflow-hidden shadow-2xl">
           <PricingCard
             title="Starter"
@@ -148,7 +132,6 @@ export default function Home() {
             color="bg-gradient-to-br from-indigo-500 to-purple-600"
             isFirst
           />
-
           <PricingCard
             title="Team"
             seats="10 seats"
@@ -162,7 +145,6 @@ export default function Home() {
             onSelect={handlePlanSelect}
             color="bg-gradient-to-br from-cyan-400 to-blue-500"
           />
-
           <PricingCard
             title="Enterprise"
             seats="Unlimited seats"
@@ -188,7 +170,6 @@ export default function Home() {
         onSwitchToRegister={handleSwitchToRegister}
       />
 
-      {/* Footer */}
       <footer className="bg-gray-100 border-t border-gray-200 py-4 sm:py-6 mt-1 sm:mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-center text-gray-600 gap-1 sm:gap-0">
@@ -197,7 +178,7 @@ export default function Home() {
               <span className="hidden sm:inline mx-3 sm:mx-5">|</span>
             </span>
             <span className="text-xs sm:text-sm text-center">
-              © 2026. All Rights Reserved.
+              &copy; 2026. All Rights Reserved.
             </span>
           </div>
         </div>
