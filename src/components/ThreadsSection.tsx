@@ -1,12 +1,4 @@
 import React, { useState, useEffect } from "react";
-import {
-  MessageSquare,
-  Plus,
-  Filter,
-  Search,
-  Users,
-  FolderOpen,
-} from "lucide-react";
 import CreateThreadModal from "./CreateThreadModal";
 import ThreadCard from "./ThreadCard";
 import ThreadDetailModal from "./ThreadDetailModal";
@@ -182,13 +174,15 @@ export default function ThreadsSection({
       ? true
       : hasPermission("dashboard-add-threads", permissions) || propCanAddThread;
 
+  // Get current user ID - handle both 'id' and '_id' properties
+  const currentUserId = (user as any)?.id || (user as any)?._id || "";
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <MessageSquare size={20} className="text-gray-700" />
             <h2 className="text-xl font-semibold text-gray-900">Threads</h2>
           </div>
           <p className="text-sm text-gray-500">
@@ -197,11 +191,9 @@ export default function ThreadsSection({
           </p>
           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
             <div className="flex items-center gap-1">
-              <Users size={14} />
               <span>{generalThreadsCount} General</span>
             </div>
             <div className="flex items-center gap-1">
-              <FolderOpen size={14} />
               <span>{projectThreadsCount} Project-specific</span>
             </div>
           </div>
@@ -211,7 +203,6 @@ export default function ThreadsSection({
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <Plus size={18} />
             <span>New Thread</span>
           </button>
         )}
@@ -220,21 +211,17 @@ export default function ThreadsSection({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex-1 relative">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          />
           <input
             type="text"
             placeholder="Search threads..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 min-w-[200px]">
-          <Filter size={16} className="text-gray-500" />
+          <span className="text-sm text-gray-500">Filter:</span>
           <select
             value={selectedProjectFilter}
             onChange={(e) => setSelectedProjectFilter(e.target.value)}
@@ -267,7 +254,6 @@ export default function ThreadsSection({
       {selectedProjectFilter !== "all" && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-start gap-2">
-            <Filter size={16} className="text-blue-600 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm text-blue-900 font-medium">
                 {selectedProjectFilter === "general" ? (
@@ -304,7 +290,6 @@ export default function ThreadsSection({
         </div>
       ) : filteredThreads.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
-          <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
           <p className="font-semibold mb-2">
             {searchQuery
               ? "No threads match your search"
@@ -321,12 +306,11 @@ export default function ThreadsSection({
                   ? "Create a thread for this project to get started"
                   : "Start a conversation by creating a new thread"}
           </p>
-          {!searchQuery && (
+          {!searchQuery && canAddThread && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
-              <Plus size={18} />
               <span>Create First Thread</span>
             </button>
           )}
@@ -337,7 +321,7 @@ export default function ThreadsSection({
             <ThreadCard
               key={thread._id}
               thread={thread}
-              currentUserId={user?._id || ""}
+              currentUserId={currentUserId}
               onClick={() => setSelectedThread(thread)}
               onUpdate={handleThreadUpdated}
               onDelete={handleThreadDeleted}
@@ -361,7 +345,7 @@ export default function ThreadsSection({
       {selectedThread && (
         <ThreadDetailModal
           thread={selectedThread}
-          currentUserId={user?._id || ""}
+          currentUserId={currentUserId}
           onClose={() => setSelectedThread(null)}
           onUpdate={handleThreadUpdated}
           onDelete={handleThreadDeleted}
