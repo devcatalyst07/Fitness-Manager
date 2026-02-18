@@ -10,6 +10,7 @@ export interface Permission {
   label: string;
   checked: boolean;
   children?: Permission[];
+  isTitle?: boolean;
 }
 
 /**
@@ -41,10 +42,11 @@ export const hasPermission = (
     ancestorsChecked: boolean,
   ): boolean => {
     for (const perm of perms) {
-      const isAllowed = ancestorsChecked && perm.checked;
+      const isAllowed =
+        ancestorsChecked && (perm.isTitle ? true : perm.checked);
       // Direct match - check if this permission is checked
       if (perm.id === permissionId) {
-        return isAllowed;
+        return perm.isTitle ? ancestorsChecked && perm.checked : isAllowed;
       }
 
       // Recursively check children

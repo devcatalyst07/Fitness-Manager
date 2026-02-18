@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Home,
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { hasPermission } from "@/utils/permissions";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/axios";
 
 // Use inline interface definition to avoid import issues
 interface Permission {
@@ -46,16 +48,62 @@ export function AdminSidebar({
   pathname: propPathname,
   setPathname,
   userRole,
-  permissions,
+  permissions: permissionsProp,
 }: AdminSidebarProps) {
   const router = useRouter();
   const currentPathname = usePathname();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [fetchedPermissions, setFetchedPermissions] = useState<
+    Permission[] | null
+  >(null);
 
   const resolvedRole = userRole ?? "admin";
   const isUser = resolvedRole === "user";
+
+  // Effective permissions: prefer non-empty prop, otherwise use internally fetched
+  const permissions =
+    permissionsProp && permissionsProp.length > 0
+      ? permissionsProp
+      : (fetchedPermissions ?? undefined);
+
+  // Auto-fetch permissions when parent page doesn't provide real permissions
+  // Treats both undefined and empty [] as "no permissions provided"
+  useEffect(() => {
+    if (!isUser || permissionsProp?.length) return;
+
+    const fetchPermissions = async () => {
+      try {
+        let roleId = user?.roleId;
+
+        // If AuthContext doesn't have roleId, re-check /api/auth/me for fresh data
+        // (handles case where admin assigned role while user is already logged in)
+        if (!roleId && user) {
+          try {
+            const fresh = await apiClient.get<{ user: { roleId?: string } }>(
+              "/api/auth/me",
+            );
+            roleId = fresh.user?.roleId ?? null;
+          } catch {
+            return;
+          }
+        }
+
+        if (!roleId) return;
+
+        const data = await apiClient.get<{ permissions: Permission[] }>(
+          `/api/roles/${roleId}`,
+        );
+        setFetchedPermissions(data.permissions);
+      } catch (err) {
+        console.error("Failed to load sidebar permissions:", err);
+      }
+    };
+
+    fetchPermissions();
+  }, [isUser, permissionsProp?.length, user?.roleId]);
 
   // Use prop pathname if provided, otherwise use Next.js pathname
   const activePath = propPathname || currentPathname;

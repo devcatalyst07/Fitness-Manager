@@ -11,6 +11,19 @@ import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import ProjectCard from "@/components/ProjectCard";
 import { apiClient } from "@/lib/axios";
 
+interface Permission {
+  id: string;
+  label: string;
+  checked: boolean;
+  children?: Permission[];
+}
+
+interface RoleData {
+  _id: string;
+  name: string;
+  permissions: Permission[];
+}
+
 interface Project {
   _id: string;
   projectName: string;
@@ -33,27 +46,57 @@ export default function UserProjectsPage() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [roleData, setRoleData] = useState<RoleData | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Role-based redirect
   useEffect(() => {
-    if (!authLoading && user && user.role === 'admin') {
-      console.log('⚠️ Admin accessing user page, redirecting');
-      router.replace('/admin/projects');
+    if (!authLoading && user && user.role === "admin") {
+      console.log("⚠️ Admin accessing user page, redirecting");
+      router.replace("/admin/projects");
     }
   }, [user, authLoading, router]);
 
   // Fetch data when user is ready
   useEffect(() => {
-    if (user && user.role === 'user') {
+    if (user && user.role === "user") {
       fetchProjects();
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user && user.role === "user") {
+      fetchRolePermissions();
+    }
+  }, [user]);
+
+  const fetchRolePermissions = async () => {
+    try {
+      let roleId = user?.roleId;
+      if (!roleId && user) {
+        try {
+          const fresh = await apiClient.get<{ user: { roleId?: string } }>(
+            "/api/auth/me",
+          );
+          roleId = fresh.user?.roleId ?? null;
+        } catch {
+          return;
+        }
+      }
+
+      if (!roleId) return;
+
+      const data = await apiClient.get<RoleData>(`/api/roles/${roleId}`);
+      setRoleData(data);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+    }
+  };
+
   const fetchProjects = async () => {
     try {
-      const data = await apiClient.get<Project[]>('/api/projects');
+      const data = await apiClient.get<Project[]>("/api/projects");
       setProjects(data);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -74,18 +117,20 @@ export default function UserProjectsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  if (authLoading || (loading && user?.role === 'user')) {
+  if (authLoading || (loading && user?.role === "user")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'user') {
+  if (user && user.role !== "user") {
     return <FitoutLoadingSpinner />;
   }
+
+  const permissions = roleData?.permissions;
 
   return (
     <SessionGuard>
       <div className="min-h-screen bg-gray-50">
-        <AdminSidebar userRole="user" />
+        <AdminSidebar userRole="user" permissions={permissions} />
         <AdminHeader />
 
         <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">

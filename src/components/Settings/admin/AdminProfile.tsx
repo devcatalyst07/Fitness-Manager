@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { Pencil, Mail, User, Shield, Clock, Lock } from "lucide-react";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { apiClient } from "@/lib/axios";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AdminProfileData {
@@ -114,7 +113,6 @@ function EditProfileModal({
     setIsLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
       const firstName = form.firstName.trim() || profile.firstName;
       const lastName = form.lastName.trim() || profile.lastName;
       const username = form.username.trim() || profile.username;
@@ -127,23 +125,12 @@ function EditProfileModal({
       if (username) formData.append("username", username);
       if (email) formData.append("email", email);
       if (selectedFile) {
-        formData.append("profilePhoto", selectedFile); // multer picks this up
+        formData.append("profilePhoto", selectedFile);
       }
 
-      const res = await fetch(`${API_URL}/api/profile`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // NOTE: do NOT set Content-Type here — browser auto-sets it with boundary for FormData
-        },
-        body: formData,
+      const data = await apiClient.put("/api/profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Failed to update profile.");
-        return;
-      }
 
       // Push updated values back to parent
       const updatedProfile = {
@@ -174,7 +161,7 @@ function EditProfileModal({
       setSelectedFile(null);
       onClose();
     } catch (err: any) {
-      setError("Network error — please try again.");
+      setError(err?.response?.data?.message || "Network error — please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -341,28 +328,22 @@ export default function AdminProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(`${API_URL}/api/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const data = await apiClient.get("/api/profile");
+        setProfile({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          username: data.username,
+          email: data.email,
+          role: "Admin", // admin side — always "Admin"
+          profilePhoto: data.profilePhoto || undefined,
+          updatedAt: data.updatedAt
+            ? new Date(data.updatedAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            : "",
         });
-        const data = await res.json();
-        if (res.ok) {
-          setProfile({
-            firstName: data.firstName,
-            lastName: data.lastName,
-            username: data.username,
-            email: data.email,
-            role: "Admin", // admin side — always "Admin"
-            profilePhoto: data.profilePhoto || undefined,
-            updatedAt: data.updatedAt
-              ? new Date(data.updatedAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "",
-          });
-        }
       } catch (err) {
         console.error("Failed to fetch profile:", err);
       } finally {

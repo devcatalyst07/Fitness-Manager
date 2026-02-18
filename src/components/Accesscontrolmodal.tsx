@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Trash2, ChevronDown } from "lucide-react";
+import { apiClient } from "@/lib/axios";
 
 interface Permission {
   id: string;
@@ -21,16 +22,15 @@ interface AccessControlModalProps {
   onClose: () => void;
   brandId?: string;
   brands?: Array<{ _id: string; name: string }>;
+  highlightUserId?: string;
 }
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 const AccessControlModal: React.FC<AccessControlModalProps> = ({
   isOpen,
   onClose,
   brandId: initialBrandId,
   brands = [],
+  highlightUserId,
 }) => {
   const [selectedBrandId, setSelectedBrandId] = useState<string>(
     initialBrandId || "",
@@ -47,12 +47,34 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const brandDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Users state
+  const [users, setUsers] = useState<
+    {
+      id: string;
+      name: string;
+      email: string;
+      roleId: string | null;
+      roleRequestPending?: boolean;
+    }[]
+  >([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
+  const userListRef = useRef<HTMLDivElement>(null);
+  const highlightedUserRef = useRef<HTMLDivElement>(null);
+
   // Sync selectedBrandId when initialBrandId prop changes or modal opens
   useEffect(() => {
     if (isOpen && initialBrandId && !selectedBrandId) {
       setSelectedBrandId(initialBrandId);
     }
   }, [isOpen, initialBrandId]);
+
+  // Fetch users when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchUsers();
+    }
+  }, [isOpen]);
 
   // Fetch roles when modal opens or brandId changes
   useEffect(() => {
@@ -340,7 +362,10 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
       id: "documents",
       label: "Documents",
       checked: false,
-      children: [{ id: "documents-upload", label: "Upload", checked: false }],
+      children: [
+        { id: "documents-upload", label: "Upload", checked: false },
+        { id: "documents-bulk-upload", label: "Bulk Upload", checked: false },
+      ],
     },
   ];
 
@@ -349,20 +374,10 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${API_URL}/api/roles/brand/${selectedBrandId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
-        if (data.length > 0) {
-          setSelectedRoleId(data[0]._id);
-        }
+      const data = await apiClient.get(`/api/roles/brand/${selectedBrandId}`);
+      setRoles(data);
+      if (data.length > 0) {
+        setSelectedRoleId(data[0]._id);
       }
     } catch (error) {
       console.error("Error fetching roles:", error);
@@ -496,26 +511,12 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
 
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/roles/${selectedRoleId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ permissions }),
-      });
-
-      if (response.ok) {
-        alert("Permissions updated successfully!");
-        onClose();
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to update permissions");
-      }
-    } catch (error) {
+      await apiClient.put(`/api/roles/${selectedRoleId}`, { permissions });
+      alert("Permissions updated successfully!");
+      onClose();
+    } catch (error: any) {
       console.error("Error updating permissions:", error);
-      alert("Failed to update permissions");
+      alert(error?.response?.data?.message || "Failed to update permissions");
     } finally {
       setSaving(false);
     }
@@ -529,38 +530,89 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
 
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/roles`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: newRoleName,
-          brandId: selectedBrandId,
-          permissions: initialPermissions,
-        }),
+      const data = await apiClient.post(`/api/roles`, {
+        name: newRoleName,
+        brandId: selectedBrandId,
+        permissions: initialPermissions,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        await fetchRoles();
-        if (data.role && data.role._id) {
-          setSelectedRoleId(data.role._id);
-        }
-        setNewRoleName("");
-        setShowAddRoleInput(false);
-        alert("Role created successfully!");
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to create role");
+      await fetchRoles();
+      if (data.role && data.role._id) {
+        setSelectedRoleId(data.role._id);
       }
-    } catch (error) {
+      setNewRoleName("");
+      setShowAddRoleInput(false);
+      alert("Role created successfully!");
+    } catch (error: any) {
       console.error("Error creating role:", error);
-      alert("Failed to create role");
+      alert(error?.response?.data?.message || "Failed to create role");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Fetch all non-admin users
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const data =
+        await apiClient.get<
+          {
+            id: string;
+            name: string;
+            email: string;
+            roleId: string | null;
+            roleRequestPending?: boolean;
+          }[]
+        >("/api/admin/users");
+      setUsers(data);
+
+      // Auto-scroll to highlighted user after data loads
+      if (highlightUserId && highlightedUserRef.current) {
+        setTimeout(() => {
+          highlightedUserRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }, 100);
+      }
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Assign selected role to a user
+  const handleAssignUser = async (userId: string) => {
+    setAssigningUserId(userId);
+    try {
+      await apiClient.put(`/api/admin/users/${userId}/role`, {
+        roleId: selectedRoleId,
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId ? { ...u, roleId: selectedRoleId } : u,
+        ),
+      );
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "Failed to assign role");
+    } finally {
+      setAssigningUserId(null);
+    }
+  };
+
+  // Remove role assignment from a user
+  const handleUnassignUser = async (userId: string) => {
+    setAssigningUserId(userId);
+    try {
+      await apiClient.put(`/api/admin/users/${userId}/role`, { roleId: null });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, roleId: null } : u)),
+      );
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "Failed to remove role");
+    } finally {
+      setAssigningUserId(null);
     }
   };
 
@@ -573,25 +625,15 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
 
     setSaving(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/roles/${roleId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        alert("Role deleted successfully!");
-        if (selectedRoleId === roleId) {
-          setSelectedRoleId("");
-        }
-        await fetchRoles();
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to delete role");
+      await apiClient.delete(`/api/roles/${roleId}`);
+      alert("Role deleted successfully!");
+      if (selectedRoleId === roleId) {
+        setSelectedRoleId("");
       }
-    } catch (error) {
+      await fetchRoles();
+    } catch (error: any) {
       console.error("Error deleting role:", error);
-      alert("Failed to delete role");
+      alert(error?.response?.data?.message || "Failed to delete role");
     } finally {
       setSaving(false);
     }
@@ -1214,6 +1256,140 @@ const AccessControlModal: React.FC<AccessControlModalProps> = ({
           {/* Permission Tree */}
           {permissions.map((permission) => renderPermissionItem(permission))}
         </div>
+
+        {/* Assign Users Section */}
+        {selectedRoleId && (
+          <div
+            style={{
+              padding: "20px 28px",
+              borderTop: "1px solid #e5e7eb",
+              background: "#fafafa",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "15px",
+                fontWeight: 600,
+                color: "#111827",
+                marginBottom: "12px",
+              }}
+            >
+              Assign Users to This Role
+            </h3>
+
+            {loadingUsers ? (
+              <p style={{ color: "#6b7280", fontSize: "14px" }}>
+                Loading users...
+              </p>
+            ) : users.length === 0 ? (
+              <p style={{ color: "#6b7280", fontSize: "14px" }}>
+                No users found.
+              </p>
+            ) : (
+              <div
+                ref={userListRef}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  maxHeight: "220px",
+                  overflowY: "auto",
+                }}
+              >
+                {users.map((u) => {
+                  const isAssigned = u.roleId === selectedRoleId;
+                  const isHighlighted = u.id === highlightUserId;
+                  const isPending = u.roleRequestPending && !u.roleId;
+                  return (
+                    <div
+                      key={u.id}
+                      ref={isHighlighted ? highlightedUserRef : null}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 14px",
+                        background: isAssigned
+                          ? "#f0fdf4"
+                          : isHighlighted || isPending
+                            ? "#fef3c7"
+                            : "#ffffff",
+                        borderRadius: "8px",
+                        border: `2px solid ${isAssigned ? "#86efac" : isHighlighted || isPending ? "#fbbf24" : "#e5e7eb"}`,
+                        position: "relative",
+                        animation: isHighlighted
+                          ? "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) 2"
+                          : "none",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 500,
+                            fontSize: "14px",
+                            color: "#111827",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          {u.name}
+                          {isPending && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                color: "#d97706",
+                                background: "#fef3c7",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                border: "1px solid #fbbf24",
+                              }}
+                            >
+                              PENDING REQUEST
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                          {u.email}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() =>
+                          isAssigned
+                            ? handleUnassignUser(u.id)
+                            : handleAssignUser(u.id)
+                        }
+                        disabled={assigningUserId === u.id}
+                        style={{
+                          padding: "6px 14px",
+                          background: isAssigned ? "#fee2e2" : "#3b82f6",
+                          color: isAssigned ? "#dc2626" : "white",
+                          border: "none",
+                          borderRadius: "6px",
+                          fontSize: "13px",
+                          fontWeight: 500,
+                          cursor:
+                            assigningUserId === u.id
+                              ? "not-allowed"
+                              : "pointer",
+                          opacity: assigningUserId === u.id ? 0.6 : 1,
+                          minWidth: "80px",
+                        }}
+                      >
+                        {assigningUserId === u.id
+                          ? "..."
+                          : isAssigned
+                            ? "Unassign"
+                            : "Assign"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div

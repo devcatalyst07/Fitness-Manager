@@ -65,8 +65,12 @@ export default function UserReportsPage() {
 
   // Fetch permissions when user is ready
   useEffect(() => {
-    if (user && user.role === 'user' && user.roleId) {
-      fetchRolePermissions(user.roleId);
+    if (user && user.role === 'user') {
+      if (user.roleId) {
+        fetchRolePermissions(user.roleId);
+      } else {
+        setLoading(false);
+      }
     }
   }, [user]);
 

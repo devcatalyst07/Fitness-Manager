@@ -9,6 +9,7 @@ import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import AdminHeader from "@/components/AdminHeader";
 import ScopeWorkflowArchitecture from "@/components/ScopeWorkflowArchitecture";
 import BrandManagement from "@/components/BrandManagement";
+import AccessControlModal from "@/components/Accesscontrolmodal";
 import ThreadsSection from "@/components/ThreadsSection";
 import BrandsTask from "@/components/BrandsTask";
 import TaskDetailModal from "@/components/TaskDetailModal";
@@ -95,22 +96,36 @@ export default function AdminDashboard() {
 
   const [selectedTask, setSelectedTask] = useState<DashboardTask | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "comments" | "activity">("details");
+  const [activeTab, setActiveTab] = useState<
+    "details" | "comments" | "activity"
+  >("details");
   const [comments, setComments] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
 
+  // Access Control Modal state
+  const [isAccessControlOpen, setIsAccessControlOpen] = useState(false);
+  const [highlightUserId, setHighlightUserId] = useState<string | undefined>(
+    undefined,
+  );
+
+  // Handle role request notification click
+  const handleRoleRequestClick = (userId: string) => {
+    setHighlightUserId(userId);
+    setIsAccessControlOpen(true);
+  };
+
   // Removed conflicting redirect logic - SessionGuard handles this
   // Only check role and redirect if wrong role
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'admin') {
-      console.log('⚠️ User role is not admin, redirecting to user dashboard');
-      router.replace('/user/dashboard');
+    if (!authLoading && user && user.role !== "admin") {
+      console.log("⚠️ User role is not admin, redirecting to user dashboard");
+      router.replace("/user/dashboard");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (user && user.role === "admin") {
       fetchDashboardStats();
       fetchBrands();
     }
@@ -118,7 +133,7 @@ export default function AdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const data = await apiClient.get('/api/admin/dashboard/stats');
+      const data = await apiClient.get("/api/admin/dashboard/stats");
       setStats({ projectStats: data.projectStats });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -129,7 +144,7 @@ export default function AdminDashboard() {
 
   const fetchBrands = async () => {
     try {
-      const data = await apiClient.get('/api/brands/all');
+      const data = await apiClient.get("/api/brands/all");
       setBrands(data);
       if (data.length > 0 && !selectedBrand) {
         setSelectedBrand(data[0]);
@@ -166,11 +181,13 @@ export default function AdminDashboard() {
 
     try {
       await apiClient.post(`/api/tasks/${selectedTask._id}/comments`, {
-        text: newComment
+        text: newComment,
       });
-      
+
       setNewComment("");
-      const commentsData = await apiClient.get(`/api/tasks/${selectedTask._id}/comments`);
+      const commentsData = await apiClient.get(
+        `/api/tasks/${selectedTask._id}/comments`,
+      );
       setComments(commentsData);
     } catch (error) {
       console.error("Error adding comment:", error);
@@ -178,12 +195,12 @@ export default function AdminDashboard() {
   };
 
   // Show loading only while checking auth or fetching initial data
-  if (authLoading || (loading && user?.role === 'admin')) {
+  if (authLoading || (loading && user?.role === "admin")) {
     return <FitoutLoadingSpinner />;
   }
 
   // If wrong role, show loading while redirecting
-  if (user && user.role !== 'admin') {
+  if (user && user.role !== "admin") {
     return <FitoutLoadingSpinner />;
   }
 
@@ -204,7 +221,7 @@ export default function AdminDashboard() {
     <SessionGuard>
       <div className="min-h-screen bg-gray-50">
         <AdminSidebar userRole="admin" />
-        <AdminHeader />
+        <AdminHeader onRoleRequestClick={handleRoleRequestClick} />
 
         <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">
@@ -282,7 +299,9 @@ export default function AdminDashboard() {
 
           {!selectedBrand && brands.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 mb-2">Select a brand to view threads</p>
+              <p className="text-gray-500 mb-2">
+                Select a brand to view threads
+              </p>
               <p className="text-sm text-gray-400">
                 Click on a brand above to see its threads and discussions
               </p>
@@ -306,19 +325,20 @@ export default function AdminDashboard() {
             task={selectedTask as any}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            
             comments={comments}
             activityLogs={activityLogs}
             newComment={newComment}
             setNewComment={setNewComment}
             onAddComment={handleAddComment}
-            
             onUpdate={async (updatedTask: any) => {
               try {
-                await apiClient.put(`/api/tasks/${updatedTask._id}`, updatedTask);
+                await apiClient.put(
+                  `/api/tasks/${updatedTask._id}`,
+                  updatedTask,
+                );
                 fetchDashboardStats();
               } catch (error) {
-                console.error('Error updating task:', error);
+                console.error("Error updating task:", error);
               }
             }}
             onDelete={async (taskId: string) => {
@@ -327,21 +347,31 @@ export default function AdminDashboard() {
                 handleTaskModalClose();
                 fetchDashboardStats();
               } catch (error) {
-                console.error('Error deleting task:', error);
+                console.error("Error deleting task:", error);
               }
             }}
-            
             selectedFiles={[]}
             setSelectedFiles={() => {}}
             handleFileSelect={(e: React.ChangeEvent<HTMLInputElement>) => {
-              console.log('Files selected:', e.target.files);
+              console.log("Files selected:", e.target.files);
             }}
             uploadingFiles={false}
-            
             phases={[]}
             allTasks={[]}
-            
             canEdit={true}
+          />
+        )}
+
+        {/* Access Control Modal for role assignments from notifications */}
+        {isAccessControlOpen && (
+          <AccessControlModal
+            isOpen={isAccessControlOpen}
+            onClose={() => {
+              setIsAccessControlOpen(false);
+              setHighlightUserId(undefined);
+            }}
+            brands={brands}
+            highlightUserId={highlightUserId}
           />
         )}
       </div>

@@ -14,8 +14,8 @@ import {
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import { Permission } from "@/utils/permissions";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { apiClient } from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface BrandRole {
@@ -176,7 +176,6 @@ function EditProfileModal({
     setIsLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("token");
       const firstName = form.firstName.trim() || profile.firstName;
       const lastName = form.lastName.trim() || profile.lastName;
       const username = form.username.trim() || profile.username;
@@ -191,17 +190,9 @@ function EditProfileModal({
         formData.append("profilePhoto", selectedFile);
       }
 
-      const res = await fetch(`${API_URL}/api/profile`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      const data = await apiClient.put("/api/profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Failed to update profile.");
-        return;
-      }
 
       onSave({
         ...profile,
@@ -230,7 +221,9 @@ function EditProfileModal({
       setSelectedFile(null);
       onClose();
     } catch (err: any) {
-      setError("Network error — please try again.");
+      setError(
+        err?.response?.data?.message || "Network error — please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -377,6 +370,7 @@ function EditProfileModal({
 // ─── Main User Profile Page ───────────────────────────────────────────────────
 export default function UserProfile() {
   const router = useRouter();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfileData>({
     firstName: "",
     lastName: "",
@@ -393,24 +387,24 @@ export default function UserProfile() {
 
   useEffect(() => {
     const fetchAll = async () => {
+      // Guard: Don't fetch if user is not authenticated
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
-        const roleId = localStorage.getItem("roleId");
+        const roleId = user?.roleId ?? localStorage.getItem("roleId");
 
         // ── 1. Fetch base profile ──
-        const profileRes = await fetch(`${API_URL}/api/profile`, { headers });
-        const profileData = await profileRes.json();
+        const profileData = await apiClient.get("/api/profile");
 
         // ── 2. Fetch user's projects (already filtered by backend for user role) ──
         //    Each project has team members with populated roleId → { name, brandId }
         //    We extract unique brand+role combos from there.
         let brandRoles: BrandRole[] = [];
         try {
-          const projectsRes = await fetch(`${API_URL}/api/projects`, {
-            headers,
-          });
-          const projects = await projectsRes.json();
+          const projects = await apiClient.get("/api/projects");
 
           // projects is an array; each project may have a `brand` field (name)
           // and the current user's team entry has roleId.name
@@ -446,11 +440,8 @@ export default function UserProfile() {
         });
 
         if (roleId) {
-          const roleRes = await fetch(`${API_URL}/api/roles/${roleId}`, {
-            headers,
-          });
-          if (roleRes.ok) {
-            const roleData = await roleRes.json();
+          try {
+            const roleData = await apiClient.get(`/api/roles/${roleId}`);
             setPermissions(roleData.permissions || []);
             if (roleData?.name) {
               setRoleName(roleData.name);
@@ -463,6 +454,8 @@ export default function UserProfile() {
             } catch {
               // Ignore storage errors
             }
+          } catch {
+            // non-blocking — role data stays default if fetch fails
           }
         }
       } catch (err) {
@@ -472,7 +465,8 @@ export default function UserProfile() {
       }
     };
     fetchAll();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const initials =
     `${profile.firstName?.[0] || ""}${profile.lastName?.[0] || ""}`.toUpperCase();

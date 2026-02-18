@@ -1,12 +1,12 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 // Create axios instance — ALL API calls should use this
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
-  timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000'),
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
+  timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || "30000"),
   withCredentials: true, // CRITICAL: Send cookies with every request
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -24,7 +24,7 @@ let failedQueue: Array<{
 }> = [];
 
 const processQueue = (error: any = null) => {
-  failedQueue.forEach(promise => {
+  failedQueue.forEach((promise) => {
     if (error) {
       promise.reject(error);
     } else {
@@ -48,17 +48,17 @@ const performRefresh = async (): Promise<void> => {
   refreshPromise = (async () => {
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/refresh`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/refresh`,
         {},
         {
           withCredentials: true,
           timeout: 10000,
-        }
+        },
       );
-      console.log('Token refreshed successfully');
+      console.log("Token refreshed successfully");
       processQueue(null);
     } catch (error) {
-      console.error('Token refresh failed');
+      console.error("Token refresh failed");
       processQueue(error);
       throw error;
     } finally {
@@ -88,15 +88,17 @@ api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (
       csrfToken &&
-      ['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase() || '')
+      ["post", "put", "delete", "patch"].includes(
+        config.method?.toLowerCase() || "",
+      )
     ) {
-      config.headers['X-CSRF-Token'] = csrfToken;
+      config.headers["X-CSRF-Token"] = csrfToken;
     }
     return config;
   },
   (error: AxiosError) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // ============================================
@@ -104,7 +106,7 @@ api.interceptors.request.use(
 // ============================================
 api.interceptors.response.use(
   (response) => {
-    const newCsrfToken = response.headers['x-csrf-token'];
+    const newCsrfToken = response.headers["x-csrf-token"];
     if (newCsrfToken) {
       setCsrfToken(newCsrfToken);
     }
@@ -146,7 +148,7 @@ api.interceptors.response.use(
 
         // Read Retry-After header from backend (in seconds)
         // Default to 5 seconds if not present
-        const retryAfterHeader = error.response?.headers?.['retry-after'];
+        const retryAfterHeader = error.response?.headers?.["retry-after"];
         const retryAfterMs = retryAfterHeader
           ? parseInt(retryAfterHeader) * 1000
           : 5000;
@@ -154,10 +156,12 @@ api.interceptors.response.use(
         // Cap at 30 seconds to avoid very long waits
         const waitMs = Math.min(retryAfterMs, 30000);
 
-        console.warn(`Rate limited on ${originalRequest.url}, retrying in ${waitMs / 1000}s`);
+        console.warn(
+          `Rate limited on ${originalRequest.url}, retrying in ${waitMs / 1000}s`,
+        );
 
         // Wait, then retry
-        await new Promise(resolve => setTimeout(resolve, waitMs));
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
         return api(originalRequest);
       }
 
@@ -181,22 +185,27 @@ api.interceptors.response.use(
     const errorData = error.response?.data as any;
 
     // Don't retry auth endpoints — prevents infinite loops
-    const authEndpoints = ['/api/auth/login', '/api/auth/register', '/api/auth/refresh', '/api/auth/logout'];
-    if (authEndpoints.some(ep => originalRequest.url?.includes(ep))) {
+    const authEndpoints = [
+      "/api/auth/login",
+      "/api/auth/register",
+      "/api/auth/refresh",
+      "/api/auth/logout",
+    ];
+    if (authEndpoints.some((ep) => originalRequest.url?.includes(ep))) {
       return Promise.reject(error);
     }
 
     // Already retried — give up
     if (originalRequest._retry) {
-      emitSessionExpired(errorData?.code || 'RETRY_EXHAUSTED');
+      emitSessionExpired(errorData?.code || "RETRY_EXHAUSTED");
       return Promise.reject(error);
     }
 
     // Token expired or invalid — try refresh
     if (
-      errorData?.code === 'AUTH_TOKEN_EXPIRED' ||
-      errorData?.code === 'AUTH_TOKEN_INVALID' ||
-      errorData?.code === 'AUTH_TOKEN_MISSING'
+      errorData?.code === "AUTH_TOKEN_EXPIRED" ||
+      errorData?.code === "AUTH_TOKEN_INVALID" ||
+      errorData?.code === "AUTH_TOKEN_MISSING"
     ) {
       originalRequest._retry = true;
 
@@ -204,23 +213,24 @@ api.interceptors.response.use(
         await performRefresh();
         return api(originalRequest);
       } catch (refreshError) {
-        emitSessionExpired('REFRESH_FAILED');
+        emitSessionExpired("REFRESH_FAILED");
         return Promise.reject(refreshError);
       }
     }
 
     // Session revoked/hijacked — no recovery
     if (
-      errorData?.code === 'SESSION_EXPIRED' ||
-      errorData?.code === 'SESSION_REVOKED' ||
-      errorData?.code === 'SESSION_HIJACK_DETECTED' ||
-      errorData?.code === 'USER_NOT_FOUND'
+      errorData?.code === "SESSION_EXPIRED" ||
+      errorData?.code === "SESSION_REVOKED" ||
+      errorData?.code === "SESSION_HIJACK_DETECTED" ||
+      errorData?.code === "USER_NOT_FOUND" ||
+      errorData?.code === "ROLE_REVOKED"
     ) {
       emitSessionExpired(errorData.code);
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -231,11 +241,11 @@ const emitSessionExpired = (reason: string) => {
   if (hasEmittedExpiry) return;
   hasEmittedExpiry = true;
 
-  console.log('Session expired:', reason);
+  console.log("Session expired:", reason);
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     window.dispatchEvent(
-      new CustomEvent('session:expired', { detail: { reason } })
+      new CustomEvent("session:expired", { detail: { reason } }),
     );
   }
 

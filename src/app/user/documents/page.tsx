@@ -54,21 +54,27 @@ export default function UserDocumentsPage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
   const [successMessage, setSuccessMessage] = useState("");
 
   // Role-based redirect
   useEffect(() => {
-    if (!authLoading && user && user.role === 'admin') {
-      console.log('⚠️ Admin accessing user page, redirecting');
-      router.replace('/admin/documents');
+    if (!authLoading && user && user.role === "admin") {
+      console.log("⚠️ Admin accessing user page, redirecting");
+      router.replace("/admin/documents");
     }
   }, [user, authLoading, router]);
 
   // Fetch permissions when user is ready
   useEffect(() => {
-    if (user && user.role === 'user' && user.roleId) {
-      fetchRolePermissions(user.roleId);
+    if (user && user.role === "user") {
+      if (user.roleId) {
+        fetchRolePermissions(user.roleId);
+      } else {
+        setLoading(false);
+      }
     }
   }, [user]);
 
@@ -107,7 +113,9 @@ export default function UserDocumentsPage() {
 
   const fetchFolders = async () => {
     try {
-      const data = await apiClient.get<ProjectFolder[]>('/api/documents/folders');
+      const data = await apiClient.get<ProjectFolder[]>(
+        "/api/documents/folders",
+      );
       setFolders(data);
     } catch (error) {
       console.error("Error fetching folders:", error);
@@ -116,7 +124,7 @@ export default function UserDocumentsPage() {
 
   const fetchStats = async () => {
     try {
-      const data = await apiClient.get<Stats>('/api/documents/stats/overview');
+      const data = await apiClient.get<Stats>("/api/documents/stats/overview");
       setStats(data);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -125,12 +133,14 @@ export default function UserDocumentsPage() {
 
   const fetchProjectDocuments = async (projectId: string) => {
     try {
-      const documents = await apiClient.get<Document[]>(`/api/documents/project/${projectId}`);
+      const documents = await apiClient.get<Document[]>(
+        `/api/documents/project/${projectId}`,
+      );
 
       setFolders((prevFolders) =>
         prevFolders.map((folder) =>
-          folder._id === projectId ? { ...folder, documents } : folder
-        )
+          folder._id === projectId ? { ...folder, documents } : folder,
+        ),
       );
     } catch (error) {
       console.error("Error fetching project documents:", error);
@@ -183,7 +193,9 @@ export default function UserDocumentsPage() {
       window.open(doc.fileUrl, "_blank");
     } else {
       // For local files
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://fitout-manager-api.vercel.app";
       const fileUrl = `${API_URL}${doc.fileUrl}`;
       window.open(fileUrl, "_blank");
     }
@@ -208,14 +220,14 @@ export default function UserDocumentsPage() {
   };
 
   const filteredFolders = folders.filter((folder) =>
-    folder.projectName.toLowerCase().includes(searchQuery.toLowerCase())
+    folder.projectName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  if (authLoading || (loading && user?.role === 'user')) {
+  if (authLoading || (loading && user?.role === "user")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'user') {
+  if (user && user.role !== "user") {
     return <FitoutLoadingSpinner />;
   }
 
@@ -223,7 +235,9 @@ export default function UserDocumentsPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Permissions</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Permissions
+          </h2>
           <p className="text-gray-600">Contact administrator.</p>
         </div>
       </div>
@@ -231,6 +245,8 @@ export default function UserDocumentsPage() {
   }
 
   const permissions = roleData.permissions;
+  const canUpload = hasPermission("documents-upload", permissions);
+  const canBulkUpload = hasPermission("documents-bulk-upload", permissions);
 
   return (
     <SessionGuard>
@@ -242,26 +258,32 @@ export default function UserDocumentsPage() {
           {/* Header - Matching Dashboard/Projects */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Documents</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                Documents
+              </h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">
                 Global document library across all projects and entities
               </p>
             </div>
             <div className="flex flex-wrap gap-2 self-center sm:self-auto">
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
-              >
-                <Upload size={20} />
-                <span>Upload</span>
-              </button>
-              <button
-                onClick={() => setIsBulkUploadModalOpen(true)}
-                className="flex items-center justify-center gap-2 border border-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
-              >
-                <Upload size={20} />
-                <span>Bulk Upload</span>
-              </button>
+              {canUpload && (
+                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
+                >
+                  <Upload size={20} />
+                  <span>Upload</span>
+                </button>
+              )}
+              {canBulkUpload && (
+                <button
+                  onClick={() => setIsBulkUploadModalOpen(true)}
+                  className="flex items-center justify-center gap-2 border border-gray-300 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                >
+                  <Upload size={20} />
+                  <span>Bulk Upload</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -284,13 +306,20 @@ export default function UserDocumentsPage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
+                <p className="text-sm font-medium text-green-800">
+                  {successMessage}
+                </p>
               </div>
               <button
                 onClick={() => setSuccessMessage("")}
                 className="text-green-600 hover:text-green-800"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -305,22 +334,34 @@ export default function UserDocumentsPage() {
           {/* Stats Cards - Matching Dashboard */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Total Assets</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-2">{stats.totalDocuments}</p>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Total Assets
+              </h3>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {stats.totalDocuments}
+              </p>
               <p className="text-sm text-gray-500">Across all projects</p>
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Projects with Documents</h3>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Projects with Documents
+              </h3>
               <p className="text-3xl font-bold text-gray-900 mb-2">
                 {folders.filter((f) => f.documentCount > 0).length}
               </p>
-              <p className="text-sm text-gray-500">Out of {stats.totalProjects} total</p>
+              <p className="text-sm text-gray-500">
+                Out of {stats.totalProjects} total
+              </p>
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Total Storage</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-2">{formatFileSize(stats.totalSize)}</p>
+              <h3 className="text-sm font-medium text-gray-600 mb-2">
+                Total Storage
+              </h3>
+              <p className="text-3xl font-bold text-gray-900 mb-2">
+                {formatFileSize(stats.totalSize)}
+              </p>
               <p className="text-sm text-gray-500">Cloud storage used</p>
             </div>
           </div>
@@ -349,7 +390,9 @@ export default function UserDocumentsPage() {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">File Repository</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                File Repository
+              </h2>
             </div>
 
             {filteredFolders.length === 0 ? (
@@ -389,17 +432,21 @@ export default function UserDocumentsPage() {
           </div>
         </main>
 
-        <UploadDocumentModal
-          isOpen={isUploadModalOpen}
-          onClose={() => setIsUploadModalOpen(false)}
-          onSuccess={handleUploadSuccess}
-        />
-        <UploadDocumentModal
-          isOpen={isBulkUploadModalOpen}
-          onClose={() => setIsBulkUploadModalOpen(false)}
-          onSuccess={handleUploadSuccess}
-          allowMultiple
-        />
+        {canUpload && (
+          <UploadDocumentModal
+            isOpen={isUploadModalOpen}
+            onClose={() => setIsUploadModalOpen(false)}
+            onSuccess={handleUploadSuccess}
+          />
+        )}
+        {canBulkUpload && (
+          <UploadDocumentModal
+            isOpen={isBulkUploadModalOpen}
+            onClose={() => setIsBulkUploadModalOpen(false)}
+            onSuccess={handleUploadSuccess}
+            allowMultiple
+          />
+        )}
       </div>
     </SessionGuard>
   );

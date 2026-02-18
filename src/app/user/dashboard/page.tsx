@@ -8,7 +8,32 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import AdminHeader from "@/components/AdminHeader";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import ThreadsSection from "@/components/ThreadsSection";
 import { apiClient } from "@/lib/axios";
+import { hasPermission } from "@/utils/permissions";
+
+interface Permission {
+  id: string;
+  label: string;
+  checked: boolean;
+  children?: Permission[];
+}
+
+interface RoleData {
+  _id: string;
+  name: string;
+  permissions: Permission[];
+}
+
+interface Brand {
+  _id: string;
+  name: string;
+}
+
+interface UserProject {
+  _id: string;
+  brand: string;
+}
 
 interface ProjectStats {
   totalProjects: number;
@@ -82,10 +107,17 @@ export default function UserDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleData, setRoleData] = useState<RoleData | null>(null);
+  const [userProjects, setUserProjects] = useState<UserProject[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const [selectedTask, setSelectedTask] = useState<DashboardTask | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "comments" | "activity">("details");
+  const [activeTab, setActiveTab] = useState<
+    "details" | "comments" | "activity"
+  >("details");
   const [comments, setComments] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -93,21 +125,112 @@ export default function UserDashboard() {
   // Removed conflicting redirect logic - SessionGuard handles this
   // Only check role and redirect if wrong role
   useEffect(() => {
-    if (!authLoading && user && user.role === 'admin') {
-      console.log('⚠️ Admin user accessing user dashboard, redirecting to admin dashboard');
-      router.replace('/admin/dashboard');
+    if (!authLoading && user && user.role === "admin") {
+      console.log(
+        "⚠️ Admin user accessing user dashboard, redirecting to admin dashboard",
+      );
+      router.replace("/admin/dashboard");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user && user.role === 'user') {
+    if (user && user.role === "user") {
       fetchDashboardStats();
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user && user.role === "user") {
+      fetchRolePermissions();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && user.role === "user") {
+      fetchUserProjects();
+      fetchBrands();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedBrand || brands.length === 0 || userProjects.length === 0)
+      return;
+
+    const projectBrands = new Set(userProjects.map((project) => project.brand));
+    const matchedBrand = brands.find((brand) => projectBrands.has(brand.name));
+    if (matchedBrand) {
+      setSelectedBrand(matchedBrand);
+    }
+  }, [brands, userProjects, selectedBrand]);
+
+  useEffect(() => {
+    if (!roleData) return;
+
+    const permissions = roleData.permissions || [];
+    const hasDashboardAccess = hasPermission("dashboard", permissions);
+    if (hasDashboardAccess) return;
+
+    const fallbackRoutes = [
+      { permissionId: "projects", href: "/user/projects" },
+      { permissionId: "finance", href: "/user/finance" },
+      { permissionId: "reports", href: "/user/reports" },
+      { permissionId: "documents", href: "/user/documents" },
+    ];
+
+    const nextRoute = fallbackRoutes.find((route) =>
+      hasPermission(route.permissionId, permissions),
+    );
+
+    if (nextRoute) {
+      setIsRedirecting(true);
+      router.replace(nextRoute.href);
+    }
+  }, [roleData, router]);
+
+  const fetchRolePermissions = async () => {
+    try {
+      let roleId = user?.roleId;
+      if (!roleId && user) {
+        try {
+          const fresh = await apiClient.get<{ user: { roleId?: string } }>(
+            "/api/auth/me",
+          );
+          roleId = fresh.user?.roleId ?? null;
+        } catch {
+          return;
+        }
+      }
+
+      if (!roleId) return;
+
+      const data = await apiClient.get<RoleData>(`/api/roles/${roleId}`);
+      setRoleData(data);
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+    }
+  };
+
+  const fetchUserProjects = async () => {
+    try {
+      const data = await apiClient.get<UserProject[]>("/api/projects");
+      setUserProjects(data);
+    } catch (error) {
+      console.error("Error fetching user projects:", error);
+    }
+  };
+
+  const fetchBrands = async () => {
+    try {
+      const data = await apiClient.get<Brand[]>("/api/brands");
+      setBrands(data);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+    }
+  };
+
   const fetchDashboardStats = async () => {
     try {
-      const data = await apiClient.get('/api/dashboard');
+      const data = await apiClient.get("/api/dashboard");
       setStats(data);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -119,12 +242,16 @@ export default function UserDashboard() {
   const handleTaskClick = async (task: DashboardTask) => {
     setSelectedTask(task);
     setIsTaskModalOpen(true);
-    
+
     try {
-      const commentsData = await apiClient.get(`/api/tasks/${task._id}/comments`);
+      const commentsData = await apiClient.get(
+        `/api/tasks/${task._id}/comments`,
+      );
       setComments(commentsData);
 
-      const activityData = await apiClient.get(`/api/tasks/${task._id}/activity`);
+      const activityData = await apiClient.get(
+        `/api/tasks/${task._id}/activity`,
+      );
       setActivityLogs(activityData);
     } catch (error) {
       console.error("Error fetching task details:", error);
@@ -145,11 +272,13 @@ export default function UserDashboard() {
 
     try {
       await apiClient.post(`/api/tasks/${selectedTask._id}/comments`, {
-        text: newComment
+        text: newComment,
       });
-      
+
       setNewComment("");
-      const commentsData = await apiClient.get(`/api/tasks/${selectedTask._id}/comments`);
+      const commentsData = await apiClient.get(
+        `/api/tasks/${selectedTask._id}/comments`,
+      );
       setComments(commentsData);
     } catch (error) {
       console.error("Error adding comment:", error);
@@ -157,21 +286,42 @@ export default function UserDashboard() {
   };
 
   // Show loading only while checking auth or fetching initial data
-  if (authLoading || (loading && user?.role === 'user')) {
+  if (authLoading || (loading && user?.role === "user") || isRedirecting) {
     return <FitoutLoadingSpinner />;
   }
 
   // If wrong role, show loading while redirecting
-  if (user && user.role !== 'user') {
+  if (user && user.role !== "user") {
     return <FitoutLoadingSpinner />;
   }
 
   const projectStats = stats?.projectStats;
+  const permissions = roleData?.permissions;
+  const hasDashboardAccess = permissions
+    ? hasPermission("dashboard", permissions)
+    : false;
+  if (roleData && !hasDashboardAccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Dashboard Access
+          </h2>
+          <p className="text-gray-600">Contact administrator.</p>
+        </div>
+      </div>
+    );
+  }
+  const canViewThreads = permissions
+    ? hasPermission("dashboard-add-threads", permissions) ||
+      hasPermission("dashboard-threads", permissions)
+    : false;
+  const assignedProjectIds = userProjects.map((project) => project._id);
 
   return (
     <SessionGuard>
       <div className="min-h-screen bg-gray-50">
-        <AdminSidebar userRole="user" />
+        <AdminSidebar userRole="user" permissions={permissions} />
         <AdminHeader />
 
         <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
@@ -180,7 +330,8 @@ export default function UserDashboard() {
               My Dashboard
             </h1>
             <p className="text-gray-600 mt-2">
-              Welcome back, {user?.name}! Here's what's happening with your projects.
+              Welcome back, {user?.name}! Here's what's happening with your
+              projects.
             </p>
           </div>
 
@@ -232,7 +383,9 @@ export default function UserDashboard() {
             <DashboardCard
               title="Overdue Tasks"
               value={projectStats?.overdueTask || 0}
-              change={projectStats?.overdueTask ? "Needs attention" : "All caught up!"}
+              change={
+                projectStats?.overdueTask ? "Needs attention" : "All caught up!"
+              }
               changeType={projectStats?.overdueTask ? "negative" : "positive"}
               icon={
                 <svg
@@ -260,24 +413,29 @@ export default function UserDashboard() {
                 </h2>
               </div>
               <div className="p-6">
-                {stats?.recentActivities && stats.recentActivities.length > 0 ? (
+                {stats?.recentActivities &&
+                stats.recentActivities.length > 0 ? (
                   <div className="space-y-4">
-                    {stats.recentActivities.slice(0, 5).map((activity: any, index: number) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-2 h-2 mt-2 bg-blue-500 rounded-full"></div>
+                    {stats.recentActivities
+                      .slice(0, 5)
+                      .map((activity: any, index: number) => (
+                        <div key={index} className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-2 h-2 mt-2 bg-blue-500 rounded-full"></div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900">
+                              {activity.description}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {activity.userName} •{" "}
+                              {new Date(
+                                activity.createdAt,
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {activity.userName} •{" "}
-                            {new Date(activity.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">
@@ -296,36 +454,38 @@ export default function UserDashboard() {
               <div className="p-6">
                 {stats?.upcomingTasks && stats.upcomingTasks.length > 0 ? (
                   <div className="space-y-4">
-                    {stats.upcomingTasks.slice(0, 5).map((task: any, index: number) => (
-                      <div
-                        key={index}
-                        onClick={() => handleTaskClick(task)}
-                        className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                      >
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {task.title}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Due:{" "}
-                            {task.dueDate
-                              ? new Date(task.dueDate).toLocaleDateString()
-                              : "No due date"}
-                          </p>
-                        </div>
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            task.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : task.status === "in-progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                    {stats.upcomingTasks
+                      .slice(0, 5)
+                      .map((task: any, index: number) => (
+                        <div
+                          key={index}
+                          onClick={() => handleTaskClick(task)}
+                          className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                         >
-                          {task.status}
-                        </span>
-                      </div>
-                    ))}
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {task.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Due:{" "}
+                              {task.dueDate
+                                ? new Date(task.dueDate).toLocaleDateString()
+                                : "No due date"}
+                            </p>
+                          </div>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              task.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : task.status === "in-progress"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {task.status}
+                          </span>
+                        </div>
+                      ))}
                   </div>
                 ) : (
                   <p className="text-gray-500 text-center py-8">
@@ -400,6 +560,26 @@ export default function UserDashboard() {
               </button>
             </div>
           </div>
+
+          {canViewThreads && (
+            <div className="mt-8">
+              {selectedBrand ? (
+                <ThreadsSection
+                  brandId={selectedBrand._id}
+                  brandName={selectedBrand.name}
+                  userRole="user"
+                  userAssignedProjects={assignedProjectIds}
+                />
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+                  <p className="text-gray-500">No brand threads available</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    You need an assigned project to view threads.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </main>
 
         {selectedTask && (
@@ -409,19 +589,20 @@ export default function UserDashboard() {
             task={selectedTask as any}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            
             comments={comments}
             activityLogs={activityLogs}
             newComment={newComment}
             setNewComment={setNewComment}
             onAddComment={handleAddComment}
-            
             onUpdate={async (updatedTask: any) => {
               try {
-                await apiClient.put(`/api/tasks/${updatedTask._id}`, updatedTask);
+                await apiClient.put(
+                  `/api/tasks/${updatedTask._id}`,
+                  updatedTask,
+                );
                 fetchDashboardStats();
               } catch (error) {
-                console.error('Error updating task:', error);
+                console.error("Error updating task:", error);
               }
             }}
             onDelete={async (taskId: string) => {
@@ -430,20 +611,17 @@ export default function UserDashboard() {
                 handleTaskModalClose();
                 fetchDashboardStats();
               } catch (error) {
-                console.error('Error deleting task:', error);
+                console.error("Error deleting task:", error);
               }
             }}
-            
             selectedFiles={[]}
             setSelectedFiles={() => {}}
             handleFileSelect={(e: React.ChangeEvent<HTMLInputElement>) => {
-              console.log('Files selected:', e.target.files);
+              console.log("Files selected:", e.target.files);
             }}
             uploadingFiles={false}
-            
             phases={[]}
             allTasks={[]}
-            
             canEdit={false}
           />
         )}
