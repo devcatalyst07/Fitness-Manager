@@ -1,10 +1,10 @@
-import api, { apiClient } from '@/lib/axios';
+import api, { apiClient } from "@/lib/axios";
 
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
   roleId?: string;
 }
 
@@ -18,17 +18,19 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
-  role?: 'user' | 'admin';
+  role?: "user" | "admin";
 }
 
 const authService = {
   /**
    * Login — normal request, cookies will be set by backend
    */
-  async login(credentials: LoginCredentials): Promise<{ user: User; message: string }> {
+  async login(
+    credentials: LoginCredentials,
+  ): Promise<{ user: User; message: string }> {
     return apiClient.post<{ user: User; message: string }>(
-      '/api/auth/login',
-      credentials
+      "/api/auth/login",
+      credentials,
     );
   },
 
@@ -37,8 +39,8 @@ const authService = {
    */
   async register(data: RegisterData): Promise<{ user: User; message: string }> {
     return apiClient.post<{ user: User; message: string }>(
-      '/api/auth/register',
-      data
+      "/api/auth/register",
+      data,
     );
   },
 
@@ -47,7 +49,7 @@ const authService = {
    */
   async logout(): Promise<void> {
     try {
-      await apiClient.post('/api/auth/logout');
+      await apiClient.post("/api/auth/logout");
     } catch {
       // Ignore — user is leaving anyway
     }
@@ -66,7 +68,7 @@ const authService = {
    * access token expires mid-session.
    */
   async getCurrentUser(): Promise<User> {
-    const response = await api.get('/api/auth/me', {
+    const response = await api.get("/api/auth/me", {
       _skipAuthRefresh: true, // Don't trigger refresh cascade on initial check
     } as any);
     return response.data.user;
@@ -76,7 +78,7 @@ const authService = {
    * Refresh token — explicit call
    */
   async refresh(): Promise<void> {
-    await apiClient.post('/api/auth/refresh');
+    await apiClient.post("/api/auth/refresh");
   },
 };
 

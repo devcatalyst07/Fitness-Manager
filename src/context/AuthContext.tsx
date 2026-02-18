@@ -1,22 +1,42 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import authService, { User } from '@/services/authService';
-import { tokenRefreshService } from '@/services/tokenRefreshService';
-import { sessionSync } from '@/lib/session';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
+import authService, { User } from "@/services/authService";
+import { tokenRefreshService } from "@/services/tokenRefreshService";
+import { sessionSync } from "@/lib/session";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+  ) => Promise<void>;
   logout: () => Promise<void>;
-  register: (name: string, email: string, password: string, role?: 'user' | 'admin') => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    role?: "user" | "admin",
+  ) => Promise<void>;
   isAuthenticated: boolean;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -64,15 +84,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Already logged out — nothing to do
       if (!user) return;
 
-      console.log('🔒 Session expired, clearing auth state');
+      console.log("🔒 Session expired, clearing auth state");
       tokenRefreshService.stop();
       setUser(null);
       sessionSync.broadcastLogout();
       // NO router.replace() here! SessionGuard handles redirect.
     };
 
-    window.addEventListener('session:expired', handleSessionExpired);
-    return () => window.removeEventListener('session:expired', handleSessionExpired);
+    window.addEventListener("session:expired", handleSessionExpired);
+    return () =>
+      window.removeEventListener("session:expired", handleSessionExpired);
   }, [user]);
 
   /**
@@ -80,11 +101,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   useEffect(() => {
     const handleSync = (event: string, data?: any) => {
-      if (event === 'logout' && user) {
+      if (event === "logout" && user) {
         tokenRefreshService.stop();
         setUser(null);
         // NO redirect — SessionGuard handles it
-      } else if (event === 'login' && !user && data) {
+      } else if (event === "login" && !user && data) {
         setUser(data);
         tokenRefreshService.start();
       }
@@ -99,36 +120,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && user && tokenRefreshService.isRunning()) {
+      if (
+        document.visibilityState === "visible" &&
+        user &&
+        tokenRefreshService.isRunning()
+      ) {
         tokenRefreshService.refreshNow().catch(() => {
           // If refresh fails, the interceptor will handle it on next API call
         });
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [user]);
 
   /**
    * Login
    */
-  const login = useCallback(async (email: string, password: string, rememberMe: boolean = false) => {
-    const response = await authService.login({ email, password, rememberMe });
-    setUser(response.user);
-    tokenRefreshService.start();
-    sessionSync.broadcastLogin(response.user);
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string, rememberMe: boolean = false) => {
+      const response = await authService.login({ email, password, rememberMe });
+      setUser(response.user);
+      tokenRefreshService.start();
+      sessionSync.broadcastLogin(response.user);
+    },
+    [],
+  );
 
   /**
    * Register
    */
-  const register = useCallback(async (name: string, email: string, password: string, role: 'user' | 'admin' = 'user') => {
-    const response = await authService.register({ name, email, password, role });
-    setUser(response.user);
-    tokenRefreshService.start();
-    sessionSync.broadcastLogin(response.user);
-  }, []);
+  const register = useCallback(
+    async (
+      name: string,
+      email: string,
+      password: string,
+      role: "user" | "admin" = "user",
+    ) => {
+      const response = await authService.register({
+        name,
+        email,
+        password,
+        role,
+      });
+      setUser(response.user);
+      tokenRefreshService.start();
+      sessionSync.broadcastLogin(response.user);
+    },
+    [],
+  );
 
   /**
    * Logout — intentional user action
@@ -166,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

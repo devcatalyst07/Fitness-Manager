@@ -34,49 +34,52 @@ export default function Home() {
   // BUT only after they've sent the role request email (check localStorage flag)
   // This allows the modal to show first and let them input admin email
   if (!authLoading && user && !user.roleId && user.role === "user") {
-    const roleRequestSentAt = typeof window !== "undefined" ? localStorage.getItem("roleRequestSentAt") : null;
+    const roleRequestSentAt =
+      typeof window !== "undefined"
+        ? localStorage.getItem("roleRequestSentAt")
+        : null;
     if (roleRequestSentAt) {
       return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg
-              className="w-8 h-8 text-blue-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-8 h-8 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-black mb-2">
+              Pending Role Assignment
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Your account has been created successfully! An admin will review
+              your request and assign you a role shortly.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-700">
+              <strong>What's next?</strong> Check your email for updates. Once
+              your role is assigned, you'll have full access to the platform.
+            </div>
+            <button
+              onClick={async () => {
+                await logout();
+                router.push("/");
+              }}
+              className="w-full bg-black text-white py-3 rounded hover:bg-gray-800 transition-colors font-medium"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+              Log Out
+            </button>
           </div>
-          <h1 className="text-2xl font-bold text-black mb-2">
-            Pending Role Assignment
-          </h1>
-          <p className="text-gray-600 mb-6">
-            Your account has been created successfully! An admin will review
-            your request and assign you a role shortly.
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-700">
-            <strong>What's next?</strong> Check your email for updates. Once
-            your role is assigned, you'll have full access to the platform.
-          </div>
-          <button
-            onClick={async () => {
-              await logout();
-              router.push("/");
-            }}
-            className="w-full bg-black text-white py-3 rounded hover:bg-gray-800 transition-colors font-medium"
-          >
-            Log Out
-          </button>
         </div>
-      </div>
-    );
+      );
     }
   }
 
