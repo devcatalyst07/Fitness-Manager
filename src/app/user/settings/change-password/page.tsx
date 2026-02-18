@@ -4,7 +4,7 @@ import SessionGuard from "@/components/SessionGuard";
 export default function Page() {
   return (
     <SessionGuard>
-      <ChangePassword />
+      <UserChangePassword />
     </SessionGuard>
   );
 }

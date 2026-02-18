@@ -195,7 +195,7 @@ export default function UserDashboard() {
           const fresh = await apiClient.get<{ user: { roleId?: string } }>(
             "/api/auth/me",
           );
-          roleId = fresh.user?.roleId ?? null;
+          roleId = fresh.user?.roleId ?? undefined;
         } catch {
           return;
         }
