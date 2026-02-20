@@ -165,9 +165,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         password,
         role,
       });
-      setUser(response.user);
-      tokenRefreshService.start();
-      sessionSync.broadcastLogin(response.user);
+
+      if (response.user) {
+        setUser(response.user);
+        tokenRefreshService.start();
+        sessionSync.broadcastLogin(response.user);
+      }
     },
     [],
   );

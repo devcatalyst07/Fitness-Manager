@@ -19,6 +19,15 @@ export interface RegisterData {
   email: string;
   password: string;
   role?: "user" | "admin";
+  subscriptionType?: "Starter" | "Team" | "Enterprise";
+}
+
+export interface RegisterResponse {
+  message: string;
+  verificationRequired?: boolean;
+  email?: string;
+  role?: "user" | "admin";
+  user?: User;
 }
 
 const authService = {
@@ -37,10 +46,26 @@ const authService = {
   /**
    * Register — normal request
    */
-  async register(data: RegisterData): Promise<{ user: User; message: string }> {
-    return apiClient.post<{ user: User; message: string }>(
-      "/api/auth/register",
-      data,
+  async register(data: RegisterData): Promise<RegisterResponse> {
+    return apiClient.post<RegisterResponse>("/api/auth/register", data);
+  },
+
+  async verifyEmailCode(
+    email: string,
+    code: string,
+  ): Promise<{ message: string; verified: boolean }> {
+    return apiClient.post<{ message: string; verified: boolean }>(
+      "/api/auth/verify-email-code",
+      { email, code },
+    );
+  },
+
+  async resendVerificationCode(
+    email: string,
+  ): Promise<{ message: string; verificationRequired: boolean }> {
+    return apiClient.post<{ message: string; verificationRequired: boolean }>(
+      "/api/auth/resend-verification-code",
+      { email },
     );
   },
 
