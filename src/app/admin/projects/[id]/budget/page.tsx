@@ -2,62 +2,87 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, FileDown, ChevronDown, ChevronUp, Plus, X, Edit } from 'lucide-react';
+import { Plus, X, Edit, Trash2, Link2, ArrowUpDown, Download } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiClient } from '@/lib/axios';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
 
+// ─── Types ──────────────────────────────────────────────────────
+
 interface BudgetItem {
   _id: string;
   description: string;
-  vendor: string;
+  category: string;
+  vendor?: string;
   quantity: number;
   unitCost: number;
-  committedStatus: 'Paid' | 'Invoiced' | 'Committed' | 'Planned';
-  category: string;
+  totalCost: number;
+  committedStatus: string;
+  invoicedAmount?: number;
+  paidAmount?: number;
+  notes?: string;
+  // ★ Tender sync fields
+  tenderId?: string;
+  tenderNumber?: string;
+  awardedBidId?: string;
+  isTenderSynced?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface CategoryData {
-  category: string;
-  items: BudgetItem[];
-  totalSpent: number;
-  itemCount: number;
-  expanded: boolean;
-}
-
-interface BudgetStats {
+interface ProjectFinance {
   totalBudget: number;
-  totalCommitted: number;
-  eac: number;
-  variance: number;
-  percentUsed: number;
+  committed: number;
+  invoiced: number;
+  paid: number;
+  remaining: number;
 }
 
-export default function ProjectBudgetPage() {
+// ─── Component ──────────────────────────────────────────────────
+
+export default function AdminProjectBudgetPage() {
   const router = useRouter();
   const params = useParams();
   const { user, loading: authLoading } = useAuth();
 
   const [pathname, setPathname] = useState('/admin/projects');
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<CategoryData[]>([]);
-  const [stats, setStats] = useState<BudgetStats | null>(null);
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([]);
   const [projectName, setProjectName] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [projectFinance, setProjectFinance] = useState<ProjectFinance>({
+    totalBudget: 0, committed: 0, invoiced: 0, paid: 0, remaining: 0,
+  });
+
+  // ── Modal state ──
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<BudgetItem | null>(null);
+  const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
+
+  // ── Form state ──
   const [formData, setFormData] = useState({
     description: '',
+    category: 'Construction',
     vendor: '',
     quantity: 1,
     unitCost: 0,
-    committedStatus: 'Planned',
-    category: 'Design'
+    committedStatus: 'Pending',
+    invoicedAmount: 0,
+    paidAmount: 0,
+    notes: '',
   });
+
+  // ── Sorting & filtering ──
+  const [sortField, setSortField] = useState<string>('category');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [saving, setSaving] = useState(false);
 
+  // ── Auth guards ──
   useEffect(() => {
     if (!authLoading && !user) { router.replace('/'); return; }
     if (!authLoading && user && user.role !== 'admin') { router.replace('/user/projects'); return; }
@@ -66,102 +91,326 @@ export default function ProjectBudgetPage() {
   useEffect(() => {
     if (user && user.role === 'admin' && params.id) {
       fetchProject();
-      fetchBudget();
-      fetchStats();
+      fetchBudgetItems();
     }
   }, [user, params.id]);
+
+  // ── Data fetching ──
 
   const fetchProject = async () => {
     try {
       const data = await apiClient.get(`/api/projects/${params.id}`);
       setProjectName(data.projectName);
+      setProjectFinance({
+        totalBudget: data.totalBudget || data.budget || 0,
+        committed: data.committed || 0,
+        invoiced: data.invoiced || 0,
+        paid: data.paid || 0,
+        remaining: (data.totalBudget || data.budget || 0) - (data.committed || 0),
+      });
     } catch (error) { console.error('Error fetching project:', error); }
   };
 
-  const fetchBudget = async () => {
+  const fetchBudgetItems = async () => {
+    setLoading(true);
     try {
       const data = await apiClient.get(`/api/projects/${params.id}/budget`);
-      setCategories(data.map((cat: any) => ({ ...cat, expanded: false })));
+      setBudgetItems(data);
+      recalculateFinance(data);
     } catch (error) { console.error('Error fetching budget:', error); }
     finally { setLoading(false); }
   };
 
-  const fetchStats = async () => {
-    try {
-      const data = await apiClient.get(`/api/projects/${params.id}/budget/stats`);
-      setStats(data);
-    } catch (error) { console.error('Error fetching budget stats:', error); }
+  const recalculateFinance = (items: BudgetItem[]) => {
+    const committed = items
+      .filter((i) => i.committedStatus === 'Committed')
+      .reduce((sum, i) => sum + (i.totalCost || i.quantity * i.unitCost), 0);
+    const invoiced = items.reduce((sum, i) => sum + (i.invoicedAmount || 0), 0);
+    const paid = items.reduce((sum, i) => sum + (i.paidAmount || 0), 0);
+
+    setProjectFinance((prev) => ({
+      ...prev,
+      committed,
+      invoiced,
+      paid,
+      remaining: prev.totalBudget - committed,
+    }));
   };
 
-  const handleCreateBudgetItem = async () => {
-    if (!formData.description || !formData.vendor) { alert('Please fill in all required fields'); return; }
+  // ── CRUD ──
+
+  const handleAddItem = async () => {
+    if (!formData.description.trim() || !formData.unitCost) {
+      alert('Please fill in Description and Unit Cost');
+      return;
+    }
     setSaving(true);
     try {
-      await apiClient.post(`/api/projects/${params.id}/budget`, formData);
-      await fetchBudget();
-      await fetchStats();
-      setIsCreateModalOpen(false);
-      setFormData({ description: '', vendor: '', quantity: 1, unitCost: 0, committedStatus: 'Planned', category: 'Design' });
-      alert('Budget item created successfully!');
+      await apiClient.post(`/api/projects/${params.id}/budget`, {
+        ...formData,
+        totalCost: formData.quantity * formData.unitCost,
+      });
+      await fetchBudgetItems();
+      closeAddModal();
+      alert('Budget item added!');
     } catch (error: any) {
-      console.error('Create budget item error:', error);
-      alert(error?.response?.data?.message || 'Failed to create budget item');
+      alert(error?.response?.data?.message || 'Failed to add budget item');
     } finally { setSaving(false); }
   };
 
-  const handleEditItem = (item: BudgetItem) => {
-    setSelectedItem(item);
-    setIsEditModalOpen(true);
-  };
-
-  const handleUpdateBudgetItem = async () => {
-    if (!selectedItem) return;
+  const handleUpdateItem = async () => {
+    if (!editingItem) return;
+    if (!formData.description.trim() || !formData.unitCost) {
+      alert('Please fill in Description and Unit Cost');
+      return;
+    }
     setSaving(true);
     try {
-      await apiClient.put(`/api/projects/${params.id}/budget/${selectedItem._id}`, selectedItem);
-      await fetchBudget();
-      await fetchStats();
-      setIsEditModalOpen(false);
-      setSelectedItem(null);
-      alert('Budget item updated successfully!');
+      await apiClient.put(`/api/budget/${editingItem._id}`, {
+        ...formData,
+        totalCost: formData.quantity * formData.unitCost,
+      });
+      await fetchBudgetItems();
+      closeEditModal();
+      alert('Budget item updated!');
     } catch (error: any) {
-      console.error('Update budget item error:', error);
       alert(error?.response?.data?.message || 'Failed to update budget item');
     } finally { setSaving(false); }
   };
 
-  const handleDeleteBudgetItem = async (itemId: string) => {
-    if (!confirm('Are you sure you want to delete this budget item?')) return;
+  const handleDeleteItem = async (itemId: string, isTenderSynced?: boolean) => {
+    if (isTenderSynced) {
+      alert('This item was auto-created from a Tender award and cannot be deleted. To remove it, cancel the tender award first.');
+      return;
+    }
+    if (!confirm('Delete this budget item?')) return;
     try {
-      await apiClient.delete(`/api/projects/${params.id}/budget/${itemId}`);
-      await fetchBudget();
-      await fetchStats();
-      alert('Budget item deleted successfully!');
-    } catch (error) { console.error('Delete budget item error:', error); alert('Failed to delete budget item'); }
-  };
-
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
-
-  const toggleCategory = (index: number) => {
-    const newCategories = [...categories];
-    newCategories[index].expanded = !newCategories[index].expanded;
-    setCategories(newCategories);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Paid': return 'bg-green-100 text-green-700';
-      case 'Invoiced': return 'bg-blue-100 text-blue-700';
-      case 'Committed': return 'bg-orange-100 text-orange-700';
-      default: return 'bg-gray-100 text-gray-700';
+      await apiClient.delete(`/api/budget/${itemId}`);
+      await fetchBudgetItems();
+      alert('Budget item deleted.');
+    } catch (error: any) {
+      alert(error?.response?.data?.message || 'Failed to delete');
     }
   };
 
-  const expandAll = () => setCategories(categories.map(cat => ({ ...cat, expanded: true })));
-  const collapseAll = () => setCategories(categories.map(cat => ({ ...cat, expanded: false })));
+  // ── Modal helpers ──
+
+  const openEditModal = (item: BudgetItem) => {
+    setEditingItem(item);
+    setFormData({
+      description: item.description,
+      category: item.category,
+      vendor: item.vendor || '',
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+      committedStatus: item.committedStatus,
+      invoicedAmount: item.invoicedAmount || 0,
+      paidAmount: item.paidAmount || 0,
+      notes: item.notes || '',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const closeAddModal = () => {
+    setIsAddModalOpen(false);
+    resetForm();
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingItem(null);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setFormData({
+      description: '', category: 'Construction', vendor: '', quantity: 1,
+      unitCost: 0, committedStatus: 'Pending', invoicedAmount: 0, paidAmount: 0, notes: '',
+    });
+  };
+
+  // ── Sorting ──
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // ── Formatters ──
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, string> = {
+      Pending: 'bg-gray-100 text-gray-700',
+      Committed: 'bg-blue-100 text-blue-700',
+      Invoiced: 'bg-yellow-100 text-yellow-700',
+      Paid: 'bg-green-100 text-green-700',
+      Cancelled: 'bg-red-100 text-red-700',
+    };
+    return badges[status] || 'bg-gray-100 text-gray-700';
+  };
+
+  // ── Computed data ──
+
+  const categories = ['All', ...new Set(budgetItems.map((i) => i.category))];
+  const statuses = ['All', 'Pending', 'Committed', 'Invoiced', 'Paid', 'Cancelled'];
+
+  const filteredItems = budgetItems
+    .filter((item) => {
+      if (filterCategory !== 'All' && item.category !== filterCategory) return false;
+      if (filterStatus !== 'All' && item.committedStatus !== filterStatus) return false;
+      if (searchQuery && !item.description.toLowerCase().includes(searchQuery.toLowerCase()) && !(item.vendor || '').toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      let aVal: any = (a as any)[sortField];
+      let bVal: any = (b as any)[sortField];
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const filteredTotal = filteredItems.reduce((sum, i) => sum + (i.totalCost || i.quantity * i.unitCost), 0);
+  const tenderSyncedCount = budgetItems.filter((i) => i.isTenderSynced).length;
+  const tenderSyncedTotal = budgetItems.filter((i) => i.isTenderSynced).reduce((sum, i) => sum + (i.totalCost || 0), 0);
+
+  const budgetUtilization = projectFinance.totalBudget > 0
+    ? ((projectFinance.committed / projectFinance.totalBudget) * 100).toFixed(1)
+    : '0';
 
   if (authLoading || loading) return <FitoutLoadingSpinner />;
   if (!user || user.role !== 'admin') return <FitoutLoadingSpinner />;
+
+  // ═══════════════════════════════════════════════════════════
+  // FORM RENDER (shared between Add & Edit)
+  // ═══════════════════════════════════════════════════════════
+
+  const renderForm = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Description *</label>
+          <input
+            type="text"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="w-full px-4 py-2 border rounded-lg"
+            placeholder="e.g., Main Construction Works"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <select
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className="w-full px-4 py-2 border rounded-lg"
+          >
+            {['Construction', 'Design', 'Joinery', 'MEP', 'Fixtures', 'Contingency', 'Professional Fees', 'Other'].map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Vendor</label>
+          <input
+            type="text"
+            value={formData.vendor}
+            onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+            className="w-full px-4 py-2 border rounded-lg"
+            placeholder="Contractor / vendor name"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Quantity</label>
+          <input
+            type="number"
+            min="1"
+            value={formData.quantity}
+            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+            className="w-full px-4 py-2 border rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Unit Cost *</label>
+          <input
+            type="number"
+            min="0"
+            value={formData.unitCost || ''}
+            onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value) || 0 })}
+            className="w-full px-4 py-2 border rounded-lg"
+            placeholder="0"
+          />
+        </div>
+
+        <div className="col-span-2 bg-gray-50 rounded-lg p-3 text-center">
+          <div className="text-sm text-gray-500">Total Cost</div>
+          <div className="text-2xl font-bold text-gray-900">{formatCurrency(formData.quantity * formData.unitCost)}</div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Status</label>
+          <select
+            value={formData.committedStatus}
+            onChange={(e) => setFormData({ ...formData, committedStatus: e.target.value })}
+            className="w-full px-4 py-2 border rounded-lg"
+          >
+            {['Pending', 'Committed', 'Invoiced', 'Paid', 'Cancelled'].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Invoiced Amount</label>
+          <input
+            type="number"
+            min="0"
+            value={formData.invoicedAmount || ''}
+            onChange={(e) => setFormData({ ...formData, invoicedAmount: parseFloat(e.target.value) || 0 })}
+            className="w-full px-4 py-2 border rounded-lg"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Paid Amount</label>
+          <input
+            type="number"
+            min="0"
+            value={formData.paidAmount || ''}
+            onChange={(e) => setFormData({ ...formData, paidAmount: parseFloat(e.target.value) || 0 })}
+            className="w-full px-4 py-2 border rounded-lg"
+          />
+        </div>
+
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Notes</label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            rows={2}
+            className="w-full px-4 py-2 border rounded-lg"
+            placeholder="Optional notes"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════════════════
+  // MAIN RENDER
+  // ═══════════════════════════════════════════════════════════
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,190 +418,374 @@ export default function ProjectBudgetPage() {
       <AdminHeader />
 
       <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+        {/* Header */}
         <div className="mb-6">
-          <button onClick={() => router.push(`/admin/projects/${params.id}`)} className="text-gray-600 hover:text-black mb-4 flex items-center gap-2">
-            <ArrowLeft size={20} />
-            <span>{projectName || 'Back to Project'}</span>
+          <button
+            onClick={() => router.push(`/admin/projects/${params.id}`)}
+            className="text-gray-600 hover:text-black mb-4 flex items-center gap-2 text-sm"
+          >
+            ← {projectName || 'Back to Project'}
           </button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Budget</h1>
-              <p className="text-sm text-gray-600">Budget management and tracking</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Budget Management</h1>
+              <p className="text-sm text-gray-600">Track costs, commitments, and tender-synced items</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                <Plus size={18} /><span>Add Item</span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                <FileDown size={18} /><span>Export CSV</span>
+              <button
+                onClick={() => { resetForm(); setIsAddModalOpen(true); }}
+                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+              >
+                <Plus size={18} />
+                Add Budget Item
               </button>
             </div>
           </div>
         </div>
 
-       <div className="mb-6 border-b border-gray-200">
-  <div className="flex gap-6">
-    {['Overview', 'Tasks', 'Budget', 'Tender', 'Documents', 'Team'].map((tab) => (
-      <button key={tab}
-        className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'Budget' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-        onClick={() => {
-          if (tab === 'Overview') router.push(`/admin/projects/${params.id}`);
-          if (tab === 'Tasks') router.push(`/admin/projects/${params.id}/tasks`);
-          if (tab === 'Tender') router.push(`/admin/projects/${params.id}/tender`);
-          if (tab === 'Documents') router.push(`/admin/projects/${params.id}/documents`);
-          if (tab === 'Team') router.push(`/admin/projects/${params.id}/team`);
-        }}
-      >{tab}</button>
-    ))}
-  </div>
-</div>
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-gray-200">
+          <div className="flex gap-6">
+            {['Overview', 'Tasks', 'Budget', 'Tender', 'Documents', 'Team'].map((tab) => (
+              <button
+                key={tab}
+                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                  tab === 'Budget' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => {
+                  if (tab === 'Overview') router.push(`/admin/projects/${params.id}`);
+                  if (tab === 'Tasks') router.push(`/admin/projects/${params.id}/tasks`);
+                  if (tab === 'Tender') router.push(`/admin/projects/${params.id}/tender`);
+                  if (tab === 'Documents') router.push(`/admin/projects/${params.id}/documents`);
+                  if (tab === 'Team') router.push(`/admin/projects/${params.id}/team`);
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Budget Cap</h3>
-              <p className="text-3xl font-bold text-blue-700">{formatCurrency(stats.totalBudget)}</p>
+        {/* Financial Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Total Budget</div>
+            <div className="text-2xl font-bold text-gray-900">{formatCurrency(projectFinance.totalBudget)}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Committed</div>
+            <div className="text-2xl font-bold text-blue-600">{formatCurrency(projectFinance.committed)}</div>
+            <div className="text-xs text-gray-500 mt-1">{budgetUtilization}% of budget</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Invoiced</div>
+            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(projectFinance.invoiced)}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Paid</div>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(projectFinance.paid)}</div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="text-sm text-gray-600 mb-1">Remaining</div>
+            <div className={`text-2xl font-bold ${projectFinance.remaining >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+              {formatCurrency(projectFinance.remaining)}
             </div>
-            <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Committed</h3>
-              <p className="text-3xl font-bold text-green-700">{formatCurrency(stats.totalCommitted)}</p>
+          </div>
+        </div>
+
+        {/* Budget Utilization Bar */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">Budget Utilization</span>
+            <span className="text-sm text-gray-500">{budgetUtilization}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+              className={`h-3 rounded-full transition-all ${
+                parseFloat(budgetUtilization) > 100 ? 'bg-red-500' :
+                parseFloat(budgetUtilization) > 80 ? 'bg-yellow-500' : 'bg-blue-600'
+              }`}
+              style={{ width: `${Math.min(parseFloat(budgetUtilization), 100)}%` }}
+            />
+          </div>
+          {tenderSyncedCount > 0 && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-lg p-2">
+              <Link2 size={14} />
+              <span>
+                {tenderSyncedCount} item{tenderSyncedCount > 1 ? 's' : ''} auto-synced from Tender awards ({formatCurrency(tenderSyncedTotal)})
+              </span>
+              <button
+                onClick={() => setFilterStatus('Committed')}
+                className="ml-auto text-blue-600 hover:text-blue-800 font-medium underline"
+              >
+                View
+              </button>
             </div>
-            <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-6">
-              <h3 className="text-sm font-medium text-gray-600 mb-2">EAC</h3>
-              <p className="text-3xl font-bold text-orange-700">{formatCurrency(stats.eac)}</p>
-              <p className="text-xs text-gray-600 mt-1">Estimated at Completion</p>
+          )}
+        </div>
+
+        {/* Filters & Search */}
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg text-sm"
+                placeholder="Search by description or vendor..."
+              />
             </div>
-            <div className={`border-2 rounded-lg p-6 ${stats.variance < 0 ? 'bg-red-50 border-red-200' : 'bg-purple-50 border-purple-200'}`}>
-              <h3 className="text-sm font-medium text-gray-600 mb-2">Variance</h3>
-              <p className={`text-3xl font-bold ${stats.variance < 0 ? 'text-red-700' : 'text-purple-700'}`}>{formatCurrency(stats.variance)}</p>
-              <p className="text-xs text-gray-600 mt-1">{stats.variance < 0 ? 'Over Budget' : 'Under Budget'}</p>
+            <div>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-4 py-2 border rounded-lg text-sm"
+              >
+                {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border rounded-lg text-sm"
+              >
+                {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="text-sm text-gray-500">
+              {filteredItems.length} items — Total: {formatCurrency(filteredTotal)}
+            </div>
+          </div>
+        </div>
+
+        {/* Budget Table */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          {filteredItems.length === 0 ? (
+            <div className="p-12 text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {budgetItems.length === 0 ? 'No budget items yet' : 'No items match your filters'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {budgetItems.length === 0
+                  ? 'Add budget items manually or award tenders to auto-populate.'
+                  : 'Try adjusting your filters or search query.'}
+              </p>
+              {budgetItems.length === 0 && (
+                <button
+                  onClick={() => { resetForm(); setIsAddModalOpen(true); }}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Add First Budget Item
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('description')}>
+                      <div className="flex items-center gap-1">Description <ArrowUpDown size={12} /></div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('category')}>
+                      <div className="flex items-center gap-1">Category <ArrowUpDown size={12} /></div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('unitCost')}>
+                      <div className="flex items-center justify-end gap-1">Unit Cost <ArrowUpDown size={12} /></div>
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer" onClick={() => handleSort('totalCost')}>
+                      <div className="flex items-center justify-end gap-1">Total <ArrowUpDown size={12} /></div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Invoiced</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Paid</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredItems.map((item) => {
+                    const total = item.totalCost || item.quantity * item.unitCost;
+                    return (
+                      <tr key={item._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900 text-sm">{item.description}</div>
+                          {item.notes && <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.notes}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{item.category}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{item.vendor || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{item.quantity}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(item.unitCost)}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">{formatCurrency(total)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(item.committedStatus)}`}>
+                            {item.committedStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(item.invoicedAmount || 0)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatCurrency(item.paidAmount || 0)}</td>
+                        <td className="px-4 py-3">
+                          {item.isTenderSynced ? (
+                            <button
+                              onClick={() => router.push(`/admin/projects/${params.id}/tender`)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100"
+                            >
+                              <Link2 size={12} />
+                              {item.tenderNumber || 'Tender'}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">Manual</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => openEditModal(item)}
+                              className="text-gray-600 hover:text-gray-800"
+                              title="Edit"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteItem(item._id, item.isTenderSynced)}
+                              className={`${item.isTenderSynced ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:text-red-600'}`}
+                              title={item.isTenderSynced ? 'Tender-synced items cannot be deleted' : 'Delete'}
+                              disabled={item.isTenderSynced}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+                  <tr>
+                    <td colSpan={5} className="px-4 py-3 font-bold text-gray-900 text-sm">Total ({filteredItems.length} items)</td>
+                    <td className="px-4 py-3 font-bold text-gray-900 text-right text-sm">{formatCurrency(filteredTotal)}</td>
+                    <td className="px-4 py-3"></td>
+                    <td className="px-4 py-3 font-bold text-gray-900 text-right text-sm">
+                      {formatCurrency(filteredItems.reduce((sum, i) => sum + (i.invoicedAmount || 0), 0))}
+                    </td>
+                    <td className="px-4 py-3 font-bold text-gray-900 text-right text-sm">
+                      {formatCurrency(filteredItems.reduce((sum, i) => sum + (i.paidAmount || 0), 0))}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Category Summary */}
+        {budgetItems.length > 0 && (
+          <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...new Set(budgetItems.map((i) => i.category))].map((cat) => {
+                const catItems = budgetItems.filter((i) => i.category === cat);
+                const catTotal = catItems.reduce((sum, i) => sum + (i.totalCost || i.quantity * i.unitCost), 0);
+                const catPercent = projectFinance.totalBudget > 0 ? ((catTotal / projectFinance.totalBudget) * 100).toFixed(1) : '0';
+                const catTenderCount = catItems.filter((i) => i.isTenderSynced).length;
+
+                return (
+                  <div key={cat} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-900">{cat}</span>
+                      <span className="text-xs text-gray-500">{catItems.length} items</span>
+                    </div>
+                    <div className="text-lg font-bold text-gray-900">{formatCurrency(catTotal)}</div>
+                    <div className="text-xs text-gray-500 mt-1">{catPercent}% of budget</div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                      <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${Math.min(parseFloat(catPercent), 100)}%` }} />
+                    </div>
+                    {catTenderCount > 0 && (
+                      <div className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                        <Link2 size={10} /> {catTenderCount} from tender
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        <div className="flex gap-3 mb-6 text-black">
-          <button onClick={expandAll} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Expand All</button>
-          <button onClick={collapseAll} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Collapse All</button>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit Cost</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categories.length === 0 ? (
-                  <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500"><p className="font-semibold mb-2">No budget items yet</p><p className="text-sm">Start by adding your first budget item</p></td></tr>
-                ) : categories.map((category, categoryIndex) => (
-                  <React.Fragment key={category.category}>
-                    <tr className="bg-gray-100 border-t-2 border-gray-300">
-                      <td colSpan={7} className="px-6 py-3">
-                        <button onClick={() => toggleCategory(categoryIndex)} className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-3">
-                            {category.expanded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-                            <span className="font-bold text-gray-900">{category.category}</span>
-                            <span className="text-sm text-gray-600">({category.itemCount} items)</span>
-                          </div>
-                          <span className="font-bold text-gray-900">Total: {formatCurrency(category.totalSpent)}</span>
-                        </button>
-                      </td>
-                    </tr>
-                    {category.expanded && category.items.length === 0 && (
-                      <tr className="border-b border-gray-200"><td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">No items in this category yet</td></tr>
-                    )}
-                    {category.expanded && category.items.map((item) => (
-                      <tr key={item._id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm text-gray-900">{item.description}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{item.vendor}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{item.quantity}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900">{formatCurrency(item.unitCost)}</td>
-                        <td className="px-6 py-4 text-sm text-gray-900 font-semibold">{formatCurrency(item.quantity * item.unitCost)}</td>
-                        <td className="px-6 py-4"><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(item.committedStatus)}`}>{item.committedStatus}</span></td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => handleEditItem(item)} className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"><Edit size={14} />Edit</button>
-                            <button onClick={() => handleDeleteBudgetItem(item._id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-              {stats && (
-                <tfoot className="bg-gray-50 border-t-2 border-gray-300">
-                  <tr>
-                    <td colSpan={4} className="px-6 py-4 font-bold text-gray-900">Project Total</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(stats.totalCommitted)}</td>
-                    <td colSpan={2} className="px-6 py-4"></td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        </div>
-
-        {/* Create Modal */}
-        {isCreateModalOpen && (
+        {/* ═══ ADD BUDGET ITEM MODAL ═══ */}
+        {isAddModalOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white w-full max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold">Add Budget Item</h2>
-                  <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-black"><X size={24} /></button>
+                  <button onClick={closeAddModal} className="text-gray-400 hover:text-black">
+                    <X size={24} />
+                  </button>
                 </div>
-                <div className="space-y-4">
-                  <div><label className="block text-sm font-medium mb-1">Category *</label><select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-4 py-2 border rounded-lg"><option value="Design">Design</option><option value="Approvals">Approvals</option><option value="Construction">Construction</option><option value="Joinery">Joinery</option><option value="MEP">MEP</option><option value="Fixtures">Fixtures</option><option value="Contingency">Contingency</option><option value="Misc">Misc</option></select></div>
-                  <div><label className="block text-sm font-medium mb-1">Description *</label><input type="text" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                  <div><label className="block text-sm font-medium mb-1">Vendor *</label><input type="text" value={formData.vendor} onChange={(e) => setFormData({ ...formData, vendor: e.target.value })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium mb-1">Quantity</label><input type="number" min="1" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                    <div><label className="block text-sm font-medium mb-1">Unit Cost ($)</label><input type="number" min="0" value={formData.unitCost} onChange={(e) => setFormData({ ...formData, unitCost: parseFloat(e.target.value) || 0 })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                  </div>
-                  <div><label className="block text-sm font-medium mb-1">Status</label><select value={formData.committedStatus} onChange={(e) => setFormData({ ...formData, committedStatus: e.target.value as any })} className="w-full px-4 py-2 border rounded-lg"><option value="Planned">Planned</option><option value="Committed">Committed</option><option value="Invoiced">Invoiced</option><option value="Paid">Paid</option></select></div>
-                  <div className="p-4 bg-gray-50 rounded-lg"><div className="flex justify-between text-sm mb-1"><span className="font-medium">Total Cost:</span><span className="font-bold">{formatCurrency(formData.quantity * formData.unitCost)}</span></div></div>
-                </div>
+
+                {renderForm()}
+
                 <div className="flex gap-3 mt-6">
-                  <button onClick={() => setIsCreateModalOpen(false)} className="flex-1 px-4 py-3 border rounded-lg">Cancel</button>
-                  <button onClick={handleCreateBudgetItem} disabled={saving} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg">{saving ? 'Adding...' : 'Add Item'}</button>
+                  <button onClick={closeAddModal} className="flex-1 px-4 py-3 border rounded-lg hover:bg-gray-50">Cancel</button>
+                  <button
+                    onClick={handleAddItem}
+                    disabled={saving}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  >
+                    {saving ? 'Adding...' : 'Add Item'}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Edit Modal */}
-        {isEditModalOpen && selectedItem && (
+        {/* ═══ EDIT BUDGET ITEM MODAL ═══ */}
+        {isEditModalOpen && editingItem && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white w-full max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold">Edit Budget Item</h2>
-                  <button onClick={() => { setIsEditModalOpen(false); setSelectedItem(null); }} className="text-gray-400 hover:text-black"><X size={24} /></button>
-                </div>
-                <div className="space-y-4">
-                  <div><label className="block text-sm font-medium mb-1">Category *</label><select value={selectedItem.category} onChange={(e) => setSelectedItem({ ...selectedItem, category: e.target.value })} className="w-full px-4 py-2 border rounded-lg"><option value="Design">Design</option><option value="Approvals">Approvals</option><option value="Construction">Construction</option><option value="Joinery">Joinery</option><option value="MEP">MEP</option><option value="Fixtures">Fixtures</option><option value="Contingency">Contingency</option><option value="Misc">Misc</option></select></div>
-                  <div><label className="block text-sm font-medium mb-1">Description *</label><input type="text" value={selectedItem.description} onChange={(e) => setSelectedItem({ ...selectedItem, description: e.target.value })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                  <div><label className="block text-sm font-medium mb-1">Vendor *</label><input type="text" value={selectedItem.vendor} onChange={(e) => setSelectedItem({ ...selectedItem, vendor: e.target.value })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><label className="block text-sm font-medium mb-1">Quantity</label><input type="number" min="1" value={selectedItem.quantity} onChange={(e) => setSelectedItem({ ...selectedItem, quantity: parseInt(e.target.value) || 1 })} className="w-full px-4 py-2 border rounded-lg" /></div>
-                    <div><label className="block text-sm font-medium mb-1">Unit Cost ($)</label><input type="number" min="0" value={selectedItem.unitCost} onChange={(e) => setSelectedItem({ ...selectedItem, unitCost: parseFloat(e.target.value) || 0 })} className="w-full px-4 py-2 border rounded-lg" /></div>
+                  <div>
+                    <h2 className="text-2xl font-bold">Edit Budget Item</h2>
+                    {editingItem.isTenderSynced && (
+                      <div className="flex items-center gap-2 mt-1 text-sm text-blue-600">
+                        <Link2 size={14} />
+                        <span>Auto-synced from Tender {editingItem.tenderNumber}</span>
+                      </div>
+                    )}
                   </div>
-                  <div><label className="block text-sm font-medium mb-1">Status</label><select value={selectedItem.committedStatus} onChange={(e) => setSelectedItem({ ...selectedItem, committedStatus: e.target.value as any })} className="w-full px-4 py-2 border rounded-lg"><option value="Planned">Planned</option><option value="Committed">Committed</option><option value="Invoiced">Invoiced</option><option value="Paid">Paid</option></select></div>
-                  <div className="p-4 bg-gray-50 rounded-lg"><div className="flex justify-between text-sm mb-1"><span className="font-medium">Total Cost:</span><span className="font-bold">{formatCurrency(selectedItem.quantity * selectedItem.unitCost)}</span></div></div>
+                  <button onClick={closeEditModal} className="text-gray-400 hover:text-black">
+                    <X size={24} />
+                  </button>
                 </div>
+
+                {editingItem.isTenderSynced && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      This item was automatically created from a tender award. You can update invoiced/paid amounts and notes,
+                      but the description, vendor, and total amount are linked to the awarded tender.
+                    </p>
+                  </div>
+                )}
+
+                {renderForm()}
+
                 <div className="flex gap-3 mt-6">
-                  <button onClick={() => { setIsEditModalOpen(false); setSelectedItem(null); }} className="flex-1 px-4 py-3 border rounded-lg">Cancel</button>
-                  <button onClick={handleUpdateBudgetItem} disabled={saving} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg">{saving ? 'Saving...' : 'Save Changes'}</button>
+                  <button onClick={closeEditModal} className="flex-1 px-4 py-3 border rounded-lg hover:bg-gray-50">Cancel</button>
+                  <button
+                    onClick={handleUpdateItem}
+                    disabled={saving}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
             </div>
