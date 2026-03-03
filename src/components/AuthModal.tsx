@@ -97,7 +97,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setLoading(false);
       } else {
         // Login using auth context
-        await login(email, password, false);
+        await login(email, password, false, activeTab);
         onClose();
         // Redirect happens automatically via AuthContext
       }
@@ -112,6 +112,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setError(
           errorMessage ||
             "You do not have a role assigned. Please contact an administrator to request access.",
+        );
+      } else if (errorCode === "ROLE_LOGIN_MISMATCH") {
+        setError(
+          errorMessage || "Please use the correct login tab for your role.",
         );
       } else if (errorCode === "EMAIL_NOT_VERIFIED") {
         if (modalType === "register") {
@@ -144,7 +148,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       await authService.verifyEmailCode(email, verificationCode.trim());
 
       if (accountType === "admin") {
-        await login(email, password, false);
+        await login(email, password, false, "admin");
         setVerifyLoading(false);
         onClose();
         return;

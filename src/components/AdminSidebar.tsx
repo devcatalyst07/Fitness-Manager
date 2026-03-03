@@ -16,7 +16,6 @@ import {
   ChevronRight,
   User,
   Lock,
-  Users,
 } from "lucide-react";
 import Image from "next/image";
 import { hasPermission } from "@/utils/permissions";
@@ -148,7 +147,6 @@ export function AdminSidebar({
     { icon: DollarSign, label: "Finance", href: "/admin/finance" },
     { icon: BarChart3, label: "Reports", href: "/admin/reports" },
     { icon: FileText, label: "Documents", href: "/admin/documents" },
-    { icon: Users, label: "Users", href: "/admin/users" },
   ];
 
   const menuItems = isUser
