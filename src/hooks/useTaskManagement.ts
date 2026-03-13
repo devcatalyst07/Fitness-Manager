@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { apiClient } from '@/lib/axios';
-import { Task, Comment, ActivityLog, TeamMember, Phase } from '@/types/task.types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/axios";
+import {
+  Task,
+  Comment,
+  ActivityLog,
+  TeamMember,
+  Phase,
+} from "@/types/task.types";
 import {
   taskService,
   commentService,
@@ -10,7 +16,7 @@ import {
   teamService,
   projectService,
   fileService,
-} from '@/services/taskService';
+} from "@/services/taskService";
 
 export function useTaskManagement(projectId: string) {
   const router = useRouter();
@@ -20,7 +26,7 @@ export function useTaskManagement(projectId: string) {
   const [loading, setLoading] = useState(true);
 
   // Project & Tasks
-  const [projectName, setProjectName] = useState('');
+  const [projectName, setProjectName] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
 
   // Phase Management
@@ -32,7 +38,9 @@ export function useTaskManagement(projectId: string) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'activity'>('details');
+  const [activeTab, setActiveTab] = useState<
+    "details" | "comments" | "activity"
+  >("details");
 
   // Form Data
   const [formData, setFormData] = useState<{
@@ -40,23 +48,23 @@ export function useTaskManagement(projectId: string) {
     description: string;
     status: string;
     priority: string;
-    taskType: 'Task' | 'Deliverable' | 'Milestone';
+    taskType: "Task" | "Deliverable" | "Milestone";
     assignees: { email: string; name: string }[];
     startDate: string;
     dueDate: string;
     progress: number;
     duration: number;
     phaseId: string | null;
-    dependencies: { taskId: string; type: 'FS' | 'SS' }[];
+    dependencies: { taskId: string; type: "FS" | "SS" }[];
   }>({
-    title: '',
-    description: '',
-    status: '',
-    priority: '',
-    taskType: 'Task',
+    title: "",
+    description: "",
+    status: "",
+    priority: "",
+    taskType: "Task",
     assignees: [],
-    startDate: '',
-    dueDate: '',
+    startDate: "",
+    dueDate: "",
     progress: 0,
     duration: 1,
     phaseId: null,
@@ -66,12 +74,14 @@ export function useTaskManagement(projectId: string) {
 
   // Team & Assignees
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [selectedAssignees, setSelectedAssignees] = useState<{ email: string; name: string }[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<
+    { email: string; name: string }[]
+  >([]);
 
   // Comments & Activity
   const [comments, setComments] = useState<Comment[]>([]);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
 
   // File Upload
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -79,6 +89,7 @@ export function useTaskManagement(projectId: string) {
 
   // Dropdown
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const taskEventSourceRef = useRef<EventSource | null>(null);
 
   // ============================================
   // FIX: Use useAuth() instead of localStorage
@@ -99,12 +110,12 @@ export function useTaskManagement(projectId: string) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.dropdown-menu')) {
+      if (!target.closest(".dropdown-menu")) {
         setOpenDropdown(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Fetch Operations — all use apiClient (cookie auth)
@@ -113,7 +124,7 @@ export function useTaskManagement(projectId: string) {
       const data = await projectService.getProject(projectId);
       setProjectName(data.projectName);
     } catch (error) {
-      console.error('Error fetching project:', error);
+      console.error("Error fetching project:", error);
     }
   };
 
@@ -121,7 +132,7 @@ export function useTaskManagement(projectId: string) {
     try {
       const data = await taskService.getTasks(projectId);
 
-      if (data && typeof data === 'object' && 'allTasks' in data) {
+      if (data && typeof data === "object" && "allTasks" in data) {
         const allTasks = (data as { allTasks?: Task[] }).allTasks;
         setTasks(Array.isArray(allTasks) ? allTasks : []);
       } else if (Array.isArray(data)) {
@@ -131,10 +142,10 @@ export function useTaskManagement(projectId: string) {
       }
     } catch (error: any) {
       if (error?.response?.status === 403) {
-        console.warn('Access denied when fetching tasks');
+        console.warn("Access denied when fetching tasks");
         setTasks([]);
       } else {
-        console.error('Error fetching tasks:', error);
+        console.error("Error fetching tasks:", error);
         setTasks([]);
       }
     } finally {
@@ -148,10 +159,10 @@ export function useTaskManagement(projectId: string) {
       setTeamMembers(data);
     } catch (error: any) {
       if (error?.response?.status === 403) {
-        console.warn('Access denied when fetching team members');
+        console.warn("Access denied when fetching team members");
         setTeamMembers([]);
       } else {
-        console.error('Error fetching team members:', error);
+        console.error("Error fetching team members:", error);
       }
     }
   };
@@ -161,7 +172,7 @@ export function useTaskManagement(projectId: string) {
       const data = await commentService.getComments(taskId);
       setComments(data);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error("Error fetching comments:", error);
     }
   };
 
@@ -170,7 +181,7 @@ export function useTaskManagement(projectId: string) {
       const data = await activityService.getActivityLogs(taskId);
       setActivityLogs(data);
     } catch (error) {
-      console.error('Error fetching activity logs:', error);
+      console.error("Error fetching activity logs:", error);
     }
   };
 
@@ -182,7 +193,7 @@ export function useTaskManagement(projectId: string) {
       const data = await apiClient.get(`/api/projects/${projectId}/phases`);
       setPhases(data);
     } catch (error) {
-      console.error('Fetch phases error:', error);
+      console.error("Fetch phases error:", error);
     }
   };
 
@@ -197,22 +208,25 @@ export function useTaskManagement(projectId: string) {
       setIsPhaseModalOpen(false);
       return true;
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to create phase');
+      alert(error?.response?.data?.message || "Failed to create phase");
       return false;
     }
   };
 
   const updatePhase = async (
     phaseId: string,
-    phaseData: Partial<Phase>
+    phaseData: Partial<Phase>,
   ): Promise<boolean> => {
     try {
-      await apiClient.put(`/api/projects/${projectId}/phases/${phaseId}`, phaseData);
+      await apiClient.put(
+        `/api/projects/${projectId}/phases/${phaseId}`,
+        phaseData,
+      );
       await fetchPhases();
       setEditingPhase(null);
       return true;
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to update phase');
+      alert(error?.response?.data?.message || "Failed to update phase");
       return false;
     }
   };
@@ -227,7 +241,7 @@ export function useTaskManagement(projectId: string) {
       await fetchTasks();
       return true;
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to delete phase');
+      alert(error?.response?.data?.message || "Failed to delete phase");
       return false;
     }
   };
@@ -237,12 +251,12 @@ export function useTaskManagement(projectId: string) {
   // ============================================
   const createTask = async () => {
     if (!formData.title || formData.assignees.length === 0) {
-      alert('Please fill in required fields');
+      alert("Please fill in required fields");
       return;
     }
 
-    if (formData.taskType === 'Milestone' && formData.duration > 1) {
-      alert('Milestone tasks can have a maximum duration of 1 day');
+    if (formData.taskType === "Milestone" && formData.duration > 1) {
+      alert("Milestone tasks can have a maximum duration of 1 day");
       return;
     }
 
@@ -252,8 +266,8 @@ export function useTaskManagement(projectId: string) {
       await taskService.createTask(projectId, {
         title: formData.title,
         description: formData.description,
-        status: (formData.status as any) || 'Backlog',
-        priority: (formData.priority as any) || 'Medium',
+        status: (formData.status as any) || "Backlog",
+        priority: (formData.priority as any) || "Medium",
         taskType: formData.taskType,
         assignees: formData.assignees,
         startDate: formData.startDate,
@@ -264,13 +278,17 @@ export function useTaskManagement(projectId: string) {
         phaseId: formData.phaseId,
       });
 
-      alert('Task created successfully!');
+      alert("Task created successfully!");
       setIsCreateModalOpen(false);
       resetForm();
       fetchTasks();
     } catch (error: any) {
-      console.error('Create task error:', error);
-      alert(error?.response?.data?.message || error.message || 'Failed to create task');
+      console.error("Create task error:", error);
+      alert(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to create task",
+      );
     } finally {
       setSaving(false);
     }
@@ -279,25 +297,33 @@ export function useTaskManagement(projectId: string) {
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     try {
       await taskService.updateTask(projectId, taskId, updates);
-      alert('Task updated successfully!');
+      alert("Task updated successfully!");
       fetchTasks();
       if (selectedTask?._id === taskId) {
         setIsDetailModalOpen(false);
         setSelectedTask(null);
       }
     } catch (error: any) {
-      console.error('Update task error:', error);
-      alert(error?.response?.data?.message || error.message || 'Failed to update task');
+      console.error("Update task error:", error);
+      alert(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to update task",
+      );
     }
   };
 
   const deleteTask = async (taskId: string) => {
     try {
       await taskService.deleteTask(taskId);
-      alert('Task deleted successfully!');
+      alert("Task deleted successfully!");
       fetchTasks();
     } catch (error: any) {
-      alert(error?.response?.data?.message || error.message || 'Failed to delete task');
+      alert(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to delete task",
+      );
     }
   };
 
@@ -306,7 +332,11 @@ export function useTaskManagement(projectId: string) {
       await taskService.updateTask(projectId, taskId, { status: newStatus });
       fetchTasks();
     } catch (error: any) {
-      alert(error?.response?.data?.message || error.message || 'Failed to change status');
+      alert(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to change status",
+      );
     }
   };
 
@@ -323,18 +353,26 @@ export function useTaskManagement(projectId: string) {
       let attachments: any[] = [];
       if (selectedFiles.length > 0) {
         const result = await fileService.uploadFiles(selectedFiles);
-        attachments = Array.isArray(result) ? result : [];
+        attachments = result;
       }
 
-      await commentService.addComment(selectedTask._id, newComment, attachments);
+      await commentService.addComment(
+        selectedTask._id,
+        newComment,
+        attachments,
+      );
 
-      setNewComment('');
+      setNewComment("");
       setSelectedFiles([]);
       fetchComments(selectedTask._id);
       fetchActivityLogs(selectedTask._id);
     } catch (error: any) {
-      console.error('Add comment error:', error);
-      alert(error?.response?.data?.message || error.message || 'Failed to add comment');
+      console.error("Add comment error:", error);
+      alert(
+        error?.response?.data?.message ||
+          error.message ||
+          "Failed to add comment",
+      );
     } finally {
       setUploadingFiles(false);
     }
@@ -354,7 +392,7 @@ export function useTaskManagement(projectId: string) {
       setUploadingFiles(false);
       return result;
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error("Upload error:", error);
       setUploadingFiles(false);
       return [];
     }
@@ -365,20 +403,20 @@ export function useTaskManagement(projectId: string) {
     return tasks.some(
       (task) =>
         task.assignees?.some((a) => a.email === memberEmail) &&
-        task.status !== 'Done'
+        task.status !== "Done",
     );
   };
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
-      status: '',
-      priority: '',
-      taskType: 'Task',
+      title: "",
+      description: "",
+      status: "",
+      priority: "",
+      taskType: "Task",
       assignees: [],
-      startDate: '',
-      dueDate: '',
+      startDate: "",
+      dueDate: "",
       progress: 0,
       duration: 1,
       phaseId: null,
@@ -390,11 +428,117 @@ export function useTaskManagement(projectId: string) {
 
   const openTaskDetails = (task: Task) => {
     setSelectedTask(task);
-    setActiveTab('details');
+    setActiveTab("details");
     setIsDetailModalOpen(true);
     fetchComments(task._id);
     fetchActivityLogs(task._id);
   };
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !isDetailModalOpen ||
+      !selectedTask?._id
+    ) {
+      if (taskEventSourceRef.current) {
+        taskEventSourceRef.current.close();
+        taskEventSourceRef.current = null;
+      }
+      return;
+    }
+
+    const apiBaseUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const streamUrl = `${apiBaseUrl}/api/projects/${projectId}/tasks/${selectedTask._id}/stream`;
+    const eventSource = new EventSource(streamUrl, { withCredentials: true });
+    taskEventSourceRef.current = eventSource;
+
+    eventSource.addEventListener("task:comment:new", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const incomingComment = payload.comment as Comment;
+
+        if (!incomingComment?._id || payload.taskId !== selectedTask._id) {
+          return;
+        }
+
+        setComments((prev) => {
+          if (prev.some((comment) => comment._id === incomingComment._id)) {
+            return prev;
+          }
+          return [incomingComment, ...prev];
+        });
+      } catch (error) {
+        console.error("Task comment stream parse error:", error);
+      }
+    });
+
+    eventSource.addEventListener("task:activity:new", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const incomingActivity = payload.activity as ActivityLog;
+
+        if (!incomingActivity?._id || payload.taskId !== selectedTask._id) {
+          return;
+        }
+
+        setActivityLogs((prev) => {
+          if (prev.some((log) => log._id === incomingActivity._id)) {
+            return prev;
+          }
+          return [incomingActivity, ...prev];
+        });
+      } catch (error) {
+        console.error("Task activity stream parse error:", error);
+      }
+    });
+
+    eventSource.addEventListener("task:comment:deleted", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const deletedCommentId = payload.commentId as string;
+
+        if (!deletedCommentId || payload.taskId !== selectedTask._id) {
+          return;
+        }
+
+        setComments((prev) =>
+          prev.filter((comment) => comment._id !== deletedCommentId),
+        );
+      } catch (error) {
+        console.error("Task comment delete stream parse error:", error);
+      }
+    });
+
+    eventSource.addEventListener("task:activity:deleted", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const activityIds = (payload.activityIds || []) as string[];
+
+        if (!Array.isArray(activityIds) || payload.taskId !== selectedTask._id) {
+          return;
+        }
+
+        setActivityLogs((prev) =>
+          prev.filter((log) => !activityIds.includes(log._id)),
+        );
+      } catch (error) {
+        console.error("Task activity delete stream parse error:", error);
+      }
+    });
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      taskEventSourceRef.current = null;
+    };
+
+    return () => {
+      eventSource.close();
+      if (taskEventSourceRef.current === eventSource) {
+        taskEventSourceRef.current = null;
+      }
+    };
+  }, [isDetailModalOpen, selectedTask?._id]);
 
   return {
     loading,

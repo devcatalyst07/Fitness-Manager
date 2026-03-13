@@ -27,9 +27,9 @@ export default function ProjectTasksPage() {
   const hasOpenedFromQuery = useRef(false);
 
   // View Mode State - default to phase view
-  const [viewMode, setViewMode] = useState<"list" | "board" | "timeline" | "phase">(
-    "phase"
-  );
+  const [viewMode, setViewMode] = useState<
+    "list" | "board" | "timeline" | "phase"
+  >("phase");
 
   // Custom Hook - ALL business logic
   const {
@@ -128,30 +128,32 @@ export default function ProjectTasksPage() {
         {/* Project Navigation Tabs */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto">
           <div className="flex gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map((tab) => (
-              <button
-                key={tab}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                  tab === "Tasks"
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => {
-                  if (tab === "Overview")
-                    router.push(`/admin/projects/${params.id}`);
-                  if (tab === "Budget")
-                    router.push(`/admin/projects/${params.id}/budget`);
-                  if (tab === "Tender")
-                    router.push(`/admin/projects/${params.id}/tender`);
-                  if (tab === "Documents")
-                    router.push(`/admin/projects/${params.id}/documents`);
-                  if (tab === "Team")
-                    router.push(`/admin/projects/${params.id}/team`);
-                }}
-              >
-                {tab}
-              </button>
-            ))}
+            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map(
+              (tab) => (
+                <button
+                  key={tab}
+                  className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                    tab === "Tasks"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => {
+                    if (tab === "Overview")
+                      router.push(`/admin/projects/${params.id}`);
+                    if (tab === "Budget")
+                      router.push(`/admin/projects/${params.id}/budget`);
+                    if (tab === "Tender")
+                      router.push(`/admin/projects/${params.id}/tender`);
+                    if (tab === "Documents")
+                      router.push(`/admin/projects/${params.id}/documents`);
+                    if (tab === "Team")
+                      router.push(`/admin/projects/${params.id}/team`);
+                  }}
+                >
+                  {tab}
+                </button>
+              ),
+            )}
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Heart,
@@ -13,9 +13,9 @@ import {
   Image as ImageIcon,
   FileText,
   MoreVertical,
-  X as CloseIcon
-} from 'lucide-react';
-import { apiClient } from '@/lib/axios';
+  X as CloseIcon,
+} from "lucide-react";
+import { apiClient } from "@/lib/axios";
 
 interface Thread {
   _id: string;
@@ -74,14 +74,15 @@ export default function ThreadDetailModal({
   onUpdate,
   onDelete,
 }: ThreadDetailModalProps) {
+  const eventSourceRef = useRef<EventSource | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isEditingThread, setIsEditingThread] = useState(false);
   const [editedTitle, setEditedTitle] = useState(thread.title);
   const [editedContent, setEditedContent] = useState(thread.content);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editedCommentContent, setEditedCommentContent] = useState('');
+  const [editedCommentContent, setEditedCommentContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showThreadMenu, setShowThreadMenu] = useState(false);
@@ -93,12 +94,119 @@ export default function ThreadDetailModal({
     fetchComments();
   }, [thread._id]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !thread?._id) {
+      return;
+    }
+
+    const apiBaseUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const streamUrl = `${apiBaseUrl}/api/threads/${thread._id}/stream`;
+
+    const eventSource = new EventSource(streamUrl, { withCredentials: true });
+    eventSourceRef.current = eventSource;
+
+    eventSource.addEventListener("thread:comment:new", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const incomingComment = payload.comment as Comment;
+
+        if (!incomingComment?._id || payload.threadId !== thread._id) {
+          return;
+        }
+
+        setComments((prev) => {
+          if (prev.some((comment) => comment._id === incomingComment._id)) {
+            return prev;
+          }
+          return [...prev, incomingComment];
+        });
+        onUpdate();
+      } catch (error) {
+        console.error("Thread stream new comment parse error:", error);
+      }
+    });
+
+    eventSource.addEventListener("thread:comment:updated", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const incomingComment = payload.comment as Comment;
+
+        if (!incomingComment?._id || payload.threadId !== thread._id) {
+          return;
+        }
+
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment._id === incomingComment._id ? incomingComment : comment,
+          ),
+        );
+      } catch (error) {
+        console.error("Thread stream update comment parse error:", error);
+      }
+    });
+
+    eventSource.addEventListener("thread:comment:deleted", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const deletedCommentId = payload.commentId as string;
+
+        if (!deletedCommentId || payload.threadId !== thread._id) {
+          return;
+        }
+
+        setComments((prev) =>
+          prev.filter((comment) => comment._id !== deletedCommentId),
+        );
+        onUpdate();
+      } catch (error) {
+        console.error("Thread stream delete comment parse error:", error);
+      }
+    });
+
+    eventSource.addEventListener("thread:comment:liked", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data);
+        const commentId = payload.commentId as string;
+        const likes = payload.likes as string[];
+
+        if (!commentId || payload.threadId !== thread._id) {
+          return;
+        }
+
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment._id === commentId
+              ? { ...comment, likes: likes || [] }
+              : comment,
+          ),
+        );
+      } catch (error) {
+        console.error("Thread stream like comment parse error:", error);
+      }
+    });
+
+    eventSource.onerror = () => {
+      eventSource.close();
+      if (eventSourceRef.current === eventSource) {
+        eventSourceRef.current = null;
+      }
+    };
+
+    return () => {
+      eventSource.close();
+      if (eventSourceRef.current === eventSource) {
+        eventSourceRef.current = null;
+      }
+    };
+  }, [thread._id, onUpdate]);
+
   const fetchComments = async () => {
     try {
       const data = await apiClient.get(`/api/threads/${thread._id}`);
       setComments(data.comments || []);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      console.error("Error fetching comments:", error);
     } finally {
       setLoading(false);
     }
@@ -119,10 +227,10 @@ export default function ThreadDetailModal({
     const uploadedFiles = [];
     for (const file of files) {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       try {
-        const data = await apiClient.post('/api/upload', formData);
+        const data = await apiClient.post("/api/upload", formData);
         uploadedFiles.push({
           fileName: data.file.fileName,
           fileUrl: data.file.fileUrl,
@@ -131,7 +239,7 @@ export default function ThreadDetailModal({
           uploadedAt: new Date(),
         });
       } catch (error) {
-        console.error('Upload error:', error);
+        console.error("Upload error:", error);
       }
     }
     return uploadedFiles;
@@ -152,12 +260,12 @@ export default function ThreadDetailModal({
         attachments,
       });
 
-      setNewComment('');
+      setNewComment("");
       setSelectedFiles([]);
       fetchComments();
       onUpdate();
     } catch (error) {
-      console.error('Add comment error:', error);
+      console.error("Add comment error:", error);
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +273,7 @@ export default function ThreadDetailModal({
 
   const handleUpdateThread = async () => {
     if (!editedTitle.trim() || !editedContent.trim()) {
-      alert('Title and content are required');
+      alert("Title and content are required");
       return;
     }
 
@@ -178,7 +286,7 @@ export default function ThreadDetailModal({
       setIsEditingThread(false);
       onUpdate();
     } catch (error) {
-      console.error('Update thread error:', error);
+      console.error("Update thread error:", error);
     } finally {
       setSubmitting(false);
     }
@@ -195,21 +303,21 @@ export default function ThreadDetailModal({
       setEditingCommentId(null);
       fetchComments();
     } catch (error) {
-      console.error('Update comment error:', error);
+      console.error("Update comment error:", error);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return;
+    if (!confirm("Are you sure you want to delete this comment?")) return;
 
     try {
       await apiClient.delete(`/api/comments/${commentId}`);
       fetchComments();
       onUpdate();
     } catch (error) {
-      console.error('Delete comment error:', error);
+      console.error("Delete comment error:", error);
     }
   };
 
@@ -218,31 +326,31 @@ export default function ThreadDetailModal({
       await apiClient.post(`/api/comments/${commentId}/like`);
       fetchComments();
     } catch (error) {
-      console.error('Like comment error:', error);
+      console.error("Like comment error:", error);
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('image/')) return <ImageIcon size={16} />;
-    if (fileType.includes('pdf')) return <FileText size={16} />;
+    if (fileType.startsWith("image/")) return <ImageIcon size={16} />;
+    if (fileType.includes("pdf")) return <FileText size={16} />;
     return <File size={16} />;
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   return (
@@ -260,7 +368,9 @@ export default function ThreadDetailModal({
                   className="w-full text-xl sm:text-2xl font-bold text-gray-900 border-b-2 border-blue-500 focus:outline-none mb-2"
                 />
               ) : (
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{thread.title}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                  {thread.title}
+                </h2>
               )}
               <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
                 <div className="flex items-center gap-1">
@@ -286,7 +396,10 @@ export default function ThreadDetailModal({
                   </button>
                   {showThreadMenu && (
                     <>
-                      <div className="fixed inset-0" onClick={() => setShowThreadMenu(false)} />
+                      <div
+                        className="fixed inset-0"
+                        onClick={() => setShowThreadMenu(false)}
+                      />
                       <div className="absolute right-0 top-10 bg-white border rounded-lg shadow-lg z-10 min-w-[140px]">
                         <button
                           onClick={() => {
@@ -313,7 +426,10 @@ export default function ThreadDetailModal({
                   )}
                 </div>
               )}
-              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded"
+              >
                 <X size={24} />
               </button>
             </div>
@@ -337,7 +453,7 @@ export default function ThreadDetailModal({
                     disabled={submitting}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                   >
-                    {submitting ? 'Saving...' : 'Save'}
+                    {submitting ? "Saving..." : "Save"}
                   </button>
                   <button
                     onClick={() => {
@@ -352,12 +468,16 @@ export default function ThreadDetailModal({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-800 whitespace-pre-wrap text-sm sm:text-base">{thread.content}</p>
+              <p className="text-gray-800 whitespace-pre-wrap text-sm sm:text-base">
+                {thread.content}
+              </p>
             )}
 
             {thread.attachments && thread.attachments.length > 0 && (
               <div className="mt-4 space-y-2">
-                <p className="text-sm font-medium text-gray-700">Attachments:</p>
+                <p className="text-sm font-medium text-gray-700">
+                  Attachments:
+                </p>
                 {thread.attachments.map((file, index) => (
                   <a
                     key={index}
@@ -368,10 +488,17 @@ export default function ThreadDetailModal({
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {getFileIcon(file.fileType)}
-                      <span className="text-sm text-gray-700 truncate">{file.fileName}</span>
-                      <span className="text-xs text-gray-500">({formatFileSize(file.fileSize)})</span>
+                      <span className="text-sm text-gray-700 truncate">
+                        {file.fileName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ({formatFileSize(file.fileSize)})
+                      </span>
                     </div>
-                    <Download size={16} className="text-gray-500 flex-shrink-0 ml-2" />
+                    <Download
+                      size={16}
+                      className="text-gray-500 flex-shrink-0 ml-2"
+                    />
                   </a>
                 ))}
               </div>
@@ -385,7 +512,9 @@ export default function ThreadDetailModal({
             </h3>
 
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Loading comments...</div>
+              <div className="text-center py-8 text-gray-500">
+                Loading comments...
+              </div>
             ) : comments.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>No comments yet. Be the first to comment!</p>
@@ -397,20 +526,31 @@ export default function ThreadDetailModal({
                   const isEditing = editingCommentId === comment._id;
 
                   return (
-                    <div key={comment._id} className="bg-gray-50 rounded-lg p-4">
+                    <div
+                      key={comment._id}
+                      className="bg-gray-50 rounded-lg p-4"
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <User size={14} />
-                          <span className="font-medium text-gray-900">{comment.createdByName}</span>
+                          <span className="font-medium text-gray-900">
+                            {comment.createdByName}
+                          </span>
                           <span>•</span>
-                          <span className="text-xs">{formatDate(comment.createdAt)}</span>
+                          <span className="text-xs">
+                            {formatDate(comment.createdAt)}
+                          </span>
                         </div>
 
                         {isCommentOwner && (
                           <div className="relative">
                             <button
                               onClick={() =>
-                                setCommentMenuId(commentMenuId === comment._id ? null : comment._id)
+                                setCommentMenuId(
+                                  commentMenuId === comment._id
+                                    ? null
+                                    : comment._id,
+                                )
                               }
                               className="p-1 hover:bg-gray-200 rounded"
                             >
@@ -455,7 +595,9 @@ export default function ThreadDetailModal({
                         <div>
                           <textarea
                             value={editedCommentContent}
-                            onChange={(e) => setEditedCommentContent(e.target.value)}
+                            onChange={(e) =>
+                              setEditedCommentContent(e.target.value)
+                            }
                             className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             rows={3}
                           />
@@ -465,7 +607,7 @@ export default function ThreadDetailModal({
                               disabled={submitting}
                               className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:bg-gray-400"
                             >
-                              {submitting ? 'Saving...' : 'Save'}
+                              {submitting ? "Saving..." : "Save"}
                             </button>
                             <button
                               onClick={() => setEditingCommentId(null)}
@@ -481,22 +623,25 @@ export default function ThreadDetailModal({
                             {comment.content}
                           </p>
 
-                          {comment.attachments && comment.attachments.length > 0 && (
-                            <div className="space-y-1 mb-2">
-                              {comment.attachments.map((file, idx) => (
-                                <a
-                                  key={idx}
-                                  href={file.fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 p-2 bg-white rounded border hover:bg-gray-50 text-xs"
-                                >
-                                  {getFileIcon(file.fileType)}
-                                  <span className="truncate">{file.fileName}</span>
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                          {comment.attachments &&
+                            comment.attachments.length > 0 && (
+                              <div className="space-y-1 mb-2">
+                                {comment.attachments.map((file, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={file.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-2 bg-white rounded border hover:bg-gray-50 text-xs"
+                                  >
+                                    {getFileIcon(file.fileType)}
+                                    <span className="truncate">
+                                      {file.fileName}
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
 
                           <button
                             onClick={() => handleLikeComment(comment._id)}
@@ -504,7 +649,11 @@ export default function ThreadDetailModal({
                           >
                             <Heart
                               size={14}
-                              className={comment.likes.includes(currentUserId) ? 'fill-current text-red-600' : ''}
+                              className={
+                                comment.likes.includes(currentUserId)
+                                  ? "fill-current text-red-600"
+                                  : ""
+                              }
                             />
                             <span>{comment.likes.length}</span>
                           </button>
@@ -532,12 +681,18 @@ export default function ThreadDetailModal({
             {selectedFiles.length > 0 && (
               <div className="space-y-2">
                 {selectedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-white rounded border"
+                  >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <File size={14} />
                       <span className="text-sm truncate">{file.name}</span>
                     </div>
-                    <button onClick={() => removeFile(index)} className="text-red-600 ml-2">
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-red-600 ml-2"
+                    >
                       <CloseIcon size={16} />
                     </button>
                   </div>
@@ -558,11 +713,14 @@ export default function ThreadDetailModal({
               </label>
               <button
                 onClick={handleAddComment}
-                disabled={submitting || (!newComment.trim() && selectedFiles.length === 0)}
+                disabled={
+                  submitting ||
+                  (!newComment.trim() && selectedFiles.length === 0)
+                }
                 className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm"
               >
                 <Send size={16} />
-                <span>{submitting ? 'Sending...' : 'Send'}</span>
+                <span>{submitting ? "Sending..." : "Send"}</span>
               </button>
             </div>
           </div>

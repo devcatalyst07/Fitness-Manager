@@ -7,7 +7,7 @@
  * - No more localStorage.getItem("token") — that was never set by cookie-based auth
  */
 
-import { apiClient } from '@/lib/axios';
+import { apiClient } from "@/lib/axios";
 import {
   Task,
   CreateTaskData,
@@ -15,7 +15,7 @@ import {
   Comment,
   ActivityLog,
   TeamMember,
-} from '@/types/task.types';
+} from "@/types/task.types";
 
 // ============================================
 // PROJECT OPERATIONS
@@ -42,7 +42,7 @@ export const taskService = {
 
   createTask: async (
     projectId: string,
-    data: CreateTaskData
+    data: CreateTaskData,
   ): Promise<{ task: Task }> => {
     return apiClient.post(`/api/projects/${projectId}/tasks`, data);
   },
@@ -50,7 +50,7 @@ export const taskService = {
   updateTask: async (
     projectId: string,
     taskId: string,
-    data: Partial<UpdateTaskData>
+    data: Partial<UpdateTaskData>,
   ): Promise<{ task: Task }> => {
     return apiClient.put(`/api/projects/${projectId}/tasks/${taskId}`, data);
   },
@@ -72,14 +72,17 @@ export const commentService = {
   addComment: async (
     taskId: string,
     comment: string,
-    attachments?: any[]
+    attachments?: any[],
   ): Promise<{ comment: Comment }> => {
-    return apiClient.post(`/api/tasks/${taskId}/comments`, { comment, attachments });
+    return apiClient.post(`/api/tasks/${taskId}/comments`, {
+      comment,
+      attachments,
+    });
   },
 
   deleteComment: async (
     taskId: string,
-    commentId: string
+    commentId: string,
   ): Promise<{ message: string }> => {
     return apiClient.delete(`/api/tasks/${taskId}/comments/${commentId}`);
   },
@@ -113,19 +116,32 @@ export const fileService = {
   /**
    * Upload files — uses FormData, cookies sent automatically
    */
-  uploadFiles: async (files: File[]): Promise<{ urls: string[] }> => {
+  uploadFiles: async (files: File[]): Promise<any[]> => {
     const formData = new FormData();
     files.forEach((file) => {
-      formData.append('files', file);
+      formData.append("file", file);
     });
 
     // Use raw axios import for FormData (needs different Content-Type)
-    const { default: api } = await import('@/lib/axios');
-    const response = await api.post('/api/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const { default: api } = await import("@/lib/axios");
+    const response = await api.post("/api/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
-    return response.data;
+    const payload = response.data || {};
+    const uploadedFiles = Array.isArray(payload.files)
+      ? payload.files
+      : payload.file
+        ? [payload.file]
+        : [];
+
+    return uploadedFiles.map((uploaded: any) => ({
+      fileName: uploaded.fileName || uploaded.name || "",
+      fileUrl: uploaded.fileUrl || uploaded.url || "",
+      fileType: uploaded.fileType || uploaded.type || "",
+      fileSize: uploaded.fileSize || uploaded.size || 0,
+      publicId: uploaded.publicId,
+    }));
   },
 };
 

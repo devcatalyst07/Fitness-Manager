@@ -1,13 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Task, Comment, ActivityLog, Phase, TeamMember } from '@/types/task.types';
+import React, { useState, useEffect } from "react";
+import {
+  Task,
+  Comment,
+  ActivityLog,
+  Phase,
+  TeamMember,
+} from "@/types/task.types";
 import {
   getPriorityBadge,
   getStatusBadge,
   formatDate,
   getInitials,
-} from '@/utils/taskHelpers';
+} from "@/utils/taskHelpers";
 
 interface TaskDetailModalProps {
   isOpen: boolean;
@@ -15,8 +21,8 @@ interface TaskDetailModalProps {
   task: Task | null;
   onUpdate: (taskId: string, updates: Partial<Task>) => void;
   onDelete: (taskId: string) => void;
-  activeTab: 'details' | 'comments' | 'activity';
-  setActiveTab: (tab: 'details' | 'comments' | 'activity') => void;
+  activeTab: "details" | "comments" | "activity";
+  setActiveTab: (tab: "details" | "comments" | "activity") => void;
   comments: Comment[];
   activityLogs: ActivityLog[];
   newComment: string;
@@ -67,7 +73,8 @@ export default function TaskDetailModal({
   const [internalIsEditing, setInternalIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState<Partial<Task>>({});
 
-  const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
+  const isEditing =
+    externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
   const setIsEditing = externalSetIsEditing || setInternalIsEditing;
 
   useEffect(() => {
@@ -77,7 +84,7 @@ export default function TaskDetailModal({
         description: task.description,
         status: task.status,
         priority: task.priority,
-        taskType: task.taskType || 'Task',
+        taskType: task.taskType || "Task",
         duration: task.duration || 1,
         startDate: task.startDate,
         dueDate: task.dueDate,
@@ -98,8 +105,8 @@ export default function TaskDetailModal({
   if (!isOpen || !task) return null;
 
   const handleSave = () => {
-    if (editedTask.taskType === 'Milestone' && (editedTask.duration || 0) > 1) {
-      alert('Milestone tasks can have a maximum duration of 1 day');
+    if (editedTask.taskType === "Milestone" && (editedTask.duration || 0) > 1) {
+      alert("Milestone tasks can have a maximum duration of 1 day");
       return;
     }
 
@@ -116,55 +123,57 @@ export default function TaskDetailModal({
       ...editedTask,
       dependencies: [
         ...(editedTask.dependencies || []),
-        { taskId: '', type: 'FS' as const }
-      ]
+        { taskId: "", type: "FS" as const },
+      ],
     });
   };
 
   const handleRemoveDependency = (index: number) => {
     setEditedTask({
       ...editedTask,
-      dependencies: (editedTask.dependencies || []).filter((_, i) => i !== index)
+      dependencies: (editedTask.dependencies || []).filter(
+        (_, i) => i !== index,
+      ),
     });
   };
 
   const handleDependencyChange = (
     index: number,
-    field: 'taskId' | 'type',
-    value: string
+    field: "taskId" | "type",
+    value: string,
   ) => {
     const updated = [...(editedTask.dependencies || [])];
-    if (field === 'taskId') {
+    if (field === "taskId") {
       updated[index].taskId = value;
     } else {
-      updated[index].type = value as 'FS' | 'SS';
+      updated[index].type = value as "FS" | "SS";
     }
     setEditedTask({
       ...editedTask,
-      dependencies: updated
+      dependencies: updated,
     });
   };
 
   const getTaskTypeBadge = (taskType: string) => {
     const badges: Record<string, string> = {
-      Task: 'bg-blue-100 text-blue-700 border-blue-200',
-      Deliverable: 'bg-purple-100 text-purple-700 border-purple-200',
-      Milestone: 'bg-green-100 text-green-700 border-green-200',
+      Task: "bg-blue-100 text-blue-700 border-blue-200",
+      Deliverable: "bg-purple-100 text-purple-700 border-purple-200",
+      Milestone: "bg-green-100 text-green-700 border-green-200",
     };
-    return badges[taskType] || 'bg-gray-100 text-gray-700 border-gray-200';
+    return badges[taskType] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
   const getDependencyTypeLabel = (type: string) => {
-    return type === 'FS' ? 'Finish to Start' : 'Start to Start';
+    return type === "FS" ? "Finish to Start" : "Start to Start";
   };
 
   const getAvailableTasks = (currentIndex: number) => {
     const selectedTaskIds = (editedTask.dependencies || [])
       .filter((_, i) => i !== currentIndex)
-      .map(d => d.taskId);
-    
-    return allTasks.filter(t => 
-      t._id !== task._id && !selectedTaskIds.includes(t._id)
+      .map((d) => d.taskId);
+
+    return allTasks.filter(
+      (t) => t._id !== task._id && !selectedTaskIds.includes(t._id),
     );
   };
 
@@ -183,13 +192,14 @@ export default function TaskDetailModal({
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getTaskTypeBadge(task.taskType || 'Task')}`}
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getTaskTypeBadge(task.taskType || "Task")}`}
                   >
-                    {task.taskType || 'Task'}
+                    {task.taskType || "Task"}
                   </span>
                   {task.duration && (
                     <span className="text-white/80 text-xs">
-                      {task.duration} working day{task.duration !== 1 ? 's' : ''}
+                      {task.duration} working day
+                      {task.duration !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>
@@ -197,8 +207,8 @@ export default function TaskDetailModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {canEdit && (
-                !isEditing ? (
+              {canEdit &&
+                (!isEditing ? (
                   <button
                     onClick={() => setIsEditing(true)}
                     className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all"
@@ -212,8 +222,7 @@ export default function TaskDetailModal({
                   >
                     Save
                   </button>
-                )
-              )}
+                ))}
               <button
                 onClick={onClose}
                 className="text-white/80 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-all"
@@ -228,31 +237,31 @@ export default function TaskDetailModal({
         <div className="border-b border-gray-200 bg-gray-50">
           <div className="flex px-8">
             <button
-              onClick={() => setActiveTab('details')}
+              onClick={() => setActiveTab("details")}
               className={`px-6 py-4 font-medium transition-all ${
-                activeTab === 'details'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                activeTab === "details"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Details
             </button>
             <button
-              onClick={() => setActiveTab('comments')}
+              onClick={() => setActiveTab("comments")}
               className={`px-6 py-4 font-medium transition-all ${
-                activeTab === 'comments'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                activeTab === "comments"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Comments ({comments.length})
             </button>
             <button
-              onClick={() => setActiveTab('activity')}
+              onClick={() => setActiveTab("activity")}
               className={`px-6 py-4 font-medium transition-all ${
-                activeTab === 'activity'
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                activeTab === "activity"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               Activity
@@ -262,7 +271,7 @@ export default function TaskDetailModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8">
-          {activeTab === 'details' && (
+          {activeTab === "details" && (
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -271,8 +280,10 @@ export default function TaskDetailModal({
                 {isEditing ? (
                   <input
                     type="text"
-                    value={editedTask.title || ''}
-                    onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                    value={editedTask.title || ""}
+                    onChange={(e) =>
+                      setEditedTask({ ...editedTask, title: e.target.value })
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
@@ -286,13 +297,20 @@ export default function TaskDetailModal({
                 </label>
                 {isEditing ? (
                   <textarea
-                    value={editedTask.description || ''}
-                    onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+                    value={editedTask.description || ""}
+                    onChange={(e) =>
+                      setEditedTask({
+                        ...editedTask,
+                        description: e.target.value,
+                      })
+                    }
                     rows={4}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 ) : (
-                  <p className="text-gray-700">{task.description || 'No description provided'}</p>
+                  <p className="text-gray-700">
+                    {task.description || "No description provided"}
+                  </p>
                 )}
               </div>
 
@@ -303,8 +321,13 @@ export default function TaskDetailModal({
                   </label>
                   {isEditing ? (
                     <select
-                      value={editedTask.status || ''}
-                      onChange={(e) => setEditedTask({ ...editedTask, status: e.target.value as any })}
+                      value={editedTask.status || ""}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          status: e.target.value as any,
+                        })
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Backlog">Backlog</option>
@@ -327,8 +350,13 @@ export default function TaskDetailModal({
                   </label>
                   {isEditing ? (
                     <select
-                      value={editedTask.priority || ''}
-                      onChange={(e) => setEditedTask({ ...editedTask, priority: e.target.value as any })}
+                      value={editedTask.priority || ""}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          priority: e.target.value as any,
+                        })
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Low">Low</option>
@@ -351,13 +379,17 @@ export default function TaskDetailModal({
                   </label>
                   {isEditing ? (
                     <select
-                      value={editedTask.taskType || 'Task'}
+                      value={editedTask.taskType || "Task"}
                       onChange={(e) => {
-                        const newType = e.target.value as 'Task' | 'Deliverable' | 'Milestone';
-                        setEditedTask({ 
-                          ...editedTask, 
+                        const newType = e.target.value as
+                          | "Task"
+                          | "Deliverable"
+                          | "Milestone";
+                        setEditedTask({
+                          ...editedTask,
                           taskType: newType,
-                          duration: newType === 'Milestone' ? 1 : editedTask.duration
+                          duration:
+                            newType === "Milestone" ? 1 : editedTask.duration,
                         });
                       }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -368,9 +400,9 @@ export default function TaskDetailModal({
                     </select>
                   ) : (
                     <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getTaskTypeBadge(task.taskType || 'Task')}`}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getTaskTypeBadge(task.taskType || "Task")}`}
                     >
-                      {task.taskType || 'Task'}
+                      {task.taskType || "Task"}
                     </span>
                   )}
                 </div>
@@ -383,8 +415,13 @@ export default function TaskDetailModal({
                   </label>
                   {isEditing ? (
                     <select
-                      value={editedTask.phaseId || ''}
-                      onChange={(e) => setEditedTask({ ...editedTask, phaseId: e.target.value || null })}
+                      value={editedTask.phaseId || ""}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          phaseId: e.target.value || null,
+                        })
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">No Phase (Unassigned)</option>
@@ -399,8 +436,9 @@ export default function TaskDetailModal({
                   ) : (
                     <p className="text-gray-900">
                       {task.phaseId
-                        ? phases.find((p) => p._id === task.phaseId)?.name || 'Unknown Phase'
-                        : 'No Phase (Unassigned)'}
+                        ? phases.find((p) => p._id === task.phaseId)?.name ||
+                          "Unknown Phase"
+                        : "No Phase (Unassigned)"}
                     </p>
                   )}
                 </div>
@@ -414,16 +452,22 @@ export default function TaskDetailModal({
                       <input
                         type="number"
                         min="0"
-                        max={editedTask.taskType === 'Milestone' ? 1 : undefined}
+                        max={
+                          editedTask.taskType === "Milestone" ? 1 : undefined
+                        }
                         value={editedTask.duration || 1}
                         onChange={(e) => {
                           const value = parseInt(e.target.value) || 0;
-                          const maxValue = editedTask.taskType === 'Milestone' ? 1 : value;
-                          setEditedTask({ ...editedTask, duration: Math.min(value, maxValue) });
+                          const maxValue =
+                            editedTask.taskType === "Milestone" ? 1 : value;
+                          setEditedTask({
+                            ...editedTask,
+                            duration: Math.min(value, maxValue),
+                          });
                         }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      {editedTask.taskType === 'Milestone' && (
+                      {editedTask.taskType === "Milestone" && (
                         <p className="text-xs text-gray-500 mt-1">
                           Milestones can have a maximum duration of 1 day
                         </p>
@@ -431,7 +475,8 @@ export default function TaskDetailModal({
                     </div>
                   ) : (
                     <p className="text-gray-900">
-                      {task.duration || 1} working day{(task.duration || 1) !== 1 ? 's' : ''}
+                      {task.duration || 1} working day
+                      {(task.duration || 1) !== 1 ? "s" : ""}
                     </p>
                   )}
                 </div>
@@ -461,7 +506,13 @@ export default function TaskDetailModal({
                         <div key={index} className="flex gap-2 items-center">
                           <select
                             value={dep.taskId}
-                            onChange={(e) => handleDependencyChange(index, 'taskId', e.target.value)}
+                            onChange={(e) =>
+                              handleDependencyChange(
+                                index,
+                                "taskId",
+                                e.target.value,
+                              )
+                            }
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           >
                             <option value="">Select Task</option>
@@ -474,7 +525,13 @@ export default function TaskDetailModal({
 
                           <select
                             value={dep.type}
-                            onChange={(e) => handleDependencyChange(index, 'type', e.target.value)}
+                            onChange={(e) =>
+                              handleDependencyChange(
+                                index,
+                                "type",
+                                e.target.value,
+                              )
+                            }
                             className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           >
                             <option value="FS">Finish to Start</option>
@@ -493,18 +550,20 @@ export default function TaskDetailModal({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {(!task.dependencies || task.dependencies.length === 0) ? (
+                    {!task.dependencies || task.dependencies.length === 0 ? (
                       <p className="text-sm text-gray-500">No dependencies</p>
                     ) : (
                       task.dependencies.map((dep, index) => {
-                        const depTask = allTasks.find(t => t._id === dep.taskId);
+                        const depTask = allTasks.find(
+                          (t) => t._id === dep.taskId,
+                        );
                         return (
                           <div
                             key={index}
                             className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
                           >
                             <span className="text-sm text-gray-700">
-                              {depTask?.title || 'Unknown Task'}
+                              {depTask?.title || "Unknown Task"}
                             </span>
                             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                               {getDependencyTypeLabel(dep.type)}
@@ -550,12 +609,19 @@ export default function TaskDetailModal({
                   {isEditing ? (
                     <input
                       type="date"
-                      value={editedTask.startDate || ''}
-                      onChange={(e) => setEditedTask({ ...editedTask, startDate: e.target.value })}
+                      value={editedTask.startDate || ""}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          startDate: e.target.value,
+                        })
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
-                    <p className="text-gray-900">{formatDate(task.startDate)}</p>
+                    <p className="text-gray-900">
+                      {formatDate(task.startDate)}
+                    </p>
                   )}
                 </div>
 
@@ -566,8 +632,13 @@ export default function TaskDetailModal({
                   {isEditing ? (
                     <input
                       type="date"
-                      value={editedTask.dueDate || ''}
-                      onChange={(e) => setEditedTask({ ...editedTask, dueDate: e.target.value })}
+                      value={editedTask.dueDate || ""}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          dueDate: e.target.value,
+                        })
+                      }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
@@ -587,7 +658,12 @@ export default function TaskDetailModal({
                       min="0"
                       max="100"
                       value={editedTask.progress || 0}
-                      onChange={(e) => setEditedTask({ ...editedTask, progress: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          progress: parseInt(e.target.value),
+                        })
+                      }
                       className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                     />
                     <input
@@ -595,7 +671,12 @@ export default function TaskDetailModal({
                       min="0"
                       max="100"
                       value={editedTask.progress || 0}
-                      onChange={(e) => setEditedTask({ ...editedTask, progress: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        setEditedTask({
+                          ...editedTask,
+                          progress: parseInt(e.target.value),
+                        })
+                      }
                       className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -613,7 +694,9 @@ export default function TaskDetailModal({
                 <div className="pt-4 border-t border-gray-200">
                   <button
                     onClick={() => {
-                      if (confirm('Are you sure you want to delete this task?')) {
+                      if (
+                        confirm("Are you sure you want to delete this task?")
+                      ) {
                         onDelete(task._id);
                         onClose();
                       }
@@ -627,7 +710,7 @@ export default function TaskDetailModal({
             </div>
           )}
 
-          {activeTab === 'comments' && (
+          {activeTab === "comments" && (
             <div className="space-y-6">
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                 <textarea
@@ -637,7 +720,7 @@ export default function TaskDetailModal({
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 />
-                
+
                 {selectedFiles.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectedFiles.map((file, index) => (
@@ -651,7 +734,9 @@ export default function TaskDetailModal({
                             if (onRemoveFile) {
                               onRemoveFile(index);
                             } else {
-                              setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+                              setSelectedFiles(
+                                selectedFiles.filter((_, i) => i !== index),
+                              );
                             }
                           }}
                           className="text-gray-400 hover:text-red-600 px-1"
@@ -675,84 +760,124 @@ export default function TaskDetailModal({
                   </label>
                   <button
                     onClick={onAddComment}
-                    disabled={uploadingFiles || (!newComment.trim() && selectedFiles.length === 0)}
+                    disabled={
+                      uploadingFiles ||
+                      (!newComment.trim() && selectedFiles.length === 0)
+                    }
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-sm font-medium"
                   >
-                    {uploadingFiles ? 'Uploading...' : 'Post Comment'}
+                    {uploadingFiles ? "Uploading..." : "Post Comment"}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-4">
                 {comments.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No comments yet</p>
+                  <p className="text-center text-gray-500 py-8">
+                    No comments yet
+                  </p>
                 ) : (
                   <React.Fragment>
-                    {comments.map((comment) => (
-                      <div key={comment._id} className="bg-white border border-gray-200 rounded-xl p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                            {getInitials(comment.userId.name)}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-gray-900">
-                                {comment.userId.name}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(comment.createdAt).toLocaleString()}
-                              </span>
+                    {comments.map((comment) => {
+                      const commentAuthorName =
+                        comment.userId?.name ||
+                        (comment as any).userName ||
+                        "Unknown User";
+
+                      return (
+                        <div
+                          key={comment._id}
+                          className="bg-white border border-gray-200 rounded-xl p-4"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                              {getInitials(commentAuthorName)}
                             </div>
-                            <p className="text-gray-700 text-sm whitespace-pre-wrap">
-                              {comment.comment}
-                            </p>
-                            {comment.attachments && comment.attachments.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {comment.attachments.map((file, index) => {
-                                  if (!file || !file.url) return null;
-                                  return (
-                                    <button
-                                      key={index}
-                                      onClick={() => window.open(file.url, '_blank')}
-                                      className="text-xs px-2 py-1 bg-gray-100 text-blue-600 rounded hover:bg-gray-200"
-                                    >
-                                      {file.name}
-                                    </button>
-                                  );
-                                })}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-gray-900">
+                                  {commentAuthorName}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(comment.createdAt).toLocaleString()}
+                                </span>
                               </div>
-                            )}
+                              <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                                {comment.comment}
+                              </p>
+                              {comment.attachments &&
+                                comment.attachments.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {comment.attachments.map((file, index) => {
+                                      const fileUrl =
+                                        (file as any)?.url ||
+                                        (file as any)?.fileUrl;
+                                      const fileName =
+                                        (file as any)?.name ||
+                                        (file as any)?.fileName ||
+                                        "Attachment";
+
+                                      if (!file || !fileUrl) return null;
+                                      return (
+                                        <button
+                                          key={index}
+                                          onClick={() =>
+                                            window.open(fileUrl, "_blank")
+                                          }
+                                          className="text-xs px-2 py-1 bg-gray-100 text-blue-600 rounded hover:bg-gray-200"
+                                        >
+                                          {fileName}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </React.Fragment>
                 )}
               </div>
             </div>
           )}
 
-          {activeTab === 'activity' && (
+          {activeTab === "activity" && (
             <div className="space-y-4">
               {activityLogs.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No activity yet</p>
+                <p className="text-center text-gray-500 py-8">
+                  No activity yet
+                </p>
               ) : (
-                activityLogs.map((log) => (
-                  <div key={log._id} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
-                      {getInitials(log.user.name)}
+                activityLogs.map((log) => {
+                  const activityUserName =
+                    log.user?.name || (log as any).userName || "Unknown User";
+
+                  return (
+                    <div
+                      key={log._id}
+                      className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl"
+                    >
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
+                        {getInitials(activityUserName)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-900">
+                          <span className="font-semibold">
+                            {activityUserName}
+                          </span>{" "}
+                          {log.description}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(
+                            log.timestamp || log.createdAt || Date.now(),
+                          ).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-900">
-                        <span className="font-semibold">{log.user.name}</span>{' '}
-                        {log.description}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
