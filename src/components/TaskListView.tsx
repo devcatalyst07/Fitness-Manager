@@ -32,7 +32,7 @@ export default function TaskListView({
       if (!a.dueDate && !b.dueDate) return 0;
       if (!a.dueDate) return 1;
       if (!b.dueDate) return -1;
-      
+
       // Sort by date (nearest first)
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });

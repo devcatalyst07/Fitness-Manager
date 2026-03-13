@@ -1,6 +1,7 @@
 export const responsive = {
   page: "w-full max-w-full overflow-x-hidden",
-  sectionCard: "bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6",
+  sectionCard:
+    "bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6",
   sectionHeader:
     "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-6",
   sectionTitleWrap: "min-w-0 flex-1",

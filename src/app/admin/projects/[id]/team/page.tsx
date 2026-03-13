@@ -11,14 +11,22 @@ import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 
 interface TeamMember {
   _id: string;
-  userId: { _id: string; name: string; email: string; };
-  roleId: { _id: string; name: string; permissions: any[]; };
+  userId: { _id: string; name: string; email: string };
+  roleId: { _id: string; name: string; permissions: any[] };
   status: "active" | "pending" | "removed";
   createdAt: string;
 }
 
-interface Role { _id: string; name: string; permissions: any[]; }
-interface BrandTeamMember { _id: string; name: string; email: string; }
+interface Role {
+  _id: string;
+  name: string;
+  permissions: any[];
+}
+interface BrandTeamMember {
+  _id: string;
+  name: string;
+  email: string;
+}
 
 export default function ProjectTeamPage() {
   const router = useRouter();
@@ -33,15 +41,23 @@ export default function ProjectTeamPage() {
   const [projectBrand, setProjectBrand] = useState("");
   const [brandId, setBrandId] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [brandTeamMembers, setBrandTeamMembers] = useState<BrandTeamMember[]>([]);
+  const [brandTeamMembers, setBrandTeamMembers] = useState<BrandTeamMember[]>(
+    [],
+  );
   const [roles, setRoles] = useState<Role[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   const [formData, setFormData] = useState({ selectedUser: "", roleId: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) { router.replace("/"); return; }
-    if (!authLoading && user && user.role !== "admin") { router.replace("/user/projects"); return; }
+    if (!authLoading && !user) {
+      router.replace("/");
+      return;
+    }
+    if (!authLoading && user && user.role !== "admin") {
+      router.replace("/user/projects");
+      return;
+    }
   }, [user, authLoading, router]);
 
   useEffect(() => {
@@ -61,7 +77,9 @@ export default function ProjectTeamPage() {
       setProjectName(data.projectName);
       setProjectBrand(data.brand);
       await fetchBrandDetails(data.brand);
-    } catch (error) { console.error("Error fetching project:", error); }
+    } catch (error) {
+      console.error("Error fetching project:", error);
+    }
   };
 
   const fetchBrandDetails = async (brandName: string) => {
@@ -72,14 +90,18 @@ export default function ProjectTeamPage() {
         setBrandId(brand._id);
         await fetchBrandTeamMembers(brand._id);
       }
-    } catch (error) { console.error("Error fetching brand details:", error); }
+    } catch (error) {
+      console.error("Error fetching brand details:", error);
+    }
   };
 
   const fetchBrandTeamMembers = async (bId: string) => {
     try {
       const data = await apiClient.get(`/api/brands/${bId}/team`);
       setBrandTeamMembers(data || []);
-    } catch (error) { console.error("Error fetching brand team members:", error); }
+    } catch (error) {
+      console.error("Error fetching brand team members:", error);
+    }
   };
 
   const fetchRoles = async () => {
@@ -88,8 +110,12 @@ export default function ProjectTeamPage() {
     try {
       const data = await apiClient.get(`/api/roles/brand/${brandId}`);
       setRoles(data);
-    } catch (error) { console.error("Error fetching roles:", error); setRoles([]); }
-    finally { setLoadingRoles(false); }
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+      setRoles([]);
+    } finally {
+      setLoadingRoles(false);
+    }
   };
 
   const fetchTeamMembers = async () => {
@@ -97,18 +123,37 @@ export default function ProjectTeamPage() {
     try {
       const data = await apiClient.get(`/api/projects/${params.id}/team`);
       setTeamMembers(data);
-    } catch (error) { console.error("Error fetching team members:", error); }
-    finally { setLoading(false); }
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddMember = async () => {
-    if (!formData.selectedUser || !formData.roleId) { alert("Please select a user and role"); return; }
-    if (roles.length === 0) { alert("No roles available. Please create roles in Brand Management first."); return; }
-    const selectedMember = brandTeamMembers.find((m) => m.email === formData.selectedUser);
-    if (!selectedMember) { alert("Selected user not found"); return; }
+    if (!formData.selectedUser || !formData.roleId) {
+      alert("Please select a user and role");
+      return;
+    }
+    if (roles.length === 0) {
+      alert(
+        "No roles available. Please create roles in Brand Management first.",
+      );
+      return;
+    }
+    const selectedMember = brandTeamMembers.find(
+      (m) => m.email === formData.selectedUser,
+    );
+    if (!selectedMember) {
+      alert("Selected user not found");
+      return;
+    }
     setSaving(true);
     try {
-      await apiClient.post(`/api/projects/${params.id}/team`, { userEmail: selectedMember.email, roleId: formData.roleId });
+      await apiClient.post(`/api/projects/${params.id}/team`, {
+        userEmail: selectedMember.email,
+        roleId: formData.roleId,
+      });
       alert("Team member added successfully!");
       setFormData({ selectedUser: "", roleId: "" });
       setIsAddModalOpen(false);
@@ -116,7 +161,9 @@ export default function ProjectTeamPage() {
     } catch (error: any) {
       console.error("Add team member error:", error);
       alert(error?.response?.data?.message || "Failed to add team member");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRemoveMember = async (memberId: string) => {
@@ -125,7 +172,10 @@ export default function ProjectTeamPage() {
       await apiClient.delete(`/api/projects/${params.id}/team/${memberId}`);
       alert("Team member removed successfully");
       fetchTeamMembers();
-    } catch (error) { console.error("Remove team member error:", error); alert("Failed to remove team member"); }
+    } catch (error) {
+      console.error("Remove team member error:", error);
+      alert("Failed to remove team member");
+    }
   };
 
   const filteredMembers = teamMembers.filter(
@@ -143,69 +193,162 @@ export default function ProjectTeamPage() {
       <AdminHeader />
 
       <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
-          <ArrowLeft size={20} /><span>{projectName}</span>
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+        >
+          <ArrowLeft size={20} />
+          <span>{projectName}</span>
         </button>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Team</h1>
             <p className="text-gray-600 mt-1">Team members for this project</p>
-            {projectBrand && <p className="text-sm text-gray-500 mt-1">Brand: <span className="font-medium">{projectBrand}</span></p>}
+            {projectBrand && (
+              <p className="text-sm text-gray-500 mt-1">
+                Brand: <span className="font-medium">{projectBrand}</span>
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 text-gray-600"><UserPlus size={20} /><span>{teamMembers.length} Members</span></div>
-            <button onClick={() => setIsAddModalOpen(true)} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
-              <UserPlus size={20} /><span>Add Member</span>
+            <div className="flex items-center gap-2 text-gray-600">
+              <UserPlus size={20} />
+              <span>{teamMembers.length} Members</span>
+            </div>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+            >
+              <UserPlus size={20} />
+              <span>Add Member</span>
             </button>
           </div>
         </div>
 
         <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
           <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
-            <button onClick={() => router.push(`/admin/projects/${params.id}/overview`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Overview</button>
-            <button onClick={() => router.push(`/admin/projects/${params.id}/tasks`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Tasks</button>
-            <button onClick={() => router.push(`/admin/projects/${params.id}/budget`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Budget</button>
-            <button onClick={() => router.push(`/admin/projects/${params.id}/tender`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Tender</button>
-            <button onClick={() => router.push(`/admin/projects/${params.id}/documents`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Documents</button>
-            <button className="pb-3 px-1 text-sm font-medium border-b-2 border-black text-black">Team</button>
+            <button
+              onClick={() =>
+                router.push(`/admin/projects/${params.id}/overview`)
+              }
+              className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => router.push(`/admin/projects/${params.id}/tasks`)}
+              className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+            >
+              Tasks
+            </button>
+            <button
+              onClick={() => router.push(`/admin/projects/${params.id}/budget`)}
+              className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+            >
+              Budget
+            </button>
+            <button
+              onClick={() => router.push(`/admin/projects/${params.id}/tender`)}
+              className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+            >
+              Tender
+            </button>
+            <button
+              onClick={() =>
+                router.push(`/admin/projects/${params.id}/documents`)
+              }
+              className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+            >
+              Documents
+            </button>
+            <button className="pb-3 px-1 text-sm font-medium border-b-2 border-black text-black">
+              Team
+            </button>
           </div>
         </div>
 
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search team members..." className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search team members..."
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-6"><UserPlus size={20} className="text-gray-700" /><h2 className="text-lg font-semibold text-gray-900">Team Members</h2></div>
-          <p className="text-sm text-gray-600 mb-6">Users assigned to this project with their roles and status</p>
+          <div className="flex items-center gap-2 mb-6">
+            <UserPlus size={20} className="text-gray-700" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Team Members
+            </h2>
+          </div>
+          <p className="text-sm text-gray-600 mb-6">
+            Users assigned to this project with their roles and status
+          </p>
 
           {filteredMembers.length === 0 ? (
             <div className="text-center py-12">
               <UserPlus size={48} className="mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
-              <p className="text-gray-600 mb-6">Add team members to collaborate on this project</p>
-              <button onClick={() => setIsAddModalOpen(true)} className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
-                <UserPlus size={20} /><span>Add Team Member</span>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No team members yet
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Add team members to collaborate on this project
+              </p>
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+              >
+                <UserPlus size={20} />
+                <span>Add Team Member</span>
               </button>
             </div>
           ) : (
             <div className="space-y-4">
               {filteredMembers.map((member) => (
-                <div key={member._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div
+                  key={member._id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-lg">{member.userId.name.charAt(0).toUpperCase()}</span>
+                      <span className="text-blue-600 font-semibold text-lg">
+                        {member.userId.name.charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                    <div><h3 className="font-semibold text-gray-900">{member.userId.name}</h3><p className="text-sm text-gray-600">{member.userId.email}</p></div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {member.userId.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {member.userId.email}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">{member.roleId?.name || "No Role"}</span>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${member.status === "active" ? "bg-green-100 text-green-700" : member.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700"}`}>{member.status}</span>
-                    <button onClick={() => handleRemoveMember(member._id)} className="text-red-600 hover:text-red-700"><X size={20} /></button>
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                      {member.roleId?.name || "No Role"}
+                    </span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${member.status === "active" ? "bg-green-100 text-green-700" : member.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700"}`}
+                    >
+                      {member.status}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveMember(member._id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -218,29 +361,84 @@ export default function ProjectTeamPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
           <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Add Team Member</h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+              <h2 className="text-xl font-bold text-gray-900">
+                Add Team Member
+              </h2>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">User <span className="text-red-500">*</span></label>
-                <select value={formData.selectedUser} onChange={(e) => setFormData({ ...formData, selectedUser: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  User <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.selectedUser}
+                  onChange={(e) =>
+                    setFormData({ ...formData, selectedUser: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
                   <option value="">-- Select User --</option>
-                  {brandTeamMembers.map((member) => (<option key={member._id} value={member.email}>{member.name} ({member.email})</option>))}
+                  {brandTeamMembers.map((member) => (
+                    <option key={member._id} value={member.email}>
+                      {member.name} ({member.email})
+                    </option>
+                  ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Users from {projectBrand} brand</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Users from {projectBrand} brand
+                </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Role <span className="text-red-500">*</span></label>
-                <select value={formData.roleId} onChange={(e) => setFormData({ ...formData, roleId: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" disabled={loadingRoles}>
-                  <option value="">{loadingRoles ? "Loading roles..." : roles.length === 0 ? "No roles available - Create roles in Brand Management first" : "-- Choose Role --"}</option>
-                  {roles.map((role) => (<option key={role._id} value={role._id}>{role.name}</option>))}
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Role <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.roleId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, roleId: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loadingRoles}
+                >
+                  <option value="">
+                    {loadingRoles
+                      ? "Loading roles..."
+                      : roles.length === 0
+                        ? "No roles available - Create roles in Brand Management first"
+                        : "-- Choose Role --"}
+                  </option>
+                  {roles.map((role) => (
+                    <option key={role._id} value={role._id}>
+                      {role.name}
+                    </option>
+                  ))}
                 </select>
-                {roles.length === 0 && !loadingRoles && <p className="text-xs text-amber-600 mt-1">Please create roles for this brand in Brand Management first</p>}
+                {roles.length === 0 && !loadingRoles && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Please create roles for this brand in Brand Management first
+                  </p>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <button onClick={() => setIsAddModalOpen(false)} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button onClick={handleAddMember} disabled={saving} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300">{saving ? "Adding..." : "Add Member"}</button>
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddMember}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+                >
+                  {saving ? "Adding..." : "Add Member"}
+                </button>
               </div>
             </div>
           </div>

@@ -1,11 +1,11 @@
-import React from 'react';
-import { Task } from '@/types/task.types';
+import React from "react";
+import { Task } from "@/types/task.types";
 import {
   getPriorityBadge,
   getStatusBadge,
   formatDate,
   getInitials,
-} from '@/utils/taskHelpers';
+} from "@/utils/taskHelpers";
 
 interface Phase {
   _id: string;
@@ -33,7 +33,9 @@ export default function TaskPhaseView({
   openDropdown,
   setOpenDropdown,
 }: TaskPhaseViewProps) {
-  const [collapsedPhases, setCollapsedPhases] = React.useState<Set<string>>(new Set());
+  const [collapsedPhases, setCollapsedPhases] = React.useState<Set<string>>(
+    new Set(),
+  );
 
   const togglePhase = (phaseId: string) => {
     setCollapsedPhases((prev) => {
@@ -50,22 +52,22 @@ export default function TaskPhaseView({
   // Get task type badge
   const getTaskTypeBadge = (taskType: string) => {
     const badges: Record<string, string> = {
-      Task: 'bg-blue-100 text-blue-700 border-blue-200',
-      Deliverable: 'bg-purple-100 text-purple-700 border-purple-200',
-      Milestone: 'bg-green-100 text-green-700 border-green-200',
+      Task: "bg-blue-100 text-blue-700 border-blue-200",
+      Deliverable: "bg-purple-100 text-purple-700 border-purple-200",
+      Milestone: "bg-green-100 text-green-700 border-green-200",
     };
-    return badges[taskType] || 'bg-gray-100 text-gray-700 border-gray-200';
+    return badges[taskType] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
   // Group tasks by phase
   const tasksByPhase = React.useMemo(() => {
     const grouped: Record<string, Task[]> = {};
-    
+
     phases.forEach((phase) => {
       grouped[phase._id] = [];
     });
-    
-    grouped['unassigned'] = [];
+
+    grouped["unassigned"] = [];
 
     tasks.forEach((task) => {
       if (task.phaseId) {
@@ -73,7 +75,7 @@ export default function TaskPhaseView({
           grouped[task.phaseId].push(task);
         }
       } else {
-        grouped['unassigned'].push(task);
+        grouped["unassigned"].push(task);
       }
     });
 
@@ -129,13 +131,13 @@ export default function TaskPhaseView({
       <td className="px-6 py-4">
         <div className="flex flex-col gap-1">
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border w-fit ${getTaskTypeBadge(task.taskType || 'Task')}`}
+            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border w-fit ${getTaskTypeBadge(task.taskType || "Task")}`}
           >
-            {task.taskType || 'Task'}
+            {task.taskType || "Task"}
           </span>
           {task.duration && (
             <span className="text-xs text-gray-600">
-              {task.duration} day{task.duration !== 1 ? 's' : ''}
+              {task.duration} day{task.duration !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -214,9 +216,7 @@ export default function TaskPhaseView({
             id={`menu-button-${task._id}`}
             onClick={(e) => {
               e.stopPropagation();
-              setOpenDropdown(
-                openDropdown === task._id ? null : task._id,
-              );
+              setOpenDropdown(openDropdown === task._id ? null : task._id);
             }}
             className="px-3 py-1 text-xs hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
           >
@@ -253,11 +253,7 @@ export default function TaskPhaseView({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (
-                      confirm(
-                        'Are you sure you want to delete this task?',
-                      )
-                    ) {
+                    if (confirm("Are you sure you want to delete this task?")) {
                       onDelete(task._id);
                     }
                     setOpenDropdown(null);
@@ -282,7 +278,10 @@ export default function TaskPhaseView({
         const isCollapsed = collapsedPhases.has(phase._id);
 
         return (
-          <div key={`${phase._id || phase.name}-${phaseIndex}`} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div
+            key={`${phase._id || phase.name}-${phaseIndex}`}
+            className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+          >
             {/* Phase Header */}
             <div
               className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
@@ -290,22 +289,25 @@ export default function TaskPhaseView({
             >
               <div className="flex items-center gap-3">
                 <button className="text-gray-600 text-xs font-medium px-2 py-1">
-                  {isCollapsed ? 'Expand' : 'Collapse'}
+                  {isCollapsed ? "Expand" : "Collapse"}
                 </button>
                 <div
                   className="w-4 h-4 rounded-full"
-                  style={{ backgroundColor: phase.color || '#3B82F6' }}
+                  style={{ backgroundColor: phase.color || "#3B82F6" }}
                 />
                 <div>
                   <h3 className="font-semibold text-gray-900">{phase.name}</h3>
                   {phase.description && (
-                    <p className="text-sm text-gray-600 mt-0.5">{phase.description}</p>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {phase.description}
+                    </p>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium text-gray-600">
-                  {phaseTasks.length} {phaseTasks.length === 1 ? 'task' : 'tasks'}
+                  {phaseTasks.length}{" "}
+                  {phaseTasks.length === 1 ? "task" : "tasks"}
                 </span>
               </div>
             </div>
@@ -349,7 +351,10 @@ export default function TaskPhaseView({
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {phaseTasks.map((task, taskIndex) => (
-                        <TaskRow key={`${task._id || `${task.title}-${task.dueDate || 'no-date'}`}-${taskIndex}`} task={task} />
+                        <TaskRow
+                          key={`${task._id || `${task.title}-${task.dueDate || "no-date"}`}-${taskIndex}`}
+                          task={task}
+                        />
                       ))}
                     </tbody>
                   </table>
@@ -361,15 +366,15 @@ export default function TaskPhaseView({
       })}
 
       {/* Unassigned Tasks */}
-      {tasksByPhase['unassigned'] && tasksByPhase['unassigned'].length > 0 && (
+      {tasksByPhase["unassigned"] && tasksByPhase["unassigned"].length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div
             className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-            onClick={() => togglePhase('unassigned')}
+            onClick={() => togglePhase("unassigned")}
           >
             <div className="flex items-center gap-3">
               <button className="text-gray-600 text-xs font-medium px-2 py-1">
-                {collapsedPhases.has('unassigned') ? 'Expand' : 'Collapse'}
+                {collapsedPhases.has("unassigned") ? "Expand" : "Collapse"}
               </button>
               <div className="w-4 h-4 rounded-full bg-gray-400" />
               <div>
@@ -380,12 +385,12 @@ export default function TaskPhaseView({
               </div>
             </div>
             <span className="text-sm font-medium text-gray-600">
-              {tasksByPhase['unassigned'].length}{' '}
-              {tasksByPhase['unassigned'].length === 1 ? 'task' : 'tasks'}
+              {tasksByPhase["unassigned"].length}{" "}
+              {tasksByPhase["unassigned"].length === 1 ? "task" : "tasks"}
             </span>
           </div>
 
-          {!collapsedPhases.has('unassigned') && (
+          {!collapsedPhases.has("unassigned") && (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -417,8 +422,11 @@ export default function TaskPhaseView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {tasksByPhase['unassigned'].map((task, taskIndex) => (
-                    <TaskRow key={`${task._id || `${task.title}-${task.dueDate || 'no-date'}`}-${taskIndex}`} task={task} />
+                  {tasksByPhase["unassigned"].map((task, taskIndex) => (
+                    <TaskRow
+                      key={`${task._id || `${task.title}-${task.dueDate || "no-date"}`}-${taskIndex}`}
+                      task={task}
+                    />
                   ))}
                 </tbody>
               </table>

@@ -39,7 +39,7 @@ export function UploadDocumentModal({
   const fetchProjects = async () => {
     try {
       // ✅ FIXED: Use apiClient instead of localStorage token + fetch
-      const data = await apiClient.get('/api/documents/projects');
+      const data = await apiClient.get("/api/documents/projects");
       setProjects(data);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -152,7 +152,7 @@ export function UploadDocumentModal({
 
         // ✅ FIXED: Use apiClient instead of localStorage token + fetch
         // apiClient auto-detects FormData and handles multipart/form-data
-        await apiClient.post('/api/documents/upload', formData);
+        await apiClient.post("/api/documents/upload", formData);
       }
 
       const projectName =
@@ -169,7 +169,10 @@ export function UploadDocumentModal({
 
       let errorMsg = "Failed to upload document";
 
-      if (error.message?.includes("Failed to fetch") || error.message?.includes("Network Error")) {
+      if (
+        error.message?.includes("Failed to fetch") ||
+        error.message?.includes("Network Error")
+      ) {
         errorMsg =
           "Network error - Cannot connect to server. Check if API is running.";
       } else if (error?.response?.data?.message) {

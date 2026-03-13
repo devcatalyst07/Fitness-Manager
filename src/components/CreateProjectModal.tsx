@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, AlertTriangle, Calendar } from 'lucide-react';
-import { apiClient } from '@/lib/axios';
-import { responsive } from '@/utils/responsive';
+import React, { useState, useEffect } from "react";
+import { X, Plus, AlertTriangle, Calendar } from "lucide-react";
+import { apiClient } from "@/lib/axios";
+import { responsive } from "@/utils/responsive";
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -29,23 +29,27 @@ interface Scope {
   workflows: Workflow[];
 }
 
-export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProjectModalProps) {
+export function CreateProjectModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: CreateProjectModalProps) {
   const [formData, setFormData] = useState({
-    projectName: '',
-    brand: '',
-    scope: '',
-    workflow: '',
-    projectCode: '',
-    description: '',
-    location: '',
-    region: '',
-    scheduleFrom: 'start' as 'start' | 'end',
-    startDate: '',
-    endDate: '',
-    budget: '',
+    projectName: "",
+    brand: "",
+    scope: "",
+    workflow: "",
+    projectCode: "",
+    description: "",
+    location: "",
+    region: "",
+    scheduleFrom: "start" as "start" | "end",
+    startDate: "",
+    endDate: "",
+    budget: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [brands, setBrands] = useState<Brand[]>([]);
   const [scopes, setScopes] = useState<Scope[]>([]);
   const [availableWorkflows, setAvailableWorkflows] = useState<Workflow[]>([]);
@@ -64,19 +68,19 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     } else {
       setScopes([]);
       setAvailableWorkflows([]);
-      setFormData(prev => ({ ...prev, scope: '', workflow: '' }));
+      setFormData((prev) => ({ ...prev, scope: "", workflow: "" }));
     }
   }, [formData.brand]);
 
   useEffect(() => {
     if (formData.scope) {
-      const selectedScope = scopes.find(s => s.name === formData.scope);
+      const selectedScope = scopes.find((s) => s.name === formData.scope);
       if (selectedScope) {
         setAvailableWorkflows(selectedScope.workflows);
         if (selectedScope.workflows.length > 0 && !formData.workflow) {
-          setFormData(prev => ({ 
-            ...prev, 
-            workflow: selectedScope.workflows[0].name 
+          setFormData((prev) => ({
+            ...prev,
+            workflow: selectedScope.workflows[0].name,
           }));
         }
       } else {
@@ -84,20 +88,20 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
       }
     } else {
       setAvailableWorkflows([]);
-      setFormData(prev => ({ ...prev, workflow: '' }));
+      setFormData((prev) => ({ ...prev, workflow: "" }));
     }
   }, [formData.scope, scopes]);
 
   // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const fetchBrands = async () => {
     try {
-      const data = await apiClient.get('/api/brands');
+      const data = await apiClient.get("/api/brands");
       setBrands(data);
       if (data.length > 0 && !formData.brand) {
-        setFormData(prev => ({ ...prev, brand: data[0].name }));
+        setFormData((prev) => ({ ...prev, brand: data[0].name }));
       }
     } catch (error) {
-      console.error('Error fetching brands:', error);
+      console.error("Error fetching brands:", error);
     } finally {
       setLoadingBrands(false);
     }
@@ -107,13 +111,15 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
   const fetchScopesForBrand = async (brandName: string) => {
     setLoadingScopes(true);
     try {
-      const data = await apiClient.get(`/api/scopes/for-brand/${encodeURIComponent(brandName)}`);
+      const data = await apiClient.get(
+        `/api/scopes/for-brand/${encodeURIComponent(brandName)}`,
+      );
       setScopes(data);
       if (data.length > 0 && !formData.scope) {
-        setFormData(prev => ({ ...prev, scope: data[0].name }));
+        setFormData((prev) => ({ ...prev, scope: data[0].name }));
       }
     } catch (error) {
-      console.error('Error fetching scopes:', error);
+      console.error("Error fetching scopes:", error);
     } finally {
       setLoadingScopes(false);
     }
@@ -123,75 +129,77 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
 
   // ✅ FIXED: Use apiClient instead of localStorage token + fetch
   const handleSubmit = async () => {
-    setError('');
+    setError("");
     setLoading(true);
 
     if (!formData.projectName) {
-      setError('Project name is required');
+      setError("Project name is required");
       setLoading(false);
       return;
     }
 
     if (!formData.brand) {
-      setError('Brand is required');
+      setError("Brand is required");
       setLoading(false);
       return;
     }
 
     if (!formData.scope) {
-      setError('Scope is required');
+      setError("Scope is required");
       setLoading(false);
       return;
     }
 
     if (!formData.workflow) {
-      setError('Workflow is required');
+      setError("Workflow is required");
       setLoading(false);
       return;
     }
 
-    if (formData.scheduleFrom === 'start' && !formData.startDate) {
-      setError('Start date is required when scheduling from start');
+    if (formData.scheduleFrom === "start" && !formData.startDate) {
+      setError("Start date is required when scheduling from start");
       setLoading(false);
       return;
     }
 
-    if (formData.scheduleFrom === 'end' && !formData.endDate) {
-      setError('End date is required when scheduling from end');
+    if (formData.scheduleFrom === "end" && !formData.endDate) {
+      setError("End date is required when scheduling from end");
       setLoading(false);
       return;
     }
 
     try {
-      const data = await apiClient.post('/api/projects', {
+      const data = await apiClient.post("/api/projects", {
         ...formData,
         budget: parseFloat(formData.budget) || 0,
       });
 
       // Show risk warning if applicable
       if (data.project?.isAtRisk) {
-        alert(`⚠️ Project created but flagged as AT RISK:\n${data.project.riskReason}`);
+        alert(
+          `⚠️ Project created but flagged as AT RISK:\n${data.project.riskReason}`,
+        );
       }
 
       onSuccess();
       onClose();
       setFormData({
-        projectName: '',
-        brand: '',
-        scope: '',
-        workflow: '',
-        projectCode: '',
-        description: '',
-        location: '',
-        region: '',
-        scheduleFrom: 'start',
-        startDate: '',
-        endDate: '',
-        budget: '',
+        projectName: "",
+        brand: "",
+        scope: "",
+        workflow: "",
+        projectCode: "",
+        description: "",
+        location: "",
+        region: "",
+        scheduleFrom: "start",
+        startDate: "",
+        endDate: "",
+        budget: "",
       });
     } catch (err: any) {
-      console.error('Create project error:', err);
-      setError(err?.response?.data?.message || 'Failed to create project');
+      console.error("Create project error:", err);
+      setError(err?.response?.data?.message || "Failed to create project");
     } finally {
       setLoading(false);
     }
@@ -210,7 +218,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex items-center mb-2">
             <Plus size={24} className="mr-2" />
-            <h2 className="text-2xl font-bold text-black">Create New Project</h2>
+            <h2 className="text-2xl font-bold text-black">
+              Create New Project
+            </h2>
           </div>
           <p className="text-sm text-gray-600 mb-6">
             Create a new fitout project with automatic task scheduling
@@ -231,7 +241,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <input
                 type="text"
                 value={formData.projectName}
-                onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, projectName: e.target.value })
+                }
                 placeholder="e.g., Westfield Shopping Center - Level 2 Renovation"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -247,12 +259,15 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 </div>
               ) : brands.length === 0 ? (
                 <div className="w-full px-4 py-2 border border-red-300 rounded-lg text-red-600 bg-red-50">
-                  No brands available. Please create a brand first in the Dashboard.
+                  No brands available. Please create a brand first in the
+                  Dashboard.
                 </div>
               ) : (
                 <select
                   value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, brand: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Select Brand --</option>
@@ -279,12 +294,15 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 </div>
               ) : scopes.length === 0 ? (
                 <div className="w-full px-4 py-2 border border-yellow-300 rounded-lg text-yellow-700 bg-yellow-50">
-                  No scopes available for this brand. Please create a scope in Dashboard → Scope & Workflow Architecture.
+                  No scopes available for this brand. Please create a scope in
+                  Dashboard → Scope & Workflow Architecture.
                 </div>
               ) : (
                 <select
                   value={formData.scope}
-                  onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, scope: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Select Scope --</option>
@@ -307,12 +325,15 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 </div>
               ) : availableWorkflows.length === 0 ? (
                 <div className="w-full px-4 py-2 border border-yellow-300 rounded-lg text-yellow-700 bg-yellow-50">
-                  No workflows available for this scope. Please add workflows in Dashboard → Scope & Workflow Architecture.
+                  No workflows available for this scope. Please add workflows in
+                  Dashboard → Scope & Workflow Architecture.
                 </div>
               ) : (
                 <select
                   value={formData.workflow}
-                  onChange={(e) => setFormData({ ...formData, workflow: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, workflow: e.target.value })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">-- Select Workflow --</option>
@@ -331,31 +352,39 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 <Calendar size={16} className="inline mr-2" />
                 Schedule From <span className="text-red-500">*</span>
               </label>
-              
+
               <div className="space-y-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="scheduleFrom"
                     value="start"
-                    checked={formData.scheduleFrom === 'start'}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      scheduleFrom: 'start',
-                      endDate: ''
-                    })}
+                    checked={formData.scheduleFrom === "start"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        scheduleFrom: "start",
+                        endDate: "",
+                      })
+                    }
                     className="mt-1"
                   />
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">Start Date</div>
                     <div className="text-xs text-gray-600 mt-1">
-                      Project will be scheduled forward from the start date. End date will be calculated automatically.
+                      Project will be scheduled forward from the start date. End
+                      date will be calculated automatically.
                     </div>
-                    {formData.scheduleFrom === 'start' && (
+                    {formData.scheduleFrom === "start" && (
                       <input
                         type="date"
                         value={formData.startDate}
-                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            startDate: e.target.value,
+                          })
+                        }
                         className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     )}
@@ -367,24 +396,29 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                     type="radio"
                     name="scheduleFrom"
                     value="end"
-                    checked={formData.scheduleFrom === 'end'}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      scheduleFrom: 'end',
-                      startDate: ''
-                    })}
+                    checked={formData.scheduleFrom === "end"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        scheduleFrom: "end",
+                        startDate: "",
+                      })
+                    }
                     className="mt-1"
                   />
                   <div className="flex-1">
                     <div className="font-medium text-gray-900">End Date</div>
                     <div className="text-xs text-gray-600 mt-1">
-                      Project will be scheduled backward from the end date. Start date will be calculated automatically.
+                      Project will be scheduled backward from the end date.
+                      Start date will be calculated automatically.
                     </div>
-                    {formData.scheduleFrom === 'end' && (
+                    {formData.scheduleFrom === "end" && (
                       <input
                         type="date"
                         value={formData.endDate}
-                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, endDate: e.target.value })
+                        }
                         className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     )}
@@ -392,9 +426,10 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 </label>
               </div>
 
-              {formData.scheduleFrom === 'end' && (
+              {formData.scheduleFrom === "end" && (
                 <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                  If the end date is not achievable, the project will be created and flagged as &quot;At risk&quot;
+                  If the end date is not achievable, the project will be created
+                  and flagged as &quot;At risk&quot;
                 </div>
               )}
             </div>
@@ -406,7 +441,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <input
                 type="text"
                 value={formData.projectCode}
-                onChange={(e) => setFormData({ ...formData, projectCode: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, projectCode: e.target.value })
+                }
                 placeholder="e.g., WFC-L2-2024"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -419,7 +456,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <input
                 type="text"
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
                 placeholder="e.g., Sydney CBD"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -432,7 +471,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <input
                 type="text"
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, region: e.target.value })
+                }
                 placeholder="e.g., NSW, Victoria"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -445,7 +486,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               <input
                 type="number"
                 value={formData.budget}
-                onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, budget: e.target.value })
+                }
                 placeholder="0"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -457,7 +500,9 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Brief description of the project scope and objectives..."
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
@@ -466,10 +511,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className={responsive.secondaryButton}
-            >
+            <button onClick={onClose} className={responsive.secondaryButton}>
               Cancel
             </button>
             <button
@@ -477,7 +519,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
               disabled={loading || brands.length === 0 || scopes.length === 0}
               className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
             >
-              {loading ? 'Creating...' : 'Create Project'}
+              {loading ? "Creating..." : "Create Project"}
             </button>
           </div>
         </div>

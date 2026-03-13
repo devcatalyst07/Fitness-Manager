@@ -1,16 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { DollarSign, TrendingUp, AlertTriangle, FileDown, Filter, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  DollarSign,
+  TrendingUp,
+  AlertTriangle,
+  FileDown,
+  Filter,
+  ShieldCheck,
+} from "lucide-react";
 
-import { useAuth } from '@/context/AuthContext';
-import SessionGuard from '@/components/SessionGuard';
-import AdminSidebar from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
-import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
-import EACPolicyModal from '@/components/EACPolicyModal';
-import { apiClient } from '@/lib/axios';
+import { useAuth } from "@/context/AuthContext";
+import SessionGuard from "@/components/SessionGuard";
+import AdminSidebar from "@/components/AdminSidebar";
+import AdminHeader from "@/components/AdminHeader";
+import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import EACPolicyModal from "@/components/EACPolicyModal";
+import { apiClient } from "@/lib/axios";
 
 interface ProjectFinance {
   _id: string;
@@ -73,22 +80,24 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState<FinanceData | null>(null);
 
-  const [selectedBrand, setSelectedBrand] = useState<string>('All');
-  const [selectedRegion, setSelectedRegion] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState<string>("All");
+  const [selectedRegion, setSelectedRegion] = useState<string>("All");
 
   const [isEACModalOpen, setIsEACModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectFinance | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectFinance | null>(
+    null,
+  );
 
   // Role-based redirect (SessionGuard handles auth)
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'admin') {
-      console.log('⚠️ User role is not admin, redirecting');
-      router.replace('/user/finance');
+    if (!authLoading && user && user.role !== "admin") {
+      console.log("⚠️ User role is not admin, redirecting");
+      router.replace("/user/finance");
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (user && user.role === "admin") {
       fetchFinanceData();
     }
   }, [user, selectedBrand, selectedRegion]);
@@ -96,51 +105,51 @@ export default function FinancePage() {
   const fetchFinanceData = async () => {
     try {
       const params = new URLSearchParams();
-      if (selectedBrand !== 'All') params.append('brand', selectedBrand);
-      if (selectedRegion !== 'All') params.append('region', selectedRegion);
+      if (selectedBrand !== "All") params.append("brand", selectedBrand);
+      if (selectedRegion !== "All") params.append("region", selectedRegion);
 
       const data = await apiClient.get(`/api/finance?${params.toString()}`);
       setFinanceData(data);
     } catch (error) {
-      console.error('Error fetching finance data:', error);
+      console.error("Error fetching finance data:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
 
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
   const handleResetFilters = () => {
-    setSelectedBrand('All');
-    setSelectedRegion('All');
+    setSelectedBrand("All");
+    setSelectedRegion("All");
   };
 
   const handleExportCSV = () => {
     if (!financeData) return;
 
     const headers = [
-      'Project',
-      'Brand',
-      'Region',
-      'Budget',
-      'Committed',
-      'Invoiced',
-      'Paid',
-      'Accruals',
-      'Headroom',
-      'EAC',
-      'Variance',
-      'Utilisation',
+      "Project",
+      "Brand",
+      "Region",
+      "Budget",
+      "Committed",
+      "Invoiced",
+      "Paid",
+      "Accruals",
+      "Headroom",
+      "EAC",
+      "Variance",
+      "Utilisation",
     ];
 
-    const rows = financeData.projects.map(p => [
+    const rows = financeData.projects.map((p) => [
       p.projectName,
       p.brand,
       p.region,
@@ -155,20 +164,23 @@ export default function FinancePage() {
       p.utilisation,
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `finance-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `finance-report-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
 
-  if (authLoading || (loading && user?.role === 'admin')) {
+  if (authLoading || (loading && user?.role === "admin")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'admin') {
+  if (user && user.role !== "admin") {
     return <FitoutLoadingSpinner />;
   }
 
@@ -201,14 +213,21 @@ export default function FinancePage() {
                     <AlertTriangle size={20} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Pending Approvals</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Pending Approvals
+                    </h3>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      {financeData.pendingApprovals.slice(0, 2).map((approval, index) => (
-                        <li key={`${approval._id || `${approval.projectId?._id || approval.projectId?.projectName}-${approval.type}`}-${index}`}>
-                          • {approval.projectId.projectName} — {approval.description} (
-                          {formatCurrency(approval.amount)})
-                        </li>
-                      ))}
+                      {financeData.pendingApprovals
+                        .slice(0, 2)
+                        .map((approval, index) => (
+                          <li
+                            key={`${approval._id || `${approval.projectId?._id || approval.projectId?.projectName}-${approval.type}`}-${index}`}
+                          >
+                            • {approval.projectId.projectName} —{" "}
+                            {approval.description} (
+                            {formatCurrency(approval.amount)})
+                          </li>
+                        ))}
                     </ul>
                   </div>
                 </div>
@@ -241,7 +260,7 @@ export default function FinancePage() {
                 {formatCurrency(summary?.totalCommitted || 0)}
               </p>
               <p className="text-xs text-green-600 mt-1">
-                {summary && summary.committedChange > 0 ? '↗' : '↘'}{' '}
+                {summary && summary.committedChange > 0 ? "↗" : "↘"}{" "}
                 {formatPercentage(Math.abs(summary?.committedChange || 0))}
               </p>
             </div>
@@ -253,13 +272,17 @@ export default function FinancePage() {
               </div>
               <p
                 className={`text-2xl font-semibold ${
-                  (summary?.totalVariance || 0) < 0 ? 'text-red-600' : 'text-green-600'
+                  (summary?.totalVariance || 0) < 0
+                    ? "text-red-600"
+                    : "text-green-600"
                 }`}
               >
                 {formatCurrency(summary?.totalVariance || 0)}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {(summary?.totalVariance || 0) < 0 ? 'Over budget' : 'Under budget'}
+                {(summary?.totalVariance || 0) < 0
+                  ? "Over budget"
+                  : "Under budget"}
               </p>
             </div>
 
@@ -291,11 +314,11 @@ export default function FinancePage() {
                 <span className="text-sm font-medium">Brand</span>
                 <select
                   value={selectedBrand}
-                  onChange={e => setSelectedBrand(e.target.value)}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
                   className="text-sm border-none outline-none bg-transparent"
                 >
                   <option value="All">All</option>
-                  {financeData?.filters.brands.map(brand => (
+                  {financeData?.filters.brands.map((brand) => (
                     <option key={brand} value={brand}>
                       {brand}
                     </option>
@@ -307,11 +330,11 @@ export default function FinancePage() {
                 <span className="text-sm font-medium">Region</span>
                 <select
                   value={selectedRegion}
-                  onChange={e => setSelectedRegion(e.target.value)}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
                   className="text-sm border-none outline-none bg-transparent"
                 >
                   <option value="All">All</option>
-                  {financeData?.filters.regions.map(region => (
+                  {financeData?.filters.regions.map((region) => (
                     <option key={region} value={region}>
                       {region}
                     </option>
@@ -319,7 +342,7 @@ export default function FinancePage() {
                 </select>
               </div>
 
-              {(selectedBrand !== 'All' || selectedRegion !== 'All') && (
+              {(selectedBrand !== "All" || selectedRegion !== "All") && (
                 <button
                   onClick={handleResetFilters}
                   className="text-sm text-blue-600 hover:text-blue-800 px-3 py-2"
@@ -388,9 +411,14 @@ export default function FinancePage() {
 
                 <tbody className="divide-y divide-gray-200">
                   {financeData?.projects.map((project, index) => (
-                    <tr key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`} className="hover:bg-gray-50">
+                    <tr
+                      key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`}
+                      className="hover:bg-gray-50"
+                    >
                       <td className="px-6 py-5">
-                        <div className="font-medium text-gray-900">{project.projectName}</div>
+                        <div className="font-medium text-gray-900">
+                          {project.projectName}
+                        </div>
                         <div className="text-xs text-gray-500">
                           {project.brand} • {project.region}
                         </div>
@@ -418,7 +446,9 @@ export default function FinancePage() {
                       </td>
                       <td
                         className={`px-6 py-5 text-sm font-semibold ${
-                          project.variance < 0 ? 'text-red-600' : 'text-green-600'
+                          project.variance < 0
+                            ? "text-red-600"
+                            : "text-green-600"
                         }`}
                       >
                         {formatCurrency(project.variance)}
@@ -443,7 +473,9 @@ export default function FinancePage() {
 
                 <tfoot className="bg-gray-50 border-t border-gray-300">
                   <tr>
-                    <td className="px-6 py-4 font-bold text-gray-900">Portfolio Totals</td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      Portfolio Totals
+                    </td>
                     <td className="px-6 py-4 font-bold text-gray-900">
                       {formatCurrency(totals?.budget || 0)}
                     </td>
@@ -467,7 +499,9 @@ export default function FinancePage() {
                     </td>
                     <td
                       className={`px-6 py-4 font-bold ${
-                        (totals?.variance || 0) < 0 ? 'text-red-600' : 'text-green-600'
+                        (totals?.variance || 0) < 0
+                          ? "text-red-600"
+                          : "text-green-600"
                       }`}
                     >
                       {formatCurrency(totals?.variance || 0)}

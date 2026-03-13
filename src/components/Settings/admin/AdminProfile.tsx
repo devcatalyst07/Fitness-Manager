@@ -161,7 +161,9 @@ function EditProfileModal({
       setSelectedFile(null);
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Network error — please try again.");
+      setError(
+        err?.response?.data?.message || "Network error — please try again.",
+      );
     } finally {
       setIsLoading(false);
     }

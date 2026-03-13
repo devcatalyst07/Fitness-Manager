@@ -98,19 +98,21 @@ export default function UserFinancePage() {
   const [selectedRegion, setSelectedRegion] = useState<string>("All");
 
   const [isEACModalOpen, setIsEACModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectFinance | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectFinance | null>(
+    null,
+  );
 
   // Role-based redirect
   useEffect(() => {
-    if (!authLoading && user && user.role === 'admin') {
-      console.log('⚠️ Admin accessing user page, redirecting');
-      router.replace('/admin/finance');
+    if (!authLoading && user && user.role === "admin") {
+      console.log("⚠️ Admin accessing user page, redirecting");
+      router.replace("/admin/finance");
     }
   }, [user, authLoading, router]);
 
   // Fetch permissions when user is ready
   useEffect(() => {
-    if (user && user.role === 'user') {
+    if (user && user.role === "user") {
       if (user.roleId) {
         fetchRolePermissions(user.roleId);
       } else {
@@ -152,7 +154,9 @@ export default function UserFinancePage() {
       if (selectedBrand !== "All") params.append("brand", selectedBrand);
       if (selectedRegion !== "All") params.append("region", selectedRegion);
 
-      const data = await apiClient.get<FinanceData>(`/api/finance?${params.toString()}`);
+      const data = await apiClient.get<FinanceData>(
+        `/api/finance?${params.toString()}`,
+      );
       setFinanceData(data);
     } catch (error) {
       console.error("Error fetching finance data:", error);
@@ -177,16 +181,39 @@ export default function UserFinancePage() {
     if (!financeData) return;
 
     const headers = [
-      "Project", "Brand", "Region", "Budget", "Committed", "Invoiced",
-      "Paid", "Accruals", "Headroom", "EAC", "Variance", "Utilisation",
+      "Project",
+      "Brand",
+      "Region",
+      "Budget",
+      "Committed",
+      "Invoiced",
+      "Paid",
+      "Accruals",
+      "Headroom",
+      "EAC",
+      "Variance",
+      "Utilisation",
     ];
 
     const rows = financeData.projects.map((p) => [
-      p.projectName, p.brand, p.region, p.budget, p.committed, p.invoiced,
-      p.paid, p.accruals, p.headroom, p.eac, p.variance, p.utilisation,
+      p.projectName,
+      p.brand,
+      p.region,
+      p.budget,
+      p.committed,
+      p.invoiced,
+      p.paid,
+      p.accruals,
+      p.headroom,
+      p.eac,
+      p.variance,
+      p.utilisation,
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.join(",")),
+    ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -195,11 +222,11 @@ export default function UserFinancePage() {
     a.click();
   };
 
-  if (authLoading || (loading && user?.role === 'user')) {
+  if (authLoading || (loading && user?.role === "user")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'user') {
+  if (user && user.role !== "user") {
     return <FitoutLoadingSpinner />;
   }
 
@@ -207,7 +234,9 @@ export default function UserFinancePage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Permissions</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Permissions
+          </h2>
           <p className="text-gray-600">Contact administrator.</p>
         </div>
       </div>
@@ -245,14 +274,21 @@ export default function UserFinancePage() {
                     <AlertTriangle size={20} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Pending Approvals</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      Pending Approvals
+                    </h3>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      {financeData.pendingApprovals.slice(0, 2).map((approval, index) => (
-                        <li key={`${approval._id || `${approval.projectId?._id || approval.projectId?.projectName}-${approval.type}`}-${index}`}>
-                          • {approval.projectId.projectName} — {approval.description} (
-                          {formatCurrency(approval.amount)})
-                        </li>
-                      ))}
+                      {financeData.pendingApprovals
+                        .slice(0, 2)
+                        .map((approval, index) => (
+                          <li
+                            key={`${approval._id || `${approval.projectId?._id || approval.projectId?.projectName}-${approval.type}`}-${index}`}
+                          >
+                            • {approval.projectId.projectName} —{" "}
+                            {approval.description} (
+                            {formatCurrency(approval.amount)})
+                          </li>
+                        ))}
                     </ul>
                   </div>
                 </div>
@@ -294,11 +330,15 @@ export default function UserFinancePage() {
                 <h3 className="text-sm text-gray-600">Variance</h3>
                 <TrendingUp size={16} className="text-gray-400" />
               </div>
-              <p className={`text-2xl font-semibold ${(summary?.totalVariance || 0) < 0 ? "text-red-600" : "text-green-600"}`}>
+              <p
+                className={`text-2xl font-semibold ${(summary?.totalVariance || 0) < 0 ? "text-red-600" : "text-green-600"}`}
+              >
                 {formatCurrency(summary?.totalVariance || 0)}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {(summary?.totalVariance || 0) < 0 ? "Over budget" : "Under budget"}
+                {(summary?.totalVariance || 0) < 0
+                  ? "Over budget"
+                  : "Under budget"}
               </p>
             </div>
 
@@ -335,7 +375,9 @@ export default function UserFinancePage() {
                 >
                   <option value="All">All</option>
                   {financeData?.filters.brands.map((brand) => (
-                    <option key={brand} value={brand}>{brand}</option>
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -349,7 +391,9 @@ export default function UserFinancePage() {
                 >
                   <option value="All">All</option>
                   {financeData?.filters.regions.map((region) => (
-                    <option key={region} value={region}>{region}</option>
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -387,8 +431,23 @@ export default function UserFinancePage() {
               <table className="w-full min-w-[900px]">
                 <thead className="bg-gray-900">
                   <tr>
-                    {["Project", "Budget", "Committed", "Invoiced", "Paid", "Accruals", "Headroom", "EAC", "Variance", "Utilisation", "Actions"].map((header) => (
-                      <th key={header} className="px-6 py-4 text-left text-xs font-semibold text-gray-100 uppercase">
+                    {[
+                      "Project",
+                      "Budget",
+                      "Committed",
+                      "Invoiced",
+                      "Paid",
+                      "Accruals",
+                      "Headroom",
+                      "EAC",
+                      "Variance",
+                      "Utilisation",
+                      "Actions",
+                    ].map((header) => (
+                      <th
+                        key={header}
+                        className="px-6 py-4 text-left text-xs font-semibold text-gray-100 uppercase"
+                      >
                         {header}
                       </th>
                     ))}
@@ -397,22 +456,47 @@ export default function UserFinancePage() {
 
                 <tbody className="divide-y divide-gray-200">
                   {financeData?.projects.map((project, index) => (
-                    <tr key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`} className="hover:bg-gray-50">
+                    <tr
+                      key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`}
+                      className="hover:bg-gray-50"
+                    >
                       <td className="px-6 py-5">
-                        <div className="font-medium text-gray-900">{project.projectName}</div>
-                        <div className="text-xs text-gray-500">{project.brand} • {project.region}</div>
+                        <div className="font-medium text-gray-900">
+                          {project.projectName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {project.brand} • {project.region}
+                        </div>
                       </td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.budget)}</td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.committed)}</td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.invoiced)}</td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.paid)}</td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.accruals)}</td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.headroom)}</td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatCurrency(project.eac)}</td>
-                      <td className={`px-6 py-5 text-sm font-semibold ${project.variance < 0 ? "text-red-600" : "text-green-600"}`}>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.budget)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.committed)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.invoiced)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.paid)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.accruals)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.headroom)}
+                      </td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatCurrency(project.eac)}
+                      </td>
+                      <td
+                        className={`px-6 py-5 text-sm font-semibold ${project.variance < 0 ? "text-red-600" : "text-green-600"}`}
+                      >
                         {formatCurrency(project.variance)}
                       </td>
-                      <td className="px-6 py-5 text-sm text-gray-900">{formatPercentage(project.utilisation)}</td>
+                      <td className="px-6 py-5 text-sm text-gray-900">
+                        {formatPercentage(project.utilisation)}
+                      </td>
                       <td className="px-6 py-5">
                         {canManageEACPolicy && (
                           <button
@@ -432,15 +516,33 @@ export default function UserFinancePage() {
 
                 <tfoot className="bg-gray-50 border-t border-gray-300">
                   <tr>
-                    <td className="px-6 py-4 font-bold text-gray-900">Portfolio Totals</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.budget || 0)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.committed || 0)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.invoiced || 0)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.paid || 0)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.accruals || 0)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.headroom || 0)}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(totals?.eac || 0)}</td>
-                    <td className={`px-6 py-4 font-bold ${(totals?.variance || 0) < 0 ? "text-red-600" : "text-green-600"}`}>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      Portfolio Totals
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.budget || 0)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.committed || 0)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.invoiced || 0)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.paid || 0)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.accruals || 0)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.headroom || 0)}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-900">
+                      {formatCurrency(totals?.eac || 0)}
+                    </td>
+                    <td
+                      className={`px-6 py-4 font-bold ${(totals?.variance || 0) < 0 ? "text-red-600" : "text-green-600"}`}
+                    >
                       {formatCurrency(totals?.variance || 0)}
                     </td>
                     <td colSpan={2}></td>

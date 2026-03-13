@@ -8,8 +8,13 @@ interface BrandProjectsListProps {
   brandName: string;
 }
 
-export default function BrandProjectsList({ projects, brandName }: BrandProjectsListProps) {
-  const [taskStats, setTaskStats] = useState<Record<string, { total: number; completed: number }>>({});
+export default function BrandProjectsList({
+  projects,
+  brandName,
+}: BrandProjectsListProps) {
+  const [taskStats, setTaskStats] = useState<
+    Record<string, { total: number; completed: number }>
+  >({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,8 +25,13 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
 
         for (const project of projects) {
           try {
-            const data = await apiClient.get(`/api/tasks/${project._id}/tasks/stats/overview`);
-            stats[project._id] = { total: data.totalTasks, completed: data.completedTasks };
+            const data = await apiClient.get(
+              `/api/tasks/${project._id}/tasks/stats/overview`,
+            );
+            stats[project._id] = {
+              total: data.totalTasks,
+              completed: data.completedTasks,
+            };
           } catch {
             stats[project._id] = { total: 0, completed: 0 };
           }
@@ -30,8 +40,11 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
         setTaskStats(stats);
       } catch (error) {
         console.error("Error fetching task stats:", error);
-        const emptyStats: Record<string, { total: number; completed: number }> = {};
-        projects.forEach((p) => { emptyStats[p._id] = { total: 0, completed: 0 }; });
+        const emptyStats: Record<string, { total: number; completed: number }> =
+          {};
+        projects.forEach((p) => {
+          emptyStats[p._id] = { total: 0, completed: 0 };
+        });
         setTaskStats(emptyStats);
       } finally {
         setLoading(false);
@@ -43,11 +56,16 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "In Progress": return "bg-blue-100 text-blue-800";
-      case "Planning": return "bg-yellow-100 text-yellow-800";
-      case "Completed": return "bg-green-100 text-green-800";
-      case "On Hold": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "In Progress":
+        return "bg-blue-100 text-blue-800";
+      case "Planning":
+        return "bg-yellow-100 text-yellow-800";
+      case "Completed":
+        return "bg-green-100 text-green-800";
+      case "On Hold":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -61,7 +79,9 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
       <div className="bg-white rounded-lg border border-gray-200 p-8">
         <div className="text-center text-gray-500">
           <p className="font-medium mb-2">No projects yet</p>
-          <p className="text-sm">Create a project for {brandName} to get started</p>
+          <p className="text-sm">
+            Create a project for {brandName} to get started
+          </p>
         </div>
       </div>
     );
@@ -69,32 +89,52 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Projects & Tasks</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Projects & Tasks
+      </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {projects.map((project) => {
           const tasks = taskStats[project._id] || { total: 0, completed: 0 };
           const progress = calculateProgress(project);
           return (
-            <div key={project._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div
+              key={project._id}
+              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Calendar size={16} className="text-blue-600" />
-                  <h4 className="font-semibold text-gray-900 truncate">{project.projectName}</h4>
+                  <h4 className="font-semibold text-gray-900 truncate">
+                    {project.projectName}
+                  </h4>
                 </div>
-                <span className={`self-start sm:self-auto px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>{project.status}</span>
+                <span
+                  className={`self-start sm:self-auto px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}
+                >
+                  {project.status}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-3 mb-2">
                 <span className="text-sm text-gray-600">Tasks</span>
-                <span className="text-sm font-medium text-gray-900">{tasks.completed}/{tasks.total}</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {tasks.completed}/{tasks.total}
+                </span>
               </div>
               <div className="mb-3">
                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                  <div className="bg-green-500 h-full rounded-full transition-all duration-300" style={{ width: `${tasks.total > 0 ? (tasks.completed / tasks.total) * 100 : 0}%` }} />
+                  <div
+                    className="bg-green-500 h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${tasks.total > 0 ? (tasks.completed / tasks.total) * 100 : 0}%`,
+                    }}
+                  />
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-gray-600">Budget</span>
-                <span className="font-medium text-gray-900">${project.budget.toLocaleString()}</span>
+                <span className="font-medium text-gray-900">
+                  ${project.budget.toLocaleString()}
+                </span>
               </div>
             </div>
           );

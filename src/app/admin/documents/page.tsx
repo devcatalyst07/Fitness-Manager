@@ -39,20 +39,22 @@ export default function AdminDocuments() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set(),
+  );
   const [successMessage, setSuccessMessage] = useState("");
 
   // Role-based redirect
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'admin') {
-      console.log('⚠️ User role is not admin, redirecting');
-      router.replace('/user/documents');
+    if (!authLoading && user && user.role !== "admin") {
+      console.log("⚠️ User role is not admin, redirecting");
+      router.replace("/user/documents");
     }
   }, [user, authLoading, router]);
 
   // Fetch data when user is ready
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (user && user.role === "admin") {
       fetchData();
     }
   }, [user]);
@@ -70,7 +72,9 @@ export default function AdminDocuments() {
 
   const fetchFolders = async () => {
     try {
-      const data = await apiClient.get<ProjectFolder[]>('/api/documents/folders');
+      const data = await apiClient.get<ProjectFolder[]>(
+        "/api/documents/folders",
+      );
       setFolders(data);
     } catch (error) {
       console.error("Error fetching folders:", error);
@@ -79,7 +83,7 @@ export default function AdminDocuments() {
 
   const fetchStats = async () => {
     try {
-      const data = await apiClient.get<Stats>('/api/documents/stats/overview');
+      const data = await apiClient.get<Stats>("/api/documents/stats/overview");
       setStats(data);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -88,12 +92,14 @@ export default function AdminDocuments() {
 
   const fetchProjectDocuments = async (projectId: string) => {
     try {
-      const documents = await apiClient.get<Document[]>(`/api/documents/project/${projectId}`);
+      const documents = await apiClient.get<Document[]>(
+        `/api/documents/project/${projectId}`,
+      );
 
       setFolders((prevFolders) =>
         prevFolders.map((folder) =>
-          folder._id === projectId ? { ...folder, documents } : folder
-        )
+          folder._id === projectId ? { ...folder, documents } : folder,
+        ),
       );
     } catch (error) {
       console.error("Error fetching project documents:", error);
@@ -146,7 +152,9 @@ export default function AdminDocuments() {
       window.open(doc.fileUrl, "_blank");
     } else {
       // For local files
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://fitout-manager-api.vercel.app";
       const fileUrl = `${API_URL}${doc.fileUrl}`;
       window.open(fileUrl, "_blank");
     }
@@ -171,14 +179,14 @@ export default function AdminDocuments() {
   };
 
   const filteredFolders = folders.filter((folder) =>
-    folder.projectName.toLowerCase().includes(searchQuery.toLowerCase())
+    folder.projectName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  if (authLoading || (loading && user?.role === 'admin')) {
+  if (authLoading || (loading && user?.role === "admin")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'admin') {
+  if (user && user.role !== "admin") {
     return <FitoutLoadingSpinner />;
   }
 

@@ -65,14 +65,15 @@ export default function BrandManagement({
 
     setSaving(true);
     try {
-      await apiClient.post('/api/brands', formData);
+      await apiClient.post("/api/brands", formData);
       setIsCreateModalOpen(false);
       setFormData({ name: "", description: "" });
       onRefresh();
       alert("Brand created successfully!");
     } catch (error: any) {
       console.error("Create brand error:", error);
-      const message = error?.response?.data?.message || "Failed to create brand";
+      const message =
+        error?.response?.data?.message || "Failed to create brand";
       alert(message);
     } finally {
       setSaving(false);
@@ -97,7 +98,8 @@ export default function BrandManagement({
       alert("Brand updated successfully!");
     } catch (error: any) {
       console.error("Update brand error:", error);
-      const message = error?.response?.data?.message || "Failed to update brand";
+      const message =
+        error?.response?.data?.message || "Failed to update brand";
       alert(message);
     } finally {
       setSaving(false);
@@ -106,7 +108,11 @@ export default function BrandManagement({
 
   const handleDeleteBrand = async (brandId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this brand? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this brand? This action cannot be undone.",
+      )
+    ) {
       return;
     }
 
@@ -116,7 +122,8 @@ export default function BrandManagement({
       alert("Brand deleted successfully!");
     } catch (error: any) {
       console.error("Delete brand error:", error);
-      const message = error?.response?.data?.message || "Failed to delete brand";
+      const message =
+        error?.response?.data?.message || "Failed to delete brand";
       alert(message);
     }
   };
@@ -141,7 +148,9 @@ export default function BrandManagement({
     <div className={responsive.sectionCard}>
       <div className={responsive.sectionHeader}>
         <div className={responsive.sectionTitleWrap}>
-          <h2 className="text-xl font-semibold text-gray-900">Brand Management</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            Brand Management
+          </h2>
           <p className="text-sm text-gray-500 mt-1">
             Select a brand to view threads or click dashboard icon for projects
           </p>
@@ -223,7 +232,9 @@ export default function BrandManagement({
                 </div>
               </div>
               {brand.description && (
-                <p className="text-sm text-gray-600 mb-3">{brand.description}</p>
+                <p className="text-sm text-gray-600 mb-3">
+                  {brand.description}
+                </p>
               )}
               <div className="text-xs text-gray-500">
                 <p>Created by {brand.createdBy?.name}</p>
@@ -249,7 +260,10 @@ export default function BrandManagement({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Create New Brand</h2>
-                <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-black">
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="text-gray-400 hover:text-black"
+                >
                   <X size={24} />
                 </button>
               </div>
@@ -261,16 +275,22 @@ export default function BrandManagement({
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     className={responsive.formControl}
                     placeholder="e.g., Westfield Group"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description (Optional)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Description (Optional)
+                  </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     className={responsive.formControl}
                     rows={3}
                     placeholder="Brief description about the brand..."
@@ -278,8 +298,17 @@ export default function BrandManagement({
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={() => setIsCreateModalOpen(false)} className={responsive.secondaryButton}>Cancel</button>
-                <button onClick={handleCreateBrand} disabled={saving} className={`${responsive.primaryButton} disabled:bg-gray-400`}>
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className={responsive.secondaryButton}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateBrand}
+                  disabled={saving}
+                  className={`${responsive.primaryButton} disabled:bg-gray-400`}
+                >
                   {saving ? "Creating..." : "Create Brand"}
                 </button>
               </div>
@@ -295,7 +324,13 @@ export default function BrandManagement({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Edit Brand</h2>
-                <button onClick={() => { setIsEditModalOpen(false); setSelectedBrand(null); }} className="text-gray-400 hover:text-black">
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedBrand(null);
+                  }}
+                  className="text-gray-400 hover:text-black"
+                >
                   <X size={24} />
                 </button>
               </div>
@@ -307,23 +342,47 @@ export default function BrandManagement({
                   <input
                     type="text"
                     value={selectedBrand.name}
-                    onChange={(e) => setSelectedBrand({ ...selectedBrand, name: e.target.value })}
+                    onChange={(e) =>
+                      setSelectedBrand({
+                        ...selectedBrand,
+                        name: e.target.value,
+                      })
+                    }
                     className={responsive.formControl}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description (Optional)</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Description (Optional)
+                  </label>
                   <textarea
                     value={selectedBrand.description || ""}
-                    onChange={(e) => setSelectedBrand({ ...selectedBrand, description: e.target.value })}
+                    onChange={(e) =>
+                      setSelectedBrand({
+                        ...selectedBrand,
+                        description: e.target.value,
+                      })
+                    }
                     className={responsive.formControl}
                     rows={3}
                   />
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={() => { setIsEditModalOpen(false); setSelectedBrand(null); }} className={responsive.secondaryButton}>Cancel</button>
-                <button onClick={handleUpdateBrand} disabled={saving} className={`${responsive.primaryButton} disabled:bg-gray-400`}>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setSelectedBrand(null);
+                  }}
+                  className={responsive.secondaryButton}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateBrand}
+                  disabled={saving}
+                  className={`${responsive.primaryButton} disabled:bg-gray-400`}
+                >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
@@ -336,7 +395,10 @@ export default function BrandManagement({
         <BrandDashboardModal
           brand={selectedBrand}
           isOpen={isDashboardModalOpen}
-          onClose={() => { setIsDashboardModalOpen(false); setSelectedBrand(null); }}
+          onClose={() => {
+            setIsDashboardModalOpen(false);
+            setSelectedBrand(null);
+          }}
           canAddUser={canAddUser}
         />
       )}

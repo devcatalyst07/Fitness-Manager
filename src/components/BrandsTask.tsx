@@ -82,7 +82,7 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
 
           try {
             const tasksData = await apiClient.get(
-              `/api/projects/${projectId}/tasks`
+              `/api/projects/${projectId}/tasks`,
             );
 
             const tasksList = Array.isArray(tasksData)
@@ -103,7 +103,10 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
             return (tasksList || []).map((task: any) => {
               const dueDate = task.dueDate ? new Date(task.dueDate) : null;
               const completedAt =
-                task.completedAt || task.completedDate || task.updatedAt || null;
+                task.completedAt ||
+                task.completedDate ||
+                task.updatedAt ||
+                null;
               const category: TabType = isCompletedStatus(task.status)
                 ? "completed"
                 : dueDate && dueDate < now

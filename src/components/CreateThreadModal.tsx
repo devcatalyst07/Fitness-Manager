@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { X, Upload, File, X as CloseIcon } from 'lucide-react';
-import { responsive } from '@/utils/responsive';
+import React, { useState } from "react";
+import { X, Upload, File, X as CloseIcon } from "lucide-react";
+import { responsive } from "@/utils/responsive";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface Project {
   _id: string;
@@ -24,9 +25,9 @@ export default function CreateThreadModal({
   projects,
   onSuccess,
 }: CreateThreadModalProps) {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [projectId, setProjectId] = useState<string>('');
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [projectId, setProjectId] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,12 +50,12 @@ export default function CreateThreadModal({
 
     for (const file of files) {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const response = await fetch(`${API_URL}/api/upload`, {
-          method: 'POST',
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -72,7 +73,7 @@ export default function CreateThreadModal({
           });
         }
       } catch (error) {
-        console.error('Upload error:', error);
+        console.error("Upload error:", error);
       }
     }
 
@@ -81,7 +82,7 @@ export default function CreateThreadModal({
 
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
-      alert('Title and content are required');
+      alert("Title and content are required");
       return;
     }
 
@@ -98,11 +99,11 @@ export default function CreateThreadModal({
       setUploading(false);
 
       // Create thread
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/api/brands/${brandId}/threads`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -115,17 +116,17 @@ export default function CreateThreadModal({
 
       if (response.ok) {
         onSuccess();
-        setTitle('');
-        setContent('');
-        setProjectId('');
+        setTitle("");
+        setContent("");
+        setProjectId("");
         setSelectedFiles([]);
       } else {
         const error = await response.json();
-        alert(error.message || 'Failed to create thread');
+        alert(error.message || "Failed to create thread");
       }
     } catch (error) {
-      console.error('Create thread error:', error);
-      alert('Failed to create thread');
+      console.error("Create thread error:", error);
+      alert("Failed to create thread");
     } finally {
       setSaving(false);
       setUploading(false);
@@ -138,8 +139,13 @@ export default function CreateThreadModal({
         <div className="p-4 sm:p-6">
           {/* Header */}
           <div className="flex items-start justify-between gap-2 mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Create New Thread</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-black">
+            <h2 className="text-xl font-bold text-gray-900">
+              Create New Thread
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-black"
+            >
               <X size={24} />
             </button>
           </div>
@@ -180,8 +186,8 @@ export default function CreateThreadModal({
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {projectId
-                  ? 'Only members of the selected project will see this thread'
-                  : 'All brand members will see this thread'}
+                  ? "Only members of the selected project will see this thread"
+                  : "All brand members will see this thread"}
               </p>
             </div>
 
@@ -206,7 +212,9 @@ export default function CreateThreadModal({
               </label>
               <label className="flex flex-col sm:flex-row items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-center">
                 <Upload size={18} className="text-gray-500" />
-                <span className="text-sm text-gray-600">Click to upload files</span>
+                <span className="text-sm text-gray-600">
+                  Click to upload files
+                </span>
                 <input
                   type="file"
                   onChange={handleFileSelect}
@@ -230,7 +238,9 @@ export default function CreateThreadModal({
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <File size={16} className="text-gray-500 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                      <span className="text-sm text-gray-700 truncate">
+                        {file.name}
+                      </span>
                       <span className="text-xs text-gray-500 flex-shrink-0">
                         ({(file.size / 1024).toFixed(1)} KB)
                       </span>
@@ -249,10 +259,7 @@ export default function CreateThreadModal({
 
           {/* Footer */}
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className={responsive.secondaryButton}
-            >
+            <button onClick={onClose} className={responsive.secondaryButton}>
               Cancel
             </button>
             <button
@@ -260,7 +267,11 @@ export default function CreateThreadModal({
               disabled={saving || uploading}
               className={`${responsive.primaryButton} disabled:bg-gray-400`}
             >
-              {uploading ? 'Uploading files...' : saving ? 'Creating...' : 'Create Thread'}
+              {uploading
+                ? "Uploading files..."
+                : saving
+                  ? "Creating..."
+                  : "Create Thread"}
             </button>
           </div>
         </div>

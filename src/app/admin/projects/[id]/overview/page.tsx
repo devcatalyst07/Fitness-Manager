@@ -76,7 +76,7 @@ export default function ProjectOverviewPage() {
   const fetchStats = async () => {
     try {
       const data = await apiClient.get(
-        `/api/projects/${params.id}/overview/stats`
+        `/api/projects/${params.id}/overview/stats`,
       );
       setStats(data);
     } catch (error) {
@@ -86,9 +86,7 @@ export default function ProjectOverviewPage() {
 
   const fetchInsights = async () => {
     try {
-      const data = await apiClient.get(
-        `/api/projects/${params.id}/insights`
-      );
+      const data = await apiClient.get(`/api/projects/${params.id}/insights`);
       setInsights(data);
     } catch (error) {
       console.error("Error fetching insights:", error);
@@ -98,7 +96,7 @@ export default function ProjectOverviewPage() {
   const fetchActivity = async () => {
     try {
       const data = await apiClient.get(
-        `/api/projects/${params.id}/activity?limit=10`
+        `/api/projects/${params.id}/activity?limit=10`,
       );
       setRecentActivity(data);
     } catch (error) {
@@ -109,7 +107,7 @@ export default function ProjectOverviewPage() {
   const fetchDeadlines = async () => {
     try {
       const data = await apiClient.get(
-        `/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`
+        `/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`,
       );
       setUpcomingDeadlines(data);
     } catch (error) {
@@ -148,30 +146,32 @@ export default function ProjectOverviewPage() {
         {/* Tab Navigation */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
           <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map((tab) => (
-              <button
-                key={tab}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                  tab === "Overview"
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => {
-                  if (tab === "Tasks")
-                    router.push(`/admin/projects/${params.id}/tasks`);
-                  if (tab === "Budget")
-                    router.push(`/admin/projects/${params.id}/budget`);
-                  if (tab === "Tender")
-                    router.push(`/admin/projects/${params.id}/tender`);
-                  if (tab === "Documents")
-                    router.push(`/admin/projects/${params.id}/documents`);
-                  if (tab === "Team")
-                    router.push(`/admin/projects/${params.id}/team`);
-                }}
-              >
-                {tab}
-              </button>
-            ))}
+            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map(
+              (tab) => (
+                <button
+                  key={tab}
+                  className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                    tab === "Overview"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                  onClick={() => {
+                    if (tab === "Tasks")
+                      router.push(`/admin/projects/${params.id}/tasks`);
+                    if (tab === "Budget")
+                      router.push(`/admin/projects/${params.id}/budget`);
+                    if (tab === "Tender")
+                      router.push(`/admin/projects/${params.id}/tender`);
+                    if (tab === "Documents")
+                      router.push(`/admin/projects/${params.id}/documents`);
+                    if (tab === "Team")
+                      router.push(`/admin/projects/${params.id}/team`);
+                  }}
+                >
+                  {tab}
+                </button>
+              ),
+            )}
           </div>
         </div>
 

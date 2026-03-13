@@ -59,7 +59,7 @@ export default function MyTask({ onTaskClick }: MyTaskProps) {
       const userEmail = (user?.email || "").toLowerCase();
 
       // ✅ FIXED: Use apiClient instead of localStorage token + fetch
-      const projects = await apiClient.get('/api/projects');
+      const projects = await apiClient.get("/api/projects");
 
       const now = new Date();
       const isCompletedStatus = (status?: string) => {
@@ -79,7 +79,7 @@ export default function MyTask({ onTaskClick }: MyTaskProps) {
           try {
             // ✅ FIXED: Use apiClient
             const tasksData = await apiClient.get(
-              `/api/projects/${projectId}/tasks`
+              `/api/projects/${projectId}/tasks`,
             );
 
             const tasksList = Array.isArray(tasksData)
@@ -91,13 +91,19 @@ export default function MyTask({ onTaskClick }: MyTaskProps) {
                   : [];
 
             const brandName =
-              project?.brand?.name || project?.brandName || project?.brand || "";
+              project?.brand?.name ||
+              project?.brandName ||
+              project?.brand ||
+              "";
             const projectName = project?.projectName || project?.name || "";
 
             return (tasksList || []).map((task: any) => {
               const dueDate = task.dueDate ? new Date(task.dueDate) : null;
               const completedAt =
-                task.completedAt || task.completedDate || task.updatedAt || null;
+                task.completedAt ||
+                task.completedDate ||
+                task.updatedAt ||
+                null;
               const category: TabType = isCompletedStatus(task.status)
                 ? "completed"
                 : dueDate && dueDate < now

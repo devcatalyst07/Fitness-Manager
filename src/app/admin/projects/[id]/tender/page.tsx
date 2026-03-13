@@ -1,15 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { Upload, X, FileText, Plus, Trash2, Send, Sparkles } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { apiClient } from '@/lib/axios';
-import api from '@/lib/axios';
-import AdminSidebar from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
-import FitoutLoadingSpinner from '@/components/FitoutLoadingSpinner';
-import FileUploadSection from '@/components/FileUploadSection';
+import React, { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  Upload,
+  X,
+  FileText,
+  Plus,
+  Trash2,
+  Send,
+  Sparkles,
+} from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/axios";
+import api from "@/lib/axios";
+import AdminSidebar from "@/components/AdminSidebar";
+import AdminHeader from "@/components/AdminHeader";
+import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
+import FileUploadSection from "@/components/FileUploadSection";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -71,14 +79,14 @@ interface Contractor {
 
 async function apiPostFormData(url: string, formData: FormData) {
   const res = await api.post(url, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return res.data;
 }
 
 async function apiPutFormData(url: string, formData: FormData) {
   const res = await api.put(url, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return res.data;
 }
@@ -90,11 +98,11 @@ export default function AdminProjectTenderPage() {
   const params = useParams();
   const { user, loading: authLoading } = useAuth();
 
-  const [pathname, setPathname] = useState('/admin/projects');
+  const [pathname, setPathname] = useState("/admin/projects");
   const [loading, setLoading] = useState(true);
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [projectName, setProjectName] = useState('');
+  const [projectName, setProjectName] = useState("");
 
   // ── Modal state ──
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -104,17 +112,17 @@ export default function AdminProjectTenderPage() {
 
   // ── Create / Edit form state ──
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: 'Construction',
+    title: "",
+    description: "",
+    category: "Construction",
     budgetedAmount: 0,
-    submissionDeadline: '',
-    scopeOfWorks: '',
-    specifications: '',
+    submissionDeadline: "",
+    scopeOfWorks: "",
+    specifications: "",
     complianceRequirements: [] as string[],
     shortlistedContractors: [] as any[],
   });
-  const [newComplianceItem, setNewComplianceItem] = useState('');
+  const [newComplianceItem, setNewComplianceItem] = useState("");
 
   // ── File upload state ──
   const [scopeFiles, setScopeFiles] = useState<File[]>([]);
@@ -124,12 +132,12 @@ export default function AdminProjectTenderPage() {
 
   // ── Contractor form ──
   const [contractorFormData, setContractorFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    companyName: '',
-    companyAddress: '',
-    registrationNumber: '',
+    name: "",
+    email: "",
+    phone: "",
+    companyName: "",
+    companyAddress: "",
+    registrationNumber: "",
     categories: [] as string[],
   });
 
@@ -140,17 +148,17 @@ export default function AdminProjectTenderPage() {
   // ── Auth guards ──
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/');
+      router.replace("/");
       return;
     }
-    if (!authLoading && user && user.role !== 'admin') {
-      router.replace('/user/projects');
+    if (!authLoading && user && user.role !== "admin") {
+      router.replace("/user/projects");
       return;
     }
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (user && user.role === 'admin' && params.id) {
+    if (user && user.role === "admin" && params.id) {
       fetchProject();
       fetchTenders();
       fetchContractors();
@@ -164,7 +172,7 @@ export default function AdminProjectTenderPage() {
       const data = await apiClient.get(`/api/projects/${params.id}`);
       setProjectName(data.projectName);
     } catch (error) {
-      console.error('Error fetching project:', error);
+      console.error("Error fetching project:", error);
     }
   };
 
@@ -174,7 +182,7 @@ export default function AdminProjectTenderPage() {
       const data = await apiClient.get(`/api/projects/${params.id}/tenders`);
       setTenders(data);
     } catch (error) {
-      console.error('Error fetching tenders:', error);
+      console.error("Error fetching tenders:", error);
     } finally {
       setLoading(false);
     }
@@ -182,10 +190,10 @@ export default function AdminProjectTenderPage() {
 
   const fetchContractors = async () => {
     try {
-      const data = await apiClient.get('/api/contractors');
+      const data = await apiClient.get("/api/contractors");
       setContractors(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Error fetching contractors:', error);
+      console.error("Error fetching contractors:", error);
       setContractors([]);
     }
   };
@@ -194,39 +202,45 @@ export default function AdminProjectTenderPage() {
 
   const handleCreateTender = async () => {
     if (!formData.title || !formData.budgetedAmount) {
-      alert('Please fill in Title and Budgeted Amount');
+      alert("Please fill in Title and Budgeted Amount");
       return;
     }
 
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append('title', formData.title);
-      fd.append('description', formData.description);
-      fd.append('category', formData.category);
-      fd.append('budgetedAmount', String(formData.budgetedAmount));
+      fd.append("title", formData.title);
+      fd.append("description", formData.description);
+      fd.append("category", formData.category);
+      fd.append("budgetedAmount", String(formData.budgetedAmount));
       if (formData.submissionDeadline) {
-        fd.append('submissionDeadline', formData.submissionDeadline);
+        fd.append("submissionDeadline", formData.submissionDeadline);
       }
-      fd.append('scopeOfWorks', formData.scopeOfWorks);
-      fd.append('specifications', formData.specifications);
-      fd.append('complianceRequirements', JSON.stringify(formData.complianceRequirements));
-      fd.append('shortlistedContractors', JSON.stringify(formData.shortlistedContractors));
+      fd.append("scopeOfWorks", formData.scopeOfWorks);
+      fd.append("specifications", formData.specifications);
+      fd.append(
+        "complianceRequirements",
+        JSON.stringify(formData.complianceRequirements),
+      );
+      fd.append(
+        "shortlistedContractors",
+        JSON.stringify(formData.shortlistedContractors),
+      );
 
-      scopeFiles.forEach((f) => fd.append('scope_files', f));
-      specFiles.forEach((f) => fd.append('spec_files', f));
-      generalFiles.forEach((f) => fd.append('general_files', f));
+      scopeFiles.forEach((f) => fd.append("scope_files", f));
+      specFiles.forEach((f) => fd.append("spec_files", f));
+      generalFiles.forEach((f) => fd.append("general_files", f));
 
       await apiPostFormData(`/api/projects/${params.id}/tenders`, fd);
       await fetchTenders();
       closeCreateModal();
-      alert('Tender created successfully!');
+      alert("Tender created successfully!");
     } catch (error: any) {
-      console.error('Create tender error:', error);
+      console.error("Create tender error:", error);
       const message =
         error?.response?.data?.message ||
         error?.message ||
-        'Failed to create tender';
+        "Failed to create tender";
       alert(message);
     } finally {
       setSaving(false);
@@ -239,14 +253,14 @@ export default function AdminProjectTenderPage() {
     setEditingTender(tender);
     setFormData({
       title: tender.title,
-      description: tender.description || '',
+      description: tender.description || "",
       category: tender.category,
       budgetedAmount: tender.budgetedAmount,
       submissionDeadline: tender.submissionDeadline
-        ? new Date(tender.submissionDeadline).toISOString().split('T')[0]
-        : '',
-      scopeOfWorks: tender.scopeOfWorks || '',
-      specifications: tender.specifications || '',
+        ? new Date(tender.submissionDeadline).toISOString().split("T")[0]
+        : "",
+      scopeOfWorks: tender.scopeOfWorks || "",
+      specifications: tender.specifications || "",
       complianceRequirements: tender.complianceRequirements || [],
       shortlistedContractors: tender.shortlistedContractors || [],
     });
@@ -260,49 +274,57 @@ export default function AdminProjectTenderPage() {
   const handleUpdateTender = async () => {
     if (!editingTender) return;
     if (!formData.title || !formData.budgetedAmount) {
-      alert('Please fill in Title and Budgeted Amount');
+      alert("Please fill in Title and Budgeted Amount");
       return;
     }
 
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append('title', formData.title);
-      fd.append('description', formData.description);
-      fd.append('category', formData.category);
-      fd.append('budgetedAmount', String(formData.budgetedAmount));
+      fd.append("title", formData.title);
+      fd.append("description", formData.description);
+      fd.append("category", formData.category);
+      fd.append("budgetedAmount", String(formData.budgetedAmount));
       if (formData.submissionDeadline) {
-        fd.append('submissionDeadline', formData.submissionDeadline);
+        fd.append("submissionDeadline", formData.submissionDeadline);
       }
-      fd.append('scopeOfWorks', formData.scopeOfWorks);
-      fd.append('specifications', formData.specifications);
-      fd.append('complianceRequirements', JSON.stringify(formData.complianceRequirements));
-      fd.append('shortlistedContractors', JSON.stringify(formData.shortlistedContractors));
-      fd.append('removedDocumentIds', JSON.stringify(removedDocumentIds));
+      fd.append("scopeOfWorks", formData.scopeOfWorks);
+      fd.append("specifications", formData.specifications);
+      fd.append(
+        "complianceRequirements",
+        JSON.stringify(formData.complianceRequirements),
+      );
+      fd.append(
+        "shortlistedContractors",
+        JSON.stringify(formData.shortlistedContractors),
+      );
+      fd.append("removedDocumentIds", JSON.stringify(removedDocumentIds));
 
-      if (editingTender.status === 'Issued') {
-        fd.append('changeDescription', 'Tender details updated after issuance');
+      if (editingTender.status === "Issued") {
+        fd.append("changeDescription", "Tender details updated after issuance");
       }
 
-      scopeFiles.forEach((f) => fd.append('scope_files', f));
-      specFiles.forEach((f) => fd.append('spec_files', f));
-      generalFiles.forEach((f) => fd.append('general_files', f));
+      scopeFiles.forEach((f) => fd.append("scope_files", f));
+      specFiles.forEach((f) => fd.append("spec_files", f));
+      generalFiles.forEach((f) => fd.append("general_files", f));
 
       await apiPutFormData(`/api/tenders/${editingTender._id}`, fd);
       await fetchTenders();
       closeEditModal();
 
-      if (editingTender.status === 'Issued') {
-        alert('Tender updated successfully! All contractors have been notified of the changes.');
+      if (editingTender.status === "Issued") {
+        alert(
+          "Tender updated successfully! All contractors have been notified of the changes.",
+        );
       } else {
-        alert('Tender updated successfully!');
+        alert("Tender updated successfully!");
       }
     } catch (error: any) {
-      console.error('Update tender error:', error);
+      console.error("Update tender error:", error);
       const message =
         error?.response?.data?.message ||
         error?.message ||
-        'Failed to update tender';
+        "Failed to update tender";
       alert(message);
     } finally {
       setSaving(false);
@@ -312,27 +334,31 @@ export default function AdminProjectTenderPage() {
   // ── Issue tender ──
 
   const handleIssueTender = async (tenderId: string) => {
-    if (!confirm('Issue this tender? Invitations will be sent to all shortlisted contractors.'))
+    if (
+      !confirm(
+        "Issue this tender? Invitations will be sent to all shortlisted contractors.",
+      )
+    )
       return;
     try {
       await apiClient.post(`/api/tenders/${tenderId}/issue`);
       await fetchTenders();
-      alert('Tender issued successfully! Invitations sent.');
+      alert("Tender issued successfully! Invitations sent.");
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to issue tender');
+      alert(error?.response?.data?.message || "Failed to issue tender");
     }
   };
 
   // ── Delete tender ──
 
   const handleDeleteTender = async (tenderId: string) => {
-    if (!confirm('Delete this tender? This cannot be undone.')) return;
+    if (!confirm("Delete this tender? This cannot be undone.")) return;
     try {
       await apiClient.delete(`/api/tenders/${tenderId}`);
       await fetchTenders();
-      alert('Tender deleted.');
+      alert("Tender deleted.");
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to delete tender');
+      alert(error?.response?.data?.message || "Failed to delete tender");
     }
   };
 
@@ -344,26 +370,26 @@ export default function AdminProjectTenderPage() {
       !contractorFormData.email ||
       !contractorFormData.companyName
     ) {
-      alert('Please fill in required fields');
+      alert("Please fill in required fields");
       return;
     }
     setSaving(true);
     try {
-      await apiClient.post('/api/contractors', contractorFormData);
+      await apiClient.post("/api/contractors", contractorFormData);
       await fetchContractors();
       setIsContractorModalOpen(false);
       setContractorFormData({
-        name: '',
-        email: '',
-        phone: '',
-        companyName: '',
-        companyAddress: '',
-        registrationNumber: '',
+        name: "",
+        email: "",
+        phone: "",
+        companyName: "",
+        companyAddress: "",
+        registrationNumber: "",
         categories: [],
       });
-      alert('Contractor added!');
+      alert("Contractor added!");
     } catch (error: any) {
-      alert(error?.response?.data?.message || 'Failed to create contractor');
+      alert(error?.response?.data?.message || "Failed to create contractor");
     } finally {
       setSaving(false);
     }
@@ -387,12 +413,12 @@ export default function AdminProjectTenderPage() {
           contractorId: c._id,
           name: c.name,
           email: c.email,
-          phone: c.phone || '',
-          status: 'Invited',
+          phone: c.phone || "",
+          status: "Invited",
         }));
       setFormData({ ...formData, shortlistedContractors: selected });
     } catch {
-      alert('Failed to get AI recommendations');
+      alert("Failed to get AI recommendations");
     } finally {
       setLoadingAI(false);
     }
@@ -402,13 +428,13 @@ export default function AdminProjectTenderPage() {
 
   const toggleContractorSelection = (contractor: Contractor) => {
     const exists = formData.shortlistedContractors.find(
-      (c) => c.contractorId === contractor._id
+      (c) => c.contractorId === contractor._id,
     );
     if (exists) {
       setFormData({
         ...formData,
         shortlistedContractors: formData.shortlistedContractors.filter(
-          (c) => c.contractorId !== contractor._id
+          (c) => c.contractorId !== contractor._id,
         ),
       });
     } else {
@@ -420,8 +446,8 @@ export default function AdminProjectTenderPage() {
             contractorId: contractor._id,
             name: contractor.name,
             email: contractor.email,
-            phone: contractor.phone || '',
-            status: 'Invited',
+            phone: contractor.phone || "",
+            status: "Invited",
           },
         ],
       });
@@ -439,14 +465,14 @@ export default function AdminProjectTenderPage() {
         newComplianceItem.trim(),
       ],
     });
-    setNewComplianceItem('');
+    setNewComplianceItem("");
   };
 
   const removeComplianceItem = (index: number) => {
     setFormData({
       ...formData,
       complianceRequirements: formData.complianceRequirements.filter(
-        (_, i) => i !== index
+        (_, i) => i !== index,
       ),
     });
   };
@@ -466,13 +492,13 @@ export default function AdminProjectTenderPage() {
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
-      category: 'Construction',
+      title: "",
+      description: "",
+      category: "Construction",
       budgetedAmount: 0,
-      submissionDeadline: '',
-      scopeOfWorks: '',
-      specifications: '',
+      submissionDeadline: "",
+      scopeOfWorks: "",
+      specifications: "",
       complianceRequirements: [],
       shortlistedContractors: [],
     });
@@ -481,35 +507,35 @@ export default function AdminProjectTenderPage() {
     setGeneralFiles([]);
     setRemovedDocumentIds([]);
     setAiRecommendations(null);
-    setNewComplianceItem('');
+    setNewComplianceItem("");
   };
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Not set';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    if (!dateString) return "Not set";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, string> = {
-      Draft: 'bg-gray-100 text-gray-700',
-      Issued: 'bg-blue-100 text-blue-700',
-      RFI: 'bg-yellow-100 text-yellow-700',
-      'Bid Evaluation': 'bg-purple-100 text-purple-700',
-      Awarded: 'bg-green-100 text-green-700',
-      Cancelled: 'bg-red-100 text-red-700',
+      Draft: "bg-gray-100 text-gray-700",
+      Issued: "bg-blue-100 text-blue-700",
+      RFI: "bg-yellow-100 text-yellow-700",
+      "Bid Evaluation": "bg-purple-100 text-purple-700",
+      Awarded: "bg-green-100 text-green-700",
+      Cancelled: "bg-red-100 text-red-700",
     };
-    return badges[status] || 'bg-gray-100 text-gray-700';
+    return badges[status] || "bg-gray-100 text-gray-700";
   };
 
   const handleRemoveExistingDoc = (docId: string) => {
@@ -518,11 +544,11 @@ export default function AdminProjectTenderPage() {
 
   const getExistingDocs = (section: string) =>
     (editingTender?.documents || []).filter(
-      (d) => d.section === section && !removedDocumentIds.includes(d._id)
+      (d) => d.section === section && !removedDocumentIds.includes(d._id),
     );
 
   if (authLoading || loading) return <FitoutLoadingSpinner />;
-  if (!user || user.role !== 'admin') return <FitoutLoadingSpinner />;
+  if (!user || user.role !== "admin") return <FitoutLoadingSpinner />;
 
   // ═══════════════════════════════════════════════════════════
   // RENDER — Tender Form (shared between Create & Edit modals)
@@ -531,7 +557,7 @@ export default function AdminProjectTenderPage() {
   const renderTenderForm = (isEdit: boolean) => (
     <div className="space-y-6">
       {/* Issued notice */}
-      {isEdit && editingTender?.status === 'Issued' && (
+      {isEdit && editingTender?.status === "Issued" && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-start gap-2">
             <Send size={18} className="text-amber-600 mt-0.5" />
@@ -540,8 +566,8 @@ export default function AdminProjectTenderPage() {
                 Editing an Issued Tender
               </h4>
               <p className="text-xs text-amber-700 mt-1">
-                Changes will be saved and all shortlisted contractors will be automatically
-                notified via email.
+                Changes will be saved and all shortlisted contractors will be
+                automatically notified via email.
               </p>
             </div>
           </div>
@@ -551,11 +577,15 @@ export default function AdminProjectTenderPage() {
       {/* Basic Info */}
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Tender Title *</label>
+          <label className="block text-sm font-medium mb-1">
+            Tender Title *
+          </label>
           <input
             type="text"
             value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, title: e.target.value })
+            }
             className="w-full px-4 py-2 border rounded-lg"
             placeholder="e.g., Main Construction Works"
           />
@@ -565,7 +595,9 @@ export default function AdminProjectTenderPage() {
           <label className="block text-sm font-medium mb-1">Description</label>
           <textarea
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, description: e.target.value })
+            }
             rows={3}
             className="w-full px-4 py-2 border rounded-lg"
             placeholder="Brief description of the tender scope"
@@ -576,10 +608,19 @@ export default function AdminProjectTenderPage() {
           <label className="block text-sm font-medium mb-1">Category *</label>
           <select
             value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
+            }
             className="w-full px-4 py-2 border rounded-lg"
           >
-            {['Construction', 'Design', 'Joinery', 'MEP', 'Fixtures', 'Other'].map((cat) => (
+            {[
+              "Construction",
+              "Design",
+              "Joinery",
+              "MEP",
+              "Fixtures",
+              "Other",
+            ].map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
@@ -588,11 +629,13 @@ export default function AdminProjectTenderPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Budgeted Amount *</label>
+          <label className="block text-sm font-medium mb-1">
+            Budgeted Amount *
+          </label>
           <input
             type="number"
             min="0"
-            value={formData.budgetedAmount || ''}
+            value={formData.budgetedAmount || ""}
             onChange={(e) =>
               setFormData({
                 ...formData,
@@ -605,7 +648,9 @@ export default function AdminProjectTenderPage() {
         </div>
 
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Submission Deadline</label>
+          <label className="block text-sm font-medium mb-1">
+            Submission Deadline
+          </label>
           <input
             type="date"
             value={formData.submissionDeadline}
@@ -622,7 +667,9 @@ export default function AdminProjectTenderPage() {
         <label className="block text-sm font-medium mb-1">Scope of Works</label>
         <textarea
           value={formData.scopeOfWorks}
-          onChange={(e) => setFormData({ ...formData, scopeOfWorks: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, scopeOfWorks: e.target.value })
+          }
           rows={4}
           className="w-full px-4 py-2 border rounded-lg"
           placeholder="Detailed scope of works for this tender"
@@ -632,7 +679,7 @@ export default function AdminProjectTenderPage() {
             label="Scope of Works — Attachments"
             fieldName="scope_files"
             files={scopeFiles}
-            existingFiles={isEdit ? getExistingDocs('scope') : []}
+            existingFiles={isEdit ? getExistingDocs("scope") : []}
             onFilesChange={setScopeFiles}
             onRemoveExisting={isEdit ? handleRemoveExistingDoc : undefined}
             helpText="Drawings, BOQs, scope documents (PDF, DOC, DWG, XLS, etc.)"
@@ -642,7 +689,9 @@ export default function AdminProjectTenderPage() {
 
       {/* Technical Specifications + File Uploads */}
       <div>
-        <label className="block text-sm font-medium mb-1">Technical Specifications</label>
+        <label className="block text-sm font-medium mb-1">
+          Technical Specifications
+        </label>
         <textarea
           value={formData.specifications}
           onChange={(e) =>
@@ -657,7 +706,7 @@ export default function AdminProjectTenderPage() {
             label="Technical Specifications — Attachments"
             fieldName="spec_files"
             files={specFiles}
-            existingFiles={isEdit ? getExistingDocs('specifications') : []}
+            existingFiles={isEdit ? getExistingDocs("specifications") : []}
             onFilesChange={setSpecFiles}
             onRemoveExisting={isEdit ? handleRemoveExistingDoc : undefined}
             helpText="Specs, compliance docs, technical drawings"
@@ -670,7 +719,7 @@ export default function AdminProjectTenderPage() {
         label="Additional Documents"
         fieldName="general_files"
         files={generalFiles}
-        existingFiles={isEdit ? getExistingDocs('general') : []}
+        existingFiles={isEdit ? getExistingDocs("general") : []}
         onFilesChange={setGeneralFiles}
         onRemoveExisting={isEdit ? handleRemoveExistingDoc : undefined}
         helpText="Any other supporting documents"
@@ -678,14 +727,16 @@ export default function AdminProjectTenderPage() {
 
       {/* Compliance Requirements */}
       <div>
-        <label className="block text-sm font-medium mb-2">Compliance Requirements</label>
+        <label className="block text-sm font-medium mb-2">
+          Compliance Requirements
+        </label>
         <div className="flex gap-2 mb-2">
           <input
             type="text"
             value={newComplianceItem}
             onChange={(e) => setNewComplianceItem(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 addComplianceItem();
               }
@@ -725,7 +776,9 @@ export default function AdminProjectTenderPage() {
       {/* Contractor Shortlist */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <label className="block text-sm font-medium">Shortlist Contractors</label>
+          <label className="block text-sm font-medium">
+            Shortlist Contractors
+          </label>
           <div className="flex gap-2">
             <button
               type="button"
@@ -742,7 +795,7 @@ export default function AdminProjectTenderPage() {
               className="text-sm px-3 py-1 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 border border-purple-200"
             >
               <Sparkles size={14} className="inline mr-1" />
-              {loadingAI ? 'Loading...' : 'AI Recommendations'}
+              {loadingAI ? "Loading..." : "AI Recommendations"}
             </button>
           </div>
         </div>
@@ -767,7 +820,7 @@ export default function AdminProjectTenderPage() {
                       Score: {rec.score}/100 — {rec.reasoning}
                     </div>
                   </div>
-                )
+                ),
               )}
             </div>
           </div>
@@ -789,13 +842,13 @@ export default function AdminProjectTenderPage() {
             <div className="divide-y divide-gray-200">
               {contractors.map((contractor) => {
                 const isSelected = formData.shortlistedContractors.some(
-                  (c) => c.contractorId === contractor._id
+                  (c) => c.contractorId === contractor._id,
                 );
                 return (
                   <div
                     key={contractor._id}
                     className={`p-4 cursor-pointer hover:bg-gray-50 transition ${
-                      isSelected ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                      isSelected ? "bg-blue-50 border-l-4 border-blue-500" : ""
                     }`}
                     onClick={() => toggleContractorSelection(contractor)}
                   >
@@ -813,7 +866,8 @@ export default function AdminProjectTenderPage() {
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-medium text-gray-900">
-                          {contractor.performance?.projectsCompleted || 0} projects
+                          {contractor.performance?.projectsCompleted || 0}{" "}
+                          projects
                         </div>
                         <div className="text-xs text-gray-500">
                           Rating: {contractor.performance?.averageRating || 0}/5
@@ -854,7 +908,7 @@ export default function AdminProjectTenderPage() {
             onClick={() => router.push(`/admin/projects/${params.id}`)}
             className="text-gray-600 hover:text-black mb-4 flex items-center gap-2 text-sm"
           >
-            ← {projectName || 'Back to Project'}
+            ← {projectName || "Back to Project"}
           </button>
           <div className="flex items-center justify-between">
             <div>
@@ -889,31 +943,31 @@ export default function AdminProjectTenderPage() {
         {/* Tab Navigation */}
         <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
           <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
-            {['Overview', 'Tasks', 'Budget', 'Tender', 'Documents', 'Team'].map(
+            {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map(
               (tab) => (
                 <button
                   key={tab}
                   className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-                    tab === 'Tender'
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                    tab === "Tender"
+                      ? "border-black text-black"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                   onClick={() => {
-                    if (tab === 'Overview')
+                    if (tab === "Overview")
                       router.push(`/admin/projects/${params.id}`);
-                    if (tab === 'Tasks')
+                    if (tab === "Tasks")
                       router.push(`/admin/projects/${params.id}/tasks`);
-                    if (tab === 'Budget')
+                    if (tab === "Budget")
                       router.push(`/admin/projects/${params.id}/budget`);
-                    if (tab === 'Documents')
+                    if (tab === "Documents")
                       router.push(`/admin/projects/${params.id}/documents`);
-                    if (tab === 'Team')
+                    if (tab === "Team")
                       router.push(`/admin/projects/${params.id}/team`);
                   }}
                 >
                   {tab}
                 </button>
-              )
+              ),
             )}
           </div>
         </div>
@@ -1003,7 +1057,7 @@ export default function AdminProjectTenderPage() {
                       <td className="px-6 py-4">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
-                            tender.status
+                            tender.status,
                           )}`}
                         >
                           {tender.status}
@@ -1023,7 +1077,7 @@ export default function AdminProjectTenderPage() {
                           <button
                             onClick={() =>
                               router.push(
-                                `/admin/projects/${params.id}/tender/${tender._id}`
+                                `/admin/projects/${params.id}/tender/${tender._id}`,
                               )
                             }
                             className="text-blue-600 hover:text-blue-800 text-sm"
@@ -1031,7 +1085,7 @@ export default function AdminProjectTenderPage() {
                             View
                           </button>
 
-                          {['Draft', 'Issued'].includes(tender.status) && (
+                          {["Draft", "Issued"].includes(tender.status) && (
                             <button
                               onClick={() => openEditModal(tender)}
                               className="text-gray-600 hover:text-gray-800 text-sm"
@@ -1040,7 +1094,7 @@ export default function AdminProjectTenderPage() {
                             </button>
                           )}
 
-                          {tender.status === 'Draft' && (
+                          {tender.status === "Draft" && (
                             <button
                               onClick={() => handleIssueTender(tender._id)}
                               className="text-green-600 hover:text-green-800 text-sm"
@@ -1049,7 +1103,7 @@ export default function AdminProjectTenderPage() {
                             </button>
                           )}
 
-                          {tender.status === 'Draft' && (
+                          {tender.status === "Draft" && (
                             <button
                               onClick={() => handleDeleteTender(tender._id)}
                               className="text-red-600 hover:text-red-800 text-sm"
@@ -1096,7 +1150,7 @@ export default function AdminProjectTenderPage() {
                     disabled={saving}
                     className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                   >
-                    {saving ? 'Creating...' : 'Create Tender'}
+                    {saving ? "Creating..." : "Create Tender"}
                   </button>
                 </div>
               </div>
@@ -1113,7 +1167,8 @@ export default function AdminProjectTenderPage() {
                   <div>
                     <h2 className="text-2xl font-bold">Edit Tender</h2>
                     <p className="text-sm text-gray-500 mt-1">
-                      {editingTender.tenderNumber} — Status: {editingTender.status}
+                      {editingTender.tenderNumber} — Status:{" "}
+                      {editingTender.status}
                     </p>
                   </div>
                   <button
@@ -1139,10 +1194,10 @@ export default function AdminProjectTenderPage() {
                     className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                   >
                     {saving
-                      ? 'Saving...'
-                      : editingTender.status === 'Issued'
-                        ? 'Save & Notify Contractors'
-                        : 'Save Changes'}
+                      ? "Saving..."
+                      : editingTender.status === "Issued"
+                        ? "Save & Notify Contractors"
+                        : "Save Changes"}
                   </button>
                 </div>
               </div>
@@ -1184,7 +1239,9 @@ export default function AdminProjectTenderPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Email *</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Email *
+                      </label>
                       <input
                         type="email"
                         value={contractorFormData.email}
@@ -1198,7 +1255,9 @@ export default function AdminProjectTenderPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Phone</label>
+                      <label className="block text-sm font-medium mb-1">
+                        Phone
+                      </label>
                       <input
                         type="text"
                         value={contractorFormData.phone}
@@ -1274,7 +1333,7 @@ export default function AdminProjectTenderPage() {
                     disabled={saving}
                     className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg disabled:bg-gray-400"
                   >
-                    {saving ? 'Adding...' : 'Add Contractor'}
+                    {saving ? "Adding..." : "Add Contractor"}
                   </button>
                 </div>
               </div>

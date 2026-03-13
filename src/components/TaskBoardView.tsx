@@ -18,11 +18,11 @@ export default function TaskBoardView({
   onTaskClick,
   onStatusChange,
 }: TaskBoardViewProps) {
-  const columns: { status: TaskStatus; title: string}[] = [
-    { status: "Backlog", title: "Backlog"},
-    { status: "In Progress", title: "In Progress"},
-    { status: "Blocked", title: "Blocked"},
-    { status: "Done", title: "Done"},
+  const columns: { status: TaskStatus; title: string }[] = [
+    { status: "Backlog", title: "Backlog" },
+    { status: "In Progress", title: "In Progress" },
+    { status: "Blocked", title: "Blocked" },
+    { status: "Done", title: "Done" },
   ];
 
   const getTasksByStatus = (status: TaskStatus): Task[] => {
@@ -162,7 +162,7 @@ export default function TaskBoardView({
                       {/* Due Date */}
                       {task.dueDate && (
                         <span className="text-xs text-gray-500 self-start sm:self-auto">
-                           {formatDate(task.dueDate)}
+                          {formatDate(task.dueDate)}
                         </span>
                       )}
                     </div>

@@ -79,20 +79,22 @@ export default function UserProjectOverviewPage() {
 
       if (!roleId) {
         try {
-          const profile = await apiClient.get('/api/auth/me');
+          const profile = await apiClient.get("/api/auth/me");
           roleId = profile?.roleId;
         } catch {
           try {
-            const profileAlt = await apiClient.get('/api/users/me');
+            const profileAlt = await apiClient.get("/api/users/me");
             roleId = profileAlt?.roleId;
           } catch {
-            console.warn('Could not fetch roleId from profile endpoints');
+            console.warn("Could not fetch roleId from profile endpoints");
           }
         }
       }
 
       if (!roleId) {
-        console.warn("No roleId found on user object. Loading page without permission checks.");
+        console.warn(
+          "No roleId found on user object. Loading page without permission checks.",
+        );
         await fetchAllData();
         setLoading(false);
         return;
@@ -139,7 +141,7 @@ export default function UserProjectOverviewPage() {
   const fetchStats = async () => {
     try {
       const data = await apiClient.get(
-        `/api/projects/${params.id}/overview/stats`
+        `/api/projects/${params.id}/overview/stats`,
       );
       setStats(data);
     } catch (error) {
@@ -149,9 +151,7 @@ export default function UserProjectOverviewPage() {
 
   const fetchInsights = async () => {
     try {
-      const data = await apiClient.get(
-        `/api/projects/${params.id}/insights`
-      );
+      const data = await apiClient.get(`/api/projects/${params.id}/insights`);
       setInsights(data);
     } catch (error) {
       console.error("Error fetching insights:", error);
@@ -161,7 +161,7 @@ export default function UserProjectOverviewPage() {
   const fetchActivity = async () => {
     try {
       const data = await apiClient.get(
-        `/api/projects/${params.id}/activity?limit=10`
+        `/api/projects/${params.id}/activity?limit=10`,
       );
       setRecentActivity(data);
     } catch (error) {
@@ -172,7 +172,7 @@ export default function UserProjectOverviewPage() {
   const fetchDeadlines = async () => {
     try {
       const data = await apiClient.get(
-        `/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`
+        `/api/projects/${params.id}/overview/deadlines?days=${deadlineDays}`,
       );
       setUpcomingDeadlines(data);
     } catch (error) {
@@ -187,13 +187,22 @@ export default function UserProjectOverviewPage() {
   const permissions = roleData?.permissions || [];
   const hasRoleData = !!roleData;
 
-  const canViewTasks = !hasRoleData || hasPermission("projects-view-details-task", permissions);
-  const canViewBudget = !hasRoleData || hasPermission("projects-view-details-budget", permissions);
-  const canViewTender = !hasRoleData || hasPermission("projects-view-details-tender", permissions);
-  const canViewDocuments = !hasRoleData || hasPermission("projects-view-details-documents", permissions);
-  const canViewTeam = !hasRoleData || hasPermission("projects-view-details-team", permissions);
-  const canViewOverview = !hasRoleData || hasPermission("projects-view-details-overview", permissions);
-  const canAddCalendarEvent = !hasRoleData || hasPermission("projects-calendar-add", permissions);
+  const canViewTasks =
+    !hasRoleData || hasPermission("projects-view-details-task", permissions);
+  const canViewBudget =
+    !hasRoleData || hasPermission("projects-view-details-budget", permissions);
+  const canViewTender =
+    !hasRoleData || hasPermission("projects-view-details-tender", permissions);
+  const canViewDocuments =
+    !hasRoleData ||
+    hasPermission("projects-view-details-documents", permissions);
+  const canViewTeam =
+    !hasRoleData || hasPermission("projects-view-details-team", permissions);
+  const canViewOverview =
+    !hasRoleData ||
+    hasPermission("projects-view-details-overview", permissions);
+  const canAddCalendarEvent =
+    !hasRoleData || hasPermission("projects-calendar-add", permissions);
 
   return (
     <div className="min-h-screen bg-gray-50">

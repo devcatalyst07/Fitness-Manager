@@ -375,7 +375,9 @@ export default function ThreadDetailModal({
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600">
                 <div className="flex items-center gap-1">
                   <User size={14} />
-                  <span className="font-medium break-words">{thread.createdByName}</span>
+                  <span className="font-medium break-words">
+                    {thread.createdByName}
+                  </span>
                 </div>
                 <span className="hidden sm:inline">•</span>
                 <div className="flex items-center gap-1">

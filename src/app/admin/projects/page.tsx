@@ -40,22 +40,22 @@ export default function ProjectsPage() {
 
   // Role-based redirect
   useEffect(() => {
-    if (!authLoading && user && user.role !== 'admin') {
-      console.log('⚠️ User role is not admin, redirecting');
-      router.replace('/user/projects');
+    if (!authLoading && user && user.role !== "admin") {
+      console.log("⚠️ User role is not admin, redirecting");
+      router.replace("/user/projects");
     }
   }, [user, authLoading, router]);
 
   // Fetch data when user is ready
   useEffect(() => {
-    if (user && user.role === 'admin') {
+    if (user && user.role === "admin") {
       fetchProjects();
     }
   }, [user]);
 
   const fetchProjects = async () => {
     try {
-      const data = await apiClient.get<Project[]>('/api/projects');
+      const data = await apiClient.get<Project[]>("/api/projects");
       setProjects(data);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -81,11 +81,11 @@ export default function ProjectsPage() {
     setIsCreateModalOpen(false);
   };
 
-  if (authLoading || (loading && user?.role === 'admin')) {
+  if (authLoading || (loading && user?.role === "admin")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'admin') {
+  if (user && user.role !== "admin") {
     return <FitoutLoadingSpinner />;
   }
 

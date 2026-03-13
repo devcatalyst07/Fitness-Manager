@@ -130,7 +130,8 @@ export default function UserProjectTasksPage() {
   const permissions = roleData?.permissions || [];
   const hasRoleData = !!roleData;
   const canViewOverview =
-    !hasRoleData || hasPermission("projects-view-details-overview", permissions);
+    !hasRoleData ||
+    hasPermission("projects-view-details-overview", permissions);
   const canViewTasks =
     !hasRoleData || hasPermission("projects-view-details-task", permissions);
   const canViewBudget =
@@ -138,7 +139,8 @@ export default function UserProjectTasksPage() {
   const canViewTender =
     !hasRoleData || hasPermission("projects-view-details-tender", permissions);
   const canViewDocuments =
-    !hasRoleData || hasPermission("projects-view-details-documents", permissions);
+    !hasRoleData ||
+    hasPermission("projects-view-details-documents", permissions);
   const canViewTeam =
     !hasRoleData || hasPermission("projects-view-details-team", permissions);
 
@@ -187,7 +189,9 @@ export default function UserProjectTasksPage() {
             )}
             {canViewBudget && (
               <button
-                onClick={() => router.push(`/user/projects/${params.id}/budget`)}
+                onClick={() =>
+                  router.push(`/user/projects/${params.id}/budget`)
+                }
                 className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               >
                 Budget
@@ -195,7 +199,9 @@ export default function UserProjectTasksPage() {
             )}
             {canViewTender && (
               <button
-                onClick={() => router.push(`/user/projects/${params.id}/tender`)}
+                onClick={() =>
+                  router.push(`/user/projects/${params.id}/tender`)
+                }
                 className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               >
                 Tender
@@ -203,7 +209,9 @@ export default function UserProjectTasksPage() {
             )}
             {canViewDocuments && (
               <button
-                onClick={() => router.push(`/user/projects/${params.id}/documents`)}
+                onClick={() =>
+                  router.push(`/user/projects/${params.id}/documents`)
+                }
                 className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               >
                 Documents

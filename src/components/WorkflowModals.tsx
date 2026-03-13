@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { X, Plus, Trash2, Edit2, Upload, GripVertical } from 'lucide-react';
-import { responsive } from '@/utils/responsive';
+import React, { useState } from "react";
+import { X, Plus, Trash2, Edit2, Upload, GripVertical } from "lucide-react";
+import { responsive } from "@/utils/responsive";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface Workflow {
   _id: string;
@@ -22,7 +23,7 @@ interface PredefinedTask {
   _id: string;
   title: string;
   description?: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  priority: "Low" | "Medium" | "High" | "Critical";
   estimateHours?: number;
   order: number;
 }
@@ -43,39 +44,39 @@ export function EditWorkflowModal({
 }: EditWorkflowModalProps) {
   const [formData, setFormData] = useState({
     name: workflow.name,
-    description: workflow.description || '',
+    description: workflow.description || "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    setError('');
+    setError("");
 
     if (!formData.name) {
-      setError('Workflow name is required');
+      setError("Workflow name is required");
       return;
     }
 
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/scopes/${scopeId}/workflows/${workflow._id}`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || 'Failed to update workflow');
+        setError(data.message || "Failed to update workflow");
         setLoading(false);
         return;
       }
@@ -83,8 +84,8 @@ export function EditWorkflowModal({
       onSuccess();
       onClose();
     } catch (err) {
-      console.error('Update workflow error:', err);
-      setError('Failed to update workflow');
+      console.error("Update workflow error:", err);
+      setError("Failed to update workflow");
       setLoading(false);
     }
   };
@@ -116,7 +117,9 @@ export function EditWorkflowModal({
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
               />
             </div>
@@ -127,7 +130,9 @@ export function EditWorkflowModal({
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black resize-none"
               />
@@ -135,10 +140,7 @@ export function EditWorkflowModal({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-            <button
-              onClick={onClose}
-              className={responsive.secondaryButton}
-            >
+            <button onClick={onClose} className={responsive.secondaryButton}>
               Cancel
             </button>
             <button
@@ -146,7 +148,7 @@ export function EditWorkflowModal({
               disabled={loading}
               className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
             >
-              {loading ? 'Updating...' : 'Update'}
+              {loading ? "Updating..." : "Update"}
             </button>
           </div>
         </div>
@@ -175,7 +177,7 @@ export function ManageTasksModal({
     phaseId: string;
     taskId: string;
   } | null>(null);
-  const [newPhaseName, setNewPhaseName] = useState('');
+  const [newPhaseName, setNewPhaseName] = useState("");
   const [isAddingPhase, setIsAddingPhase] = useState(false);
   const [showImportExcel, setShowImportExcel] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -185,32 +187,32 @@ export function ManageTasksModal({
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/scopes/${scopeId}/workflows/${workflow._id}/phases`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             name: newPhaseName,
             order: phases.length,
           }),
-        }
+        },
       );
 
       if (response.ok) {
         const data = await response.json();
         setPhases([...phases, data.phase]);
-        setNewPhaseName('');
+        setNewPhaseName("");
         setIsAddingPhase(false);
         onSuccess();
       }
     } catch (error) {
-      console.error('Add phase error:', error);
-      alert('Failed to add phase');
+      console.error("Add phase error:", error);
+      alert("Failed to add phase");
     } finally {
       setSaving(false);
     }
@@ -219,17 +221,17 @@ export function ManageTasksModal({
   const handleUpdatePhase = async (phaseId: string, newName: string) => {
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/scopes/${scopeId}/workflows/${workflow._id}/phases/${phaseId}`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ name: newName }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -237,25 +239,25 @@ export function ManageTasksModal({
         setEditingPhase(null);
       }
     } catch (error) {
-      console.error('Update phase error:', error);
-      alert('Failed to update phase');
+      console.error("Update phase error:", error);
+      alert("Failed to update phase");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeletePhase = async (phaseId: string) => {
-    if (!confirm('Delete this phase and all its tasks?')) return;
+    if (!confirm("Delete this phase and all its tasks?")) return;
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/scopes/${scopeId}/workflows/${workflow._id}/phases/${phaseId}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
@@ -263,8 +265,8 @@ export function ManageTasksModal({
         onSuccess();
       }
     } catch (error) {
-      console.error('Delete phase error:', error);
-      alert('Failed to delete phase');
+      console.error("Delete phase error:", error);
+      alert("Failed to delete phase");
     } finally {
       setSaving(false);
     }
@@ -275,65 +277,66 @@ export function ManageTasksModal({
     if (!phase) return;
 
     // Open add task form
-    const taskTitle = prompt('Enter task title:');
+    const taskTitle = prompt("Enter task title:");
     if (!taskTitle) return;
 
-    const taskDescription = prompt('Enter task description (optional):');
-    const priority = prompt('Enter priority (Low/Medium/High/Critical):') || 'Medium';
-    const estimateHours = prompt('Enter estimate hours (optional):');
+    const taskDescription = prompt("Enter task description (optional):");
+    const priority =
+      prompt("Enter priority (Low/Medium/High/Critical):") || "Medium";
+    const estimateHours = prompt("Enter estimate hours (optional):");
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/scopes/${scopeId}/workflows/${workflow._id}/phases/${phaseId}/tasks`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             title: taskTitle,
-            description: taskDescription || '',
+            description: taskDescription || "",
             priority,
             estimateHours: estimateHours ? parseInt(estimateHours) : undefined,
             order: phase.tasks.length,
           }),
-        }
+        },
       );
 
       if (response.ok) {
         onSuccess();
       }
     } catch (error) {
-      console.error('Add task error:', error);
-      alert('Failed to add task');
+      console.error("Add task error:", error);
+      alert("Failed to add task");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteTask = async (phaseId: string, taskId: string) => {
-    if (!confirm('Delete this task?')) return;
+    if (!confirm("Delete this task?")) return;
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch(
         `${API_URL}/api/scopes/${scopeId}/workflows/${workflow._id}/phases/${phaseId}/tasks/${taskId}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       if (response.ok) {
         onSuccess();
       }
     } catch (error) {
-      console.error('Delete task error:', error);
-      alert('Failed to delete task');
+      console.error("Delete task error:", error);
+      alert("Failed to delete task");
     } finally {
       setSaving(false);
     }
@@ -342,7 +345,7 @@ export function ManageTasksModal({
   const handleImportExcel = async (file: File) => {
     // This would parse the Excel file and import tasks
     // For now, we'll show a placeholder
-    alert('Excel import functionality will be implemented. File: ' + file.name);
+    alert("Excel import functionality will be implemented. File: " + file.name);
     setShowImportExcel(false);
   };
 
@@ -390,9 +393,11 @@ export function ManageTasksModal({
                     <input
                       type="text"
                       defaultValue={phase.name}
-                      onBlur={(e) => handleUpdatePhase(phase._id, e.target.value)}
+                      onBlur={(e) =>
+                        handleUpdatePhase(phase._id, e.target.value)
+                      }
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           handleUpdatePhase(phase._id, e.currentTarget.value);
                         }
                       }}
@@ -400,7 +405,9 @@ export function ManageTasksModal({
                       className="flex-1 px-3 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-black"
                     />
                   ) : (
-                    <h3 className="font-semibold text-gray-900">{phase.name}</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {phase.name}
+                    </h3>
                   )}
 
                   <div className="flex items-center gap-2">
@@ -442,7 +449,9 @@ export function ManageTasksModal({
                           className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900">{task.title}</div>
+                            <div className="font-medium text-gray-900">
+                              {task.title}
+                            </div>
                             {task.description && (
                               <div className="text-sm text-gray-600 mt-1">
                                 {task.description}
@@ -451,13 +460,13 @@ export function ManageTasksModal({
                             <div className="flex items-center gap-3 mt-2">
                               <span
                                 className={`inline-block px-2 py-0.5 rounded text-xs ${
-                                  task.priority === 'Critical'
-                                    ? 'bg-red-100 text-red-700'
-                                    : task.priority === 'High'
-                                    ? 'bg-orange-100 text-orange-700'
-                                    : task.priority === 'Medium'
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : 'bg-gray-100 text-gray-700'
+                                  task.priority === "Critical"
+                                    ? "bg-red-100 text-red-700"
+                                    : task.priority === "High"
+                                      ? "bg-orange-100 text-orange-700"
+                                      : task.priority === "Medium"
+                                        ? "bg-yellow-100 text-yellow-700"
+                                        : "bg-gray-100 text-gray-700"
                                 }`}
                               >
                                 {task.priority}
@@ -472,7 +481,9 @@ export function ManageTasksModal({
 
                           <div className="flex items-center gap-2 ml-4">
                             <button
-                              onClick={() => handleDeleteTask(phase._id, task._id)}
+                              onClick={() =>
+                                handleDeleteTask(phase._id, task._id)
+                              }
                               className="p-2 text-gray-600 hover:text-red-600 rounded transition-colors"
                               title="Delete task"
                             >
@@ -497,10 +508,10 @@ export function ManageTasksModal({
                   placeholder="Enter phase name..."
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddPhase();
-                    if (e.key === 'Escape') {
+                    if (e.key === "Enter") handleAddPhase();
+                    if (e.key === "Escape") {
                       setIsAddingPhase(false);
-                      setNewPhaseName('');
+                      setNewPhaseName("");
                     }
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
@@ -516,7 +527,7 @@ export function ManageTasksModal({
                   <button
                     onClick={() => {
                       setIsAddingPhase(false);
-                      setNewPhaseName('');
+                      setNewPhaseName("");
                     }}
                     className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
@@ -552,8 +563,9 @@ export function ManageTasksModal({
           <div className="bg-white w-full max-w-md rounded-lg p-4 sm:p-6">
             <h3 className="text-lg font-bold mb-4">Import Tasks from Excel</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Upload an Excel file with your predefined tasks. The file should have
-              columns: Phase, Task Title, Description, Priority, Estimate Hours.
+              Upload an Excel file with your predefined tasks. The file should
+              have columns: Phase, Task Title, Description, Priority, Estimate
+              Hours.
             </p>
             <input
               type="file"

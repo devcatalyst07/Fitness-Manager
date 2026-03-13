@@ -1,9 +1,19 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { X, Calendar, Flag, Users, FileText, Clock, Layers, Link2, AlertCircle } from 'lucide-react';
-import { Task } from '@/types/task.types';
-import { responsive } from '@/utils/responsive';
+import React, { useState, useEffect } from "react";
+import {
+  X,
+  Calendar,
+  Flag,
+  Users,
+  FileText,
+  Clock,
+  Layers,
+  Link2,
+  AlertCircle,
+} from "lucide-react";
+import { Task } from "@/types/task.types";
+import { responsive } from "@/utils/responsive";
 
 interface TeamMember {
   _id: string;
@@ -34,14 +44,14 @@ interface FormData {
   description: string;
   status: string;
   priority: string;
-  taskType: 'Task' | 'Deliverable' | 'Milestone';
+  taskType: "Task" | "Deliverable" | "Milestone";
   assignees: Assignee[];
   startDate: string;
   dueDate: string;
   progress: number;
   duration: number;
   phaseId: string | null;
-  dependencies: { taskId: string; type: 'FS' | 'SS' }[];
+  dependencies: { taskId: string; type: "FS" | "SS" }[];
 }
 
 interface TaskCreateModalProps {
@@ -78,12 +88,14 @@ export default function TaskCreateModal({
   if (!isOpen) return null;
 
   const handleAddAssignee = (email: string) => {
-    const selectedMember = teamMembers.find((member) => member.userId.email === email);
+    const selectedMember = teamMembers.find(
+      (member) => member.userId.email === email,
+    );
 
     if (!selectedMember) return;
 
     const alreadyAdded = selectedAssignees.some(
-      (a) => a.email === selectedMember.userId.email
+      (a) => a.email === selectedMember.userId.email,
     );
 
     if (alreadyAdded) {
@@ -119,41 +131,41 @@ export default function TaskCreateModal({
       ...formData,
       dependencies: [
         ...formData.dependencies,
-        { taskId: '', type: 'FS' as const }
-      ]
+        { taskId: "", type: "FS" as const },
+      ],
     });
   };
 
   const handleRemoveDependency = (index: number) => {
     setFormData({
       ...formData,
-      dependencies: formData.dependencies.filter((_, i) => i !== index)
+      dependencies: formData.dependencies.filter((_, i) => i !== index),
     });
   };
 
   const handleDependencyChange = (
     index: number,
-    field: 'taskId' | 'type',
-    value: string
+    field: "taskId" | "type",
+    value: string,
   ) => {
     const updated = [...formData.dependencies];
-    if (field === 'taskId') {
+    if (field === "taskId") {
       updated[index].taskId = value;
     } else {
-      updated[index].type = value as 'FS' | 'SS';
+      updated[index].type = value as "FS" | "SS";
     }
     setFormData({
       ...formData,
-      dependencies: updated
+      dependencies: updated,
     });
   };
 
   const getAvailableTasks = (currentIndex: number) => {
     const selectedTaskIds = formData.dependencies
       .filter((_, i) => i !== currentIndex)
-      .map(d => d.taskId);
-    
-    return tasks.filter(t => !selectedTaskIds.includes(t._id));
+      .map((d) => d.taskId);
+
+    return tasks.filter((t) => !selectedTaskIds.includes(t._id));
   };
 
   return (
@@ -194,7 +206,9 @@ export default function TaskCreateModal({
               <input
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 placeholder="Enter task title..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
@@ -208,7 +222,9 @@ export default function TaskCreateModal({
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Provide task details and requirements..."
                 rows={4}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
@@ -224,10 +240,14 @@ export default function TaskCreateModal({
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
                 >
-                  <option value="" disabled>Select status</option>
+                  <option value="" disabled>
+                    Select status
+                  </option>
                   <option value="Backlog">📋 Backlog</option>
                   <option value="In Progress">🔄 In Progress</option>
                   <option value="Blocked">⚠️ Blocked</option>
@@ -242,10 +262,14 @@ export default function TaskCreateModal({
                 </label>
                 <select
                   value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, priority: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
                 >
-                  <option value="" disabled>Select priority</option>
+                  <option value="" disabled>
+                    Select priority
+                  </option>
                   <option value="Low">🟢 Low</option>
                   <option value="Medium">🟡 Medium</option>
                   <option value="High">🟠 High</option>
@@ -262,11 +286,14 @@ export default function TaskCreateModal({
                 <select
                   value={formData.taskType}
                   onChange={(e) => {
-                    const newType = e.target.value as 'Task' | 'Deliverable' | 'Milestone';
-                    setFormData({ 
-                      ...formData, 
+                    const newType = e.target.value as
+                      | "Task"
+                      | "Deliverable"
+                      | "Milestone";
+                    setFormData({
+                      ...formData,
                       taskType: newType,
-                      duration: newType === 'Milestone' ? 1 : formData.duration
+                      duration: newType === "Milestone" ? 1 : formData.duration,
                     });
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
@@ -286,8 +313,13 @@ export default function TaskCreateModal({
                   Phase
                 </label>
                 <select
-                  value={formData.phaseId || ''}
-                  onChange={(e) => setFormData({ ...formData, phaseId: e.target.value || null })}
+                  value={formData.phaseId || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phaseId: e.target.value || null,
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
                 >
                   <option value="">No Phase (Unassigned)</option>
@@ -305,21 +337,26 @@ export default function TaskCreateModal({
               <div>
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                   <Clock size={16} className="text-gray-500" />
-                  Duration (Working Days) <span className="text-red-500">*</span>
+                  Duration (Working Days){" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   min="0"
-                  max={formData.taskType === 'Milestone' ? 1 : undefined}
+                  max={formData.taskType === "Milestone" ? 1 : undefined}
                   value={formData.duration}
                   onChange={(e) => {
                     const value = parseInt(e.target.value) || 0;
-                    const maxValue = formData.taskType === 'Milestone' ? 1 : value;
-                    setFormData({ ...formData, duration: Math.min(value, maxValue) });
+                    const maxValue =
+                      formData.taskType === "Milestone" ? 1 : value;
+                    setFormData({
+                      ...formData,
+                      duration: Math.min(value, maxValue),
+                    });
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
-                {formData.taskType === 'Milestone' && (
+                {formData.taskType === "Milestone" && (
                   <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                     <AlertCircle size={12} />
                     Milestones can have a maximum duration of 1 day
@@ -338,19 +375,32 @@ export default function TaskCreateModal({
                 <div className="flex items-center gap-2">
                   <Link2 size={16} className="text-gray-600" />
                   <span className="text-sm font-semibold text-gray-700">
-                    Dependencies {formData.dependencies.length > 0 && `(${formData.dependencies.length})`}
+                    Dependencies{" "}
+                    {formData.dependencies.length > 0 &&
+                      `(${formData.dependencies.length})`}
                   </span>
                 </div>
-                <span className="text-gray-400">{dependenciesExpanded ? '▼' : '▶'}</span>
+                <span className="text-gray-400">
+                  {dependenciesExpanded ? "▼" : "▶"}
+                </span>
               </button>
 
               {dependenciesExpanded && (
                 <div className="p-4 space-y-3">
                   {formData.dependencies.map((dep, index) => (
-                    <div key={index} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-start">
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-start"
+                    >
                       <select
                         value={dep.taskId}
-                        onChange={(e) => handleDependencyChange(index, 'taskId', e.target.value)}
+                        onChange={(e) =>
+                          handleDependencyChange(
+                            index,
+                            "taskId",
+                            e.target.value,
+                          )
+                        }
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
                         <option value="">-- Select Task --</option>
@@ -363,7 +413,9 @@ export default function TaskCreateModal({
 
                       <select
                         value={dep.type}
-                        onChange={(e) => handleDependencyChange(index, 'type', e.target.value)}
+                        onChange={(e) =>
+                          handleDependencyChange(index, "type", e.target.value)
+                        }
                         className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
                         <option value="FS">Finish→Start</option>
@@ -390,8 +442,8 @@ export default function TaskCreateModal({
                   </button>
 
                   <p className="text-xs text-gray-500 mt-2">
-                    Dependencies determine when this task can start based on other tasks. 
-                    Tasks can depend on tasks in any phase.
+                    Dependencies determine when this task can start based on
+                    other tasks. Tasks can depend on tasks in any phase.
                   </p>
                 </div>
               )}
@@ -403,17 +455,17 @@ export default function TaskCreateModal({
                 <Users size={16} className="text-gray-500" />
                 Assign Team Members <span className="text-red-500">*</span>
               </label>
-              
+
               <select
                 onChange={(e) => {
                   handleAddAssignee(e.target.value);
-                  e.target.value = '';
+                  e.target.value = "";
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
               >
                 <option value="">+ Add team member</option>
                 {teamMembers
-                  .filter((member) => member.status === 'active')
+                  .filter((member) => member.status === "active")
                   .map((member) => (
                     <option key={member._id} value={member.userId.email}>
                       {member.userId.name}
@@ -433,9 +485,16 @@ export default function TaskCreateModal({
                         className="flex items-center gap-2 bg-white border border-blue-200 px-3 py-2 rounded-lg shadow-sm"
                       >
                         <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                          {assignee.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                          {assignee.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)}
                         </div>
-                        <span className="text-sm font-medium text-gray-900">{assignee.name}</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {assignee.name}
+                        </span>
                         <button
                           type="button"
                           onClick={() => handleRemoveAssignee(index)}
@@ -467,7 +526,9 @@ export default function TaskCreateModal({
                 <input
                   type="date"
                   value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -483,7 +544,9 @@ export default function TaskCreateModal({
                 <input
                   type="date"
                   value={formData.dueDate}
-                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dueDate: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -504,7 +567,12 @@ export default function TaskCreateModal({
                   min="0"
                   max="100"
                   value={formData.progress}
-                  onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      progress: parseInt(e.target.value) || 0,
+                    })
+                  }
                   className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                 />
                 <input
@@ -512,7 +580,12 @@ export default function TaskCreateModal({
                   min="0"
                   max="100"
                   value={formData.progress}
-                  onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      progress: parseInt(e.target.value) || 0,
+                    })
+                  }
                   className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -529,15 +602,14 @@ export default function TaskCreateModal({
         {/* Footer */}
         <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50">
           <div className="flex flex-col-reverse sm:flex-row gap-3">
-            <button
-              onClick={onClose}
-              className={responsive.secondaryButton}
-            >
+            <button onClick={onClose} className={responsive.secondaryButton}>
               Cancel
             </button>
             <button
               onClick={onSubmit}
-              disabled={saving || !formData.title || formData.assignees.length === 0}
+              disabled={
+                saving || !formData.title || formData.assignees.length === 0
+              }
               className="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl 
                           hover:bg-blue-700 transition-all 
                           disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -548,7 +620,7 @@ export default function TaskCreateModal({
                   Creating...
                 </span>
               ) : (
-                'Create Task'
+                "Create Task"
               )}
             </button>
           </div>

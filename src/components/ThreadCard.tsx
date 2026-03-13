@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { 
-  MessageSquare, 
-  Heart, 
-  Pin, 
-  MoreVertical, 
-  Edit, 
+import React, { useState } from "react";
+import {
+  MessageSquare,
+  Heart,
+  Pin,
+  MoreVertical,
+  Edit,
   Trash2,
   Paperclip,
-  Calendar
-} from 'lucide-react';
-import { apiClient } from '@/lib/axios';
+  Calendar,
+} from "lucide-react";
+import { apiClient } from "@/lib/axios";
 
 interface Thread {
   _id: string;
@@ -42,7 +42,13 @@ interface ThreadCardProps {
   onDelete: (threadId: string) => void;
 }
 
-export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, onDelete }: ThreadCardProps) {
+export default function ThreadCard({
+  thread,
+  currentUserId,
+  onClick,
+  onUpdate,
+  onDelete,
+}: ThreadCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(thread.likes.length);
@@ -66,7 +72,7 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
       setIsLiked(data.isLiked);
       setLikeCount(data.likes);
     } catch (error) {
-      console.error('Like error:', error);
+      console.error("Like error:", error);
       setIsLiked(previousLiked);
       setLikeCount(previousCount);
     } finally {
@@ -76,7 +82,11 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this thread? All comments will also be deleted.')) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this thread? All comments will also be deleted.",
+      )
+    ) {
       return;
     }
 
@@ -84,8 +94,9 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
       await apiClient.delete(`/api/threads/${thread._id}`);
       onDelete(thread._id);
     } catch (error: any) {
-      console.error('Delete error:', error);
-      const message = error?.response?.data?.message || 'Failed to delete thread';
+      console.error("Delete error:", error);
+      const message =
+        error?.response?.data?.message || "Failed to delete thread";
       alert(message);
     }
     setShowMenu(false);
@@ -101,21 +112,25 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
       const hours = Math.floor(diff / (1000 * 60 * 60));
       if (hours === 0) {
         const minutes = Math.floor(diff / (1000 * 60));
-        return minutes === 0 ? 'Just now' : `${minutes}m ago`;
+        return minutes === 0 ? "Just now" : `${minutes}m ago`;
       }
       return `${hours}h ago`;
     } else if (days === 1) {
-      return 'Yesterday';
+      return "Yesterday";
     } else if (days < 7) {
       return `${days}d ago`;
     } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
     }
   };
 
   const truncateContent = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    return text.substring(0, maxLength) + "...";
   };
 
   return (
@@ -136,7 +151,9 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
             {thread.title}
           </h3>
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500">
-            <span className="font-medium text-gray-700 break-words">{thread.createdByName}</span>
+            <span className="font-medium text-gray-700 break-words">
+              {thread.createdByName}
+            </span>
             <span className="hidden sm:inline">•</span>
             <div className="flex items-center gap-1">
               <Calendar size={12} />
@@ -199,7 +216,10 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
       {thread.attachments && thread.attachments.length > 0 && (
         <div className="mb-3 flex items-center gap-2 text-xs sm:text-sm text-gray-600">
           <Paperclip size={14} />
-          <span>{thread.attachments.length} attachment{thread.attachments.length > 1 ? 's' : ''}</span>
+          <span>
+            {thread.attachments.length} attachment
+            {thread.attachments.length > 1 ? "s" : ""}
+          </span>
         </div>
       )}
 
@@ -209,10 +229,10 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
             onClick={handleLike}
             disabled={isProcessing}
             className={`flex items-center gap-1.5 transition-colors ${
-              isLiked ? 'text-red-600' : 'text-gray-600 hover:text-red-600'
+              isLiked ? "text-red-600" : "text-gray-600 hover:text-red-600"
             }`}
           >
-            <Heart size={18} className={isLiked ? 'fill-current' : ''} />
+            <Heart size={18} className={isLiked ? "fill-current" : ""} />
             <span className="text-sm font-medium">{likeCount}</span>
           </button>
 

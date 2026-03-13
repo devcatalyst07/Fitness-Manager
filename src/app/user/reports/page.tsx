@@ -19,7 +19,8 @@ import {
   type BrandReportData,
 } from "@/utils/pdfGenerator";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface Project {
   _id: string;
@@ -57,15 +58,15 @@ export default function UserReportsPage() {
 
   // Role-based redirect
   useEffect(() => {
-    if (!authLoading && user && user.role === 'admin') {
-      console.log('⚠️ Admin accessing user page, redirecting');
-      router.replace('/admin/reports');
+    if (!authLoading && user && user.role === "admin") {
+      console.log("⚠️ Admin accessing user page, redirecting");
+      router.replace("/admin/reports");
     }
   }, [user, authLoading, router]);
 
   // Fetch permissions when user is ready
   useEffect(() => {
-    if (user && user.role === 'user') {
+    if (user && user.role === "user") {
       if (user.roleId) {
         fetchRolePermissions(user.roleId);
       } else {
@@ -99,8 +100,8 @@ export default function UserReportsPage() {
   const fetchData = async () => {
     try {
       const [projectsData, brandsData] = await Promise.all([
-        apiClient.get<Project[]>('/api/admin/reports/projects'),
-        apiClient.get<Brand[]>('/api/admin/reports/brands'),
+        apiClient.get<Project[]>("/api/admin/reports/projects"),
+        apiClient.get<Brand[]>("/api/admin/reports/brands"),
       ]);
 
       setProjects(projectsData);
@@ -113,9 +114,12 @@ export default function UserReportsPage() {
   const downloadPortfolioCSV = async () => {
     setGeneratingReport("portfolio-csv");
     try {
-      const response = await fetch(`${API_URL}/api/admin/reports/portfolio/csv`, {
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/portfolio/csv`,
+        {
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         const blob = await response.blob();
@@ -139,7 +143,9 @@ export default function UserReportsPage() {
   const generatePortfolioPDFReport = async () => {
     setGeneratingReport("portfolio-pdf");
     try {
-      const data = await apiClient.get<PortfolioReportData>('/api/admin/reports/portfolio/pdf-data');
+      const data = await apiClient.get<PortfolioReportData>(
+        "/api/admin/reports/portfolio/pdf-data",
+      );
       generatePortfolioPDF(data);
     } catch (error) {
       console.error("Generate PDF error:", error);
@@ -152,9 +158,12 @@ export default function UserReportsPage() {
   const downloadProjectCSV = async (projectId: string, projectName: string) => {
     setGeneratingReport(`project-csv-${projectId}`);
     try {
-      const response = await fetch(`${API_URL}/api/admin/reports/project/${projectId}/csv`, {
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/project/${projectId}/csv`,
+        {
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         const blob = await response.blob();
@@ -178,7 +187,9 @@ export default function UserReportsPage() {
   const generateProjectPDFReport = async (projectId: string) => {
     setGeneratingReport(`project-pdf-${projectId}`);
     try {
-      const data = await apiClient.get<ProjectReportData>(`/api/admin/reports/project/${projectId}/pdf-data`);
+      const data = await apiClient.get<ProjectReportData>(
+        `/api/admin/reports/project/${projectId}/pdf-data`,
+      );
       generateProjectPDF(data);
     } catch (error) {
       console.error("Generate PDF error:", error);
@@ -191,9 +202,12 @@ export default function UserReportsPage() {
   const downloadBrandCSV = async (brandName: string) => {
     setGeneratingReport(`brand-csv-${brandName}`);
     try {
-      const response = await fetch(`${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/csv`, {
-        credentials: 'include',
-      });
+      const response = await fetch(
+        `${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/csv`,
+        {
+          credentials: "include",
+        },
+      );
 
       if (response.ok) {
         const blob = await response.blob();
@@ -217,7 +231,9 @@ export default function UserReportsPage() {
   const generateBrandPDFReport = async (brandName: string) => {
     setGeneratingReport(`brand-pdf-${brandName}`);
     try {
-      const data = await apiClient.get<BrandReportData>(`/api/admin/reports/brand/${encodeURIComponent(brandName)}/pdf-data`);
+      const data = await apiClient.get<BrandReportData>(
+        `/api/admin/reports/brand/${encodeURIComponent(brandName)}/pdf-data`,
+      );
       generateBrandPDF(data);
     } catch (error) {
       console.error("Generate PDF error:", error);
@@ -227,11 +243,11 @@ export default function UserReportsPage() {
     }
   };
 
-  if (authLoading || (loading && user?.role === 'user')) {
+  if (authLoading || (loading && user?.role === "user")) {
     return <FitoutLoadingSpinner />;
   }
 
-  if (user && user.role !== 'user') {
+  if (user && user.role !== "user") {
     return <FitoutLoadingSpinner />;
   }
 
@@ -239,7 +255,9 @@ export default function UserReportsPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Permissions</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            No Permissions
+          </h2>
           <p className="text-gray-600">Contact administrator.</p>
         </div>
       </div>
@@ -259,7 +277,9 @@ export default function UserReportsPage() {
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Reports</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Reports
+                </h1>
                 <p className="text-sm text-gray-600">
                   Export portfolio and project data for analysis and reporting
                 </p>
@@ -297,7 +317,11 @@ export default function UserReportsPage() {
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
               >
                 <Download size={18} />
-                <span>{generatingReport === "portfolio-csv" ? "Generating..." : "Download CSV"}</span>
+                <span>
+                  {generatingReport === "portfolio-csv"
+                    ? "Generating..."
+                    : "Download CSV"}
+                </span>
               </button>
             </div>
 
@@ -322,7 +346,11 @@ export default function UserReportsPage() {
                 className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 transition-colors"
               >
                 <Download size={18} />
-                <span>{generatingReport === "portfolio-pdf" ? "Generating..." : "Generate PDF"}</span>
+                <span>
+                  {generatingReport === "portfolio-pdf"
+                    ? "Generating..."
+                    : "Generate PDF"}
+                </span>
               </button>
             </div>
           </div>
@@ -332,26 +360,41 @@ export default function UserReportsPage() {
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Folder size={20} className="text-gray-700" />
-                <h2 className="text-xl font-semibold text-gray-900">Brand Reports</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Brand Reports
+                </h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {brands.map((brand, index) => (
-                  <div key={`${brand._id || brand.name}-${index}`} className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">{brand.name}</h3>
+                  <div
+                    key={`${brand._id || brand.name}-${index}`}
+                    className="bg-white border border-gray-200 rounded-lg p-4"
+                  >
+                    <h3 className="font-semibold text-gray-900 mb-3">
+                      {brand.name}
+                    </h3>
                     <div className="flex gap-2">
                       <button
                         onClick={() => downloadBrandCSV(brand.name)}
-                        disabled={generatingReport === `brand-csv-${brand.name}`}
+                        disabled={
+                          generatingReport === `brand-csv-${brand.name}`
+                        }
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100"
                       >
-                        {generatingReport === `brand-csv-${brand.name}` ? "Loading..." : "CSV"}
+                        {generatingReport === `brand-csv-${brand.name}`
+                          ? "Loading..."
+                          : "CSV"}
                       </button>
                       <button
                         onClick={() => generateBrandPDFReport(brand.name)}
-                        disabled={generatingReport === `brand-pdf-${brand.name}`}
+                        disabled={
+                          generatingReport === `brand-pdf-${brand.name}`
+                        }
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100"
                       >
-                        {generatingReport === `brand-pdf-${brand.name}` ? "Loading..." : "PDF"}
+                        {generatingReport === `brand-pdf-${brand.name}`
+                          ? "Loading..."
+                          : "PDF"}
                       </button>
                     </div>
                   </div>
@@ -364,33 +407,54 @@ export default function UserReportsPage() {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Folder size={20} className="text-gray-700" />
-              <h2 className="text-xl font-semibold text-gray-900">Project Reports</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Project Reports
+              </h2>
             </div>
 
             {projects.length === 0 ? (
               <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-                <p className="text-gray-500">No projects available for reporting</p>
+                <p className="text-gray-500">
+                  No projects available for reporting
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {projects.map((project, index) => (
-                  <div key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`} className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-1">{project.projectName}</h3>
-                    <p className="text-sm text-gray-500 mb-3">{project.projectCode || project.brand}</p>
+                  <div
+                    key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`}
+                    className="bg-white border border-gray-200 rounded-lg p-4"
+                  >
+                    <h3 className="font-semibold text-gray-900 mb-1">
+                      {project.projectName}
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-3">
+                      {project.projectCode || project.brand}
+                    </p>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => downloadProjectCSV(project._id, project.projectName)}
-                        disabled={generatingReport === `project-csv-${project._id}`}
+                        onClick={() =>
+                          downloadProjectCSV(project._id, project.projectName)
+                        }
+                        disabled={
+                          generatingReport === `project-csv-${project._id}`
+                        }
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 transition-colors"
                       >
-                        {generatingReport === `project-csv-${project._id}` ? "Loading..." : "CSV"}
+                        {generatingReport === `project-csv-${project._id}`
+                          ? "Loading..."
+                          : "CSV"}
                       </button>
                       <button
                         onClick={() => generateProjectPDFReport(project._id)}
-                        disabled={generatingReport === `project-pdf-${project._id}`}
+                        disabled={
+                          generatingReport === `project-pdf-${project._id}`
+                        }
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 transition-colors"
                       >
-                        {generatingReport === `project-pdf-${project._id}` ? "Loading..." : "PDF"}
+                        {generatingReport === `project-pdf-${project._id}`
+                          ? "Loading..."
+                          : "PDF"}
                       </button>
                     </div>
                   </div>
@@ -404,10 +468,13 @@ export default function UserReportsPage() {
             <div className="flex items-start gap-3">
               <Info size={20} className="text-blue-600 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-blue-900 mb-1">Report Generation</h3>
+                <h3 className="font-semibold text-blue-900 mb-1">
+                  Report Generation
+                </h3>
                 <p className="text-sm text-blue-800">
-                  Reports are generated on-demand and include the latest data from your projects. 
-                  Large datasets may take a few moments to process.
+                  Reports are generated on-demand and include the latest data
+                  from your projects. Large datasets may take a few moments to
+                  process.
                 </p>
               </div>
             </div>

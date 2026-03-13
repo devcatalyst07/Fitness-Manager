@@ -47,7 +47,9 @@ export default function ProjectApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [projectName, setProjectName] = useState("");
   const [approvals, setApprovals] = useState<Approval[]>([]);
-  const [filter, setFilter] = useState<"all" | "Pending" | "Approved" | "Rejected">("Pending");
+  const [filter, setFilter] = useState<
+    "all" | "Pending" | "Approved" | "Rejected"
+  >("Pending");
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,7 +81,9 @@ export default function ProjectApprovalsPage() {
   const fetchApprovals = async () => {
     try {
       const statusParam = filter === "all" ? "" : `?status=${filter}`;
-      const data = await apiClient.get(`/api/projects/${params.id}/approvals${statusParam}`);
+      const data = await apiClient.get(
+        `/api/projects/${params.id}/approvals${statusParam}`,
+      );
       setApprovals(data);
     } catch (error) {
       console.error("Error fetching approvals:", error);
@@ -91,7 +95,9 @@ export default function ProjectApprovalsPage() {
   const handleApprove = async (approvalId: string) => {
     if (!confirm("Are you sure you want to approve this request?")) return;
     try {
-      await apiClient.put(`/api/projects/${params.id}/approvals/${approvalId}/approve`);
+      await apiClient.put(
+        `/api/projects/${params.id}/approvals/${approvalId}/approve`,
+      );
       await fetchApprovals();
       alert("Approval granted successfully!");
     } catch (error: any) {
@@ -104,7 +110,10 @@ export default function ProjectApprovalsPage() {
     const reason = prompt("Please provide a reason for rejection:");
     if (!reason) return;
     try {
-      await apiClient.put(`/api/projects/${params.id}/approvals/${approvalId}/reject`, { reason });
+      await apiClient.put(
+        `/api/projects/${params.id}/approvals/${approvalId}/reject`,
+        { reason },
+      );
       await fetchApprovals();
       alert("Approval rejected successfully!");
     } catch (error: any) {
@@ -134,8 +143,12 @@ export default function ProjectApprovalsPage() {
             <ArrowLeft size={20} />
             <span>Back to Overview</span>
           </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Approvals</h1>
-          <p className="text-sm text-gray-600">Manage approval requests for {projectName}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+            Approvals
+          </h1>
+          <p className="text-sm text-gray-600">
+            Manage approval requests for {projectName}
+          </p>
         </div>
 
         <div className="mb-6 border-b border-gray-200">
@@ -145,11 +158,16 @@ export default function ProjectApprovalsPage() {
                 key={tab}
                 className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
                 onClick={() => {
-                  if (tab === "Overview") router.push(`/admin/projects/${params.id}/overview`);
-                  if (tab === "Tasks") router.push(`/admin/projects/${params.id}/tasks`);
-                  if (tab === "Budget") router.push(`/admin/projects/${params.id}/budget`);
-                  if (tab === "Documents") router.push(`/admin/projects/${params.id}/documents`);
-                  if (tab === "Team") router.push(`/admin/projects/${params.id}/team`);
+                  if (tab === "Overview")
+                    router.push(`/admin/projects/${params.id}/overview`);
+                  if (tab === "Tasks")
+                    router.push(`/admin/projects/${params.id}/tasks`);
+                  if (tab === "Budget")
+                    router.push(`/admin/projects/${params.id}/budget`);
+                  if (tab === "Documents")
+                    router.push(`/admin/projects/${params.id}/documents`);
+                  if (tab === "Team")
+                    router.push(`/admin/projects/${params.id}/team`);
                 }}
               >
                 {tab}
@@ -159,7 +177,11 @@ export default function ProjectApprovalsPage() {
         </div>
 
         <div className="mb-6">
-          <ApprovalStats pendingCount={pendingCount} approvedCount={approvedCount} rejectedCount={rejectedCount} />
+          <ApprovalStats
+            pendingCount={pendingCount}
+            approvedCount={approvedCount}
+            rejectedCount={rejectedCount}
+          />
         </div>
 
         <div className="mb-6">
@@ -172,7 +194,12 @@ export default function ProjectApprovalsPage() {
           ) : (
             <div className="divide-y divide-gray-200">
               {approvals.map((approval) => (
-                <ApprovalCard key={approval._id} approval={approval} onApprove={handleApprove} onReject={handleReject} />
+                <ApprovalCard
+                  key={approval._id}
+                  approval={approval}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                />
               ))}
             </div>
           )}

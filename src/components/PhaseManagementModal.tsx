@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { X, Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
-import { responsive } from '@/utils/responsive';
+import React, { useState } from "react";
+import { X, Plus, Edit2, Trash2, GripVertical } from "lucide-react";
+import { responsive } from "@/utils/responsive";
 
 interface Phase {
   _id: string;
@@ -15,20 +15,27 @@ interface PhaseManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   phases: Phase[];
-  onCreatePhase: (phaseData: { name: string; description?: string; color?: string }) => Promise<boolean>;
-  onUpdatePhase: (phaseId: string, phaseData: Partial<Phase>) => Promise<boolean>;
+  onCreatePhase: (phaseData: {
+    name: string;
+    description?: string;
+    color?: string;
+  }) => Promise<boolean>;
+  onUpdatePhase: (
+    phaseId: string,
+    phaseData: Partial<Phase>,
+  ) => Promise<boolean>;
   onDeletePhase: (phaseId: string) => Promise<boolean>;
 }
 
 const PRESET_COLORS = [
-  '#3B82F6', // blue
-  '#10B981', // green
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#8B5CF6', // purple
-  '#EC4899', // pink
-  '#14B8A6', // teal
-  '#F97316', // orange
+  "#3B82F6", // blue
+  "#10B981", // green
+  "#F59E0B", // amber
+  "#EF4444", // red
+  "#8B5CF6", // purple
+  "#EC4899", // pink
+  "#14B8A6", // teal
+  "#F97316", // orange
 ];
 
 export default function PhaseManagementModal({
@@ -42,8 +49,8 @@ export default function PhaseManagementModal({
   const [isAdding, setIsAdding] = useState(false);
   const [editingPhaseId, setEditingPhaseId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     color: PRESET_COLORS[0],
   });
   const [saving, setSaving] = useState(false);
@@ -51,14 +58,14 @@ export default function PhaseManagementModal({
   if (!isOpen) return null;
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', color: PRESET_COLORS[0] });
+    setFormData({ name: "", description: "", color: PRESET_COLORS[0] });
     setIsAdding(false);
     setEditingPhaseId(null);
   };
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
-      alert('Phase name is required');
+      alert("Phase name is required");
       return;
     }
 
@@ -81,7 +88,7 @@ export default function PhaseManagementModal({
   const handleEdit = (phase: Phase) => {
     setFormData({
       name: phase.name,
-      description: phase.description || '',
+      description: phase.description || "",
       color: phase.color || PRESET_COLORS[0],
     });
     setEditingPhaseId(phase._id);
@@ -123,9 +130,9 @@ export default function PhaseManagementModal({
           {isAdding && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
               <h3 className="font-semibold text-gray-900 mb-4">
-                {editingPhaseId ? 'Edit Phase' : 'Add New Phase'}
+                {editingPhaseId ? "Edit Phase" : "Add New Phase"}
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -134,7 +141,9 @@ export default function PhaseManagementModal({
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
                     placeholder="e.g., Planning, Design, Development"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -146,7 +155,9 @@ export default function PhaseManagementModal({
                   </label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="Brief description of this phase"
                     rows={2}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
@@ -164,8 +175,8 @@ export default function PhaseManagementModal({
                         onClick={() => setFormData({ ...formData, color })}
                         className={`w-10 h-10 rounded-lg border-2 transition-all ${
                           formData.color === color
-                            ? 'border-gray-900 scale-110'
-                            : 'border-gray-300 hover:scale-105'
+                            ? "border-gray-900 scale-110"
+                            : "border-gray-300 hover:scale-105"
                         }`}
                         style={{ backgroundColor: color }}
                       />
@@ -173,17 +184,21 @@ export default function PhaseManagementModal({
                   </div>
                 </div>
 
-                  <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={handleSubmit}
                     disabled={saving || !formData.name.trim()}
-                      className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                   >
-                    {saving ? 'Saving...' : editingPhaseId ? 'Update Phase' : 'Add Phase'}
+                    {saving
+                      ? "Saving..."
+                      : editingPhaseId
+                        ? "Update Phase"
+                        : "Add Phase"}
                   </button>
                   <button
                     onClick={resetForm}
-                      className={responsive.secondaryButton}
+                    className={responsive.secondaryButton}
                   >
                     Cancel
                   </button>
@@ -226,7 +241,7 @@ export default function PhaseManagementModal({
                     {/* Color Indicator */}
                     <div
                       className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: phase.color || '#3B82F6' }}
+                      style={{ backgroundColor: phase.color || "#3B82F6" }}
                     />
 
                     {/* Phase Info */}

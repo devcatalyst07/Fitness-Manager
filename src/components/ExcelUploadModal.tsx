@@ -1,9 +1,17 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { X, Upload, Download, FileSpreadsheet, AlertTriangle, CheckCircle, Info } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { responsive } from '@/utils/responsive';
+import React, { useState } from "react";
+import {
+  X,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+} from "lucide-react";
+import * as XLSX from "xlsx";
+import { responsive } from "@/utils/responsive";
 
 interface ExcelUploadModalProps {
   isOpen: boolean;
@@ -42,7 +50,8 @@ export default function ExcelUploadModal({
 }: ExcelUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [validationResult, setValidationResult] =
+    useState<ValidationResult | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
   if (!isOpen) return null;
@@ -50,24 +59,27 @@ export default function ExcelUploadModal({
   const handleDownloadTemplate = async () => {
     try {
       // ✅ FIXED: Use raw axios instance for blob responses
-      const { default: axiosInstance } = await import('@/lib/axios');
+      const { default: axiosInstance } = await import("@/lib/axios");
       const response = await axiosInstance.get(
         `/api/scopes/${scopeId}/workflows/${workflowId}/templates/task-upload-template.xlsx`,
-        { responseType: 'blob' }
+        { responseType: "blob" },
       );
 
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'task-upload-template.xlsx';
+      a.download = "task-upload-template.xlsx";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error('Download template error:', error);
-      alert(error?.response?.data?.message || 'Failed to download template. Please check your connection and try again.');
+      console.error("Download template error:", error);
+      alert(
+        error?.response?.data?.message ||
+          "Failed to download template. Please check your connection and try again.",
+      );
     }
   };
 
@@ -86,7 +98,7 @@ export default function ExcelUploadModal({
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
       const errors: string[] = [];
       const warnings: string[] = [];
@@ -94,35 +106,37 @@ export default function ExcelUploadModal({
 
       // Check if file has data
       if (jsonData.length === 0) {
-        errors.push('Excel file is empty');
+        errors.push("Excel file is empty");
         setValidationResult({ isValid: false, errors, warnings, tasks });
         return;
       }
 
       // Validate headers
       const requiredHeaders = [
-        'Task ID',
-        'Phase Name',
-        'Task Title',
-        'Task Description',
-        'Task Type',
-        'Priority',
-        'Predecessor IDs',
-        'Dependency Type',
-        'Lag (Days)',
-        'Duration (Days)',
+        "Task ID",
+        "Phase Name",
+        "Task Title",
+        "Task Description",
+        "Task Type",
+        "Priority",
+        "Predecessor IDs",
+        "Dependency Type",
+        "Lag (Days)",
+        "Duration (Days)",
       ];
 
       const firstRow: any = jsonData[0];
       const actualHeaders = Object.keys(firstRow);
-      
+
       const missingHeaders = requiredHeaders.filter(
-        h => !actualHeaders.includes(h)
+        (h) => !actualHeaders.includes(h),
       );
 
       if (missingHeaders.length > 0) {
-        errors.push(`Missing required columns: ${missingHeaders.join(', ')}`);
-        errors.push('Please download the latest template and ensure all columns are present.');
+        errors.push(`Missing required columns: ${missingHeaders.join(", ")}`);
+        errors.push(
+          "Please download the latest template and ensure all columns are present.",
+        );
         setValidationResult({ isValid: false, errors, warnings, tasks });
         return;
       }
@@ -132,82 +146,84 @@ export default function ExcelUploadModal({
       jsonData.forEach((row: any, index: number) => {
         const rowNum = index + 2;
 
-        if (!row['Task ID']) {
+        if (!row["Task ID"]) {
           errors.push(`Row ${rowNum}: Task ID is required`);
-        } else if (taskIds.has(row['Task ID'])) {
-          errors.push(`Row ${rowNum}: Duplicate Task ID "${row['Task ID']}"`);
+        } else if (taskIds.has(row["Task ID"])) {
+          errors.push(`Row ${rowNum}: Duplicate Task ID "${row["Task ID"]}"`);
         } else {
-          taskIds.add(row['Task ID']);
+          taskIds.add(row["Task ID"]);
         }
 
-        if (!row['Phase Name']) {
+        if (!row["Phase Name"]) {
           errors.push(`Row ${rowNum}: Phase Name is required`);
         }
 
-        if (!row['Task Title']) {
+        if (!row["Task Title"]) {
           errors.push(`Row ${rowNum}: Task Title is required`);
         }
 
-        const validTaskTypes = ['Task', 'Deliverable', 'Milestone'];
-        if (row['Task Type'] && !validTaskTypes.includes(row['Task Type'])) {
+        const validTaskTypes = ["Task", "Deliverable", "Milestone"];
+        if (row["Task Type"] && !validTaskTypes.includes(row["Task Type"])) {
           errors.push(
-            `Row ${rowNum}: Task Type must be one of: ${validTaskTypes.join(', ')}`
+            `Row ${rowNum}: Task Type must be one of: ${validTaskTypes.join(", ")}`,
           );
         }
 
-        const validPriorities = ['Low', 'Medium', 'High', 'Critical'];
-        if (row['Priority'] && !validPriorities.includes(row['Priority'])) {
+        const validPriorities = ["Low", "Medium", "High", "Critical"];
+        if (row["Priority"] && !validPriorities.includes(row["Priority"])) {
           warnings.push(
-            `Row ${rowNum}: Priority "${row['Priority']}" will default to "Medium". Valid values: ${validPriorities.join(', ')}`
+            `Row ${rowNum}: Priority "${row["Priority"]}" will default to "Medium". Valid values: ${validPriorities.join(", ")}`,
           );
         }
 
-        const duration = parseFloat(row['Duration (Days)']);
+        const duration = parseFloat(row["Duration (Days)"]);
         if (isNaN(duration) || duration < 0) {
           errors.push(`Row ${rowNum}: Duration must be a positive number`);
-        } else if (row['Task Type'] === 'Milestone' && duration > 1) {
-          errors.push(`Row ${rowNum}: Milestone tasks can have a maximum duration of 1 day`);
+        } else if (row["Task Type"] === "Milestone" && duration > 1) {
+          errors.push(
+            `Row ${rowNum}: Milestone tasks can have a maximum duration of 1 day`,
+          );
         }
 
-        if (row['Predecessor IDs']) {
-          const predecessors = row['Predecessor IDs']
-            .split(';')
+        if (row["Predecessor IDs"]) {
+          const predecessors = row["Predecessor IDs"]
+            .split(";")
             .map((p: string) => p.trim())
             .filter((p: string) => p);
 
-          const depTypes = row['Dependency Type']
-            ? row['Dependency Type']
-                .split(';')
+          const depTypes = row["Dependency Type"]
+            ? row["Dependency Type"]
+                .split(";")
                 .map((t: string) => t.trim())
                 .filter((t: string) => t)
             : [];
 
           if (depTypes.length > 0 && depTypes.length !== predecessors.length) {
             warnings.push(
-              `Row ${rowNum}: Number of dependency types (${depTypes.length}) doesn't match number of predecessors (${predecessors.length}). Missing types will default to "FS".`
+              `Row ${rowNum}: Number of dependency types (${depTypes.length}) doesn't match number of predecessors (${predecessors.length}). Missing types will default to "FS".`,
             );
           }
 
           depTypes.forEach((type: string, i: number) => {
-            if (type && !['FS', 'SS'].includes(type)) {
+            if (type && !["FS", "SS"].includes(type)) {
               errors.push(
-                `Row ${rowNum}: Invalid dependency type "${type}" for predecessor ${i + 1}. Must be "FS" or "SS".`
+                `Row ${rowNum}: Invalid dependency type "${type}" for predecessor ${i + 1}. Must be "FS" or "SS".`,
               );
             }
           });
         }
 
         tasks.push({
-          taskId: row['Task ID'],
-          phaseName: row['Phase Name'],
-          taskTitle: row['Task Title'],
-          taskDescription: row['Task Description'] || '',
-          taskType: row['Task Type'] || 'Task',
-          priority: row['Priority'] || 'Medium',
-          predecessorIds: row['Predecessor IDs'] || '',
-          dependencyType: row['Dependency Type'] || '',
-          lagDays: row['Lag (Days)'] || '0',
-          duration: row['Duration (Days)'] || '1',
+          taskId: row["Task ID"],
+          phaseName: row["Phase Name"],
+          taskTitle: row["Task Title"],
+          taskDescription: row["Task Description"] || "",
+          taskType: row["Task Type"] || "Task",
+          priority: row["Priority"] || "Medium",
+          predecessorIds: row["Predecessor IDs"] || "",
+          dependencyType: row["Dependency Type"] || "",
+          lagDays: row["Lag (Days)"] || "0",
+          duration: row["Duration (Days)"] || "1",
         });
       });
 
@@ -215,14 +231,14 @@ export default function ExcelUploadModal({
       tasks.forEach((task, index) => {
         if (task.predecessorIds) {
           const predecessors = task.predecessorIds
-            .split(';')
-            .map(p => p.trim())
-            .filter(p => p);
+            .split(";")
+            .map((p) => p.trim())
+            .filter((p) => p);
 
           predecessors.forEach((predId) => {
             if (!taskIds.has(predId)) {
               errors.push(
-                `Row ${index + 2}: Predecessor ID "${predId}" not found in Task ID column`
+                `Row ${index + 2}: Predecessor ID "${predId}" not found in Task ID column`,
               );
             }
           });
@@ -240,10 +256,12 @@ export default function ExcelUploadModal({
         setShowPreview(true);
       }
     } catch (error) {
-      console.error('File validation error:', error);
+      console.error("File validation error:", error);
       setValidationResult({
         isValid: false,
-        errors: ['Failed to read Excel file. Please ensure it is a valid .xlsx file.'],
+        errors: [
+          "Failed to read Excel file. Please ensure it is a valid .xlsx file.",
+        ],
         warnings: [],
         tasks: [],
       });
@@ -257,24 +275,24 @@ export default function ExcelUploadModal({
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       // ✅ FIXED: Use raw axios instance for file upload (same as download template)
-      const { default: axiosInstance } = await import('@/lib/axios');
+      const { default: axiosInstance } = await import("@/lib/axios");
       const response = await axiosInstance.post(
         `/api/scopes/${scopeId}/workflows/${workflowId}/tasks/bulk-upload`,
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       const data = response.data;
 
       alert(
-        `Successfully uploaded ${data.tasksCreated} tasks across ${data.phasesCreated} phases!`
+        `Successfully uploaded ${data.tasksCreated} tasks across ${data.phasesCreated} phases!`,
       );
       onSuccess();
       onClose();
@@ -282,8 +300,8 @@ export default function ExcelUploadModal({
       setValidationResult(null);
       setShowPreview(false);
     } catch (error: any) {
-      console.error('Upload error:', error);
-      alert(error?.response?.data?.message || 'Failed to upload tasks');
+      console.error("Upload error:", error);
+      alert(error?.response?.data?.message || "Failed to upload tasks");
     } finally {
       setUploading(false);
     }
@@ -324,14 +342,18 @@ export default function ExcelUploadModal({
             {/* Template Update Notice */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <div className="flex items-start gap-3">
-                <Info size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                <Info
+                  size={20}
+                  className="text-blue-600 flex-shrink-0 mt-0.5"
+                />
                 <div className="flex-1">
                   <h3 className="font-semibold text-blue-900 mb-1">
                     Template Format Updated
                   </h3>
                   <p className="text-sm text-blue-800 mb-3">
-                    The Excel template now includes new columns for Task Type, Dependencies, and Duration. 
-                    Please download the latest template before uploading.
+                    The Excel template now includes new columns for Task Type,
+                    Dependencies, and Duration. Please download the latest
+                    template before uploading.
                   </p>
                   <button
                     onClick={handleDownloadTemplate}
@@ -377,7 +399,9 @@ export default function ExcelUploadModal({
                     <div className="flex items-center gap-3">
                       <FileSpreadsheet size={20} className="text-blue-600" />
                       <div>
-                        <p className="text-sm font-medium text-blue-900">{file.name}</p>
+                        <p className="text-sm font-medium text-blue-900">
+                          {file.name}
+                        </p>
                         <p className="text-xs text-blue-700">
                           {(file.size / 1024).toFixed(2)} KB
                         </p>
@@ -404,7 +428,10 @@ export default function ExcelUploadModal({
                 {validationResult.errors.length > 0 && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <AlertTriangle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                      <AlertTriangle
+                        size={20}
+                        className="text-red-600 flex-shrink-0 mt-0.5"
+                      />
                       <div className="flex-1">
                         <h3 className="font-semibold text-red-900 mb-2">
                           Validation Errors ({validationResult.errors.length})
@@ -424,7 +451,10 @@ export default function ExcelUploadModal({
                 {validationResult.warnings.length > 0 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <Info size={20} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <Info
+                        size={20}
+                        className="text-yellow-600 flex-shrink-0 mt-0.5"
+                      />
                       <div className="flex-1">
                         <h3 className="font-semibold text-yellow-900 mb-2">
                           Warnings ({validationResult.warnings.length})
@@ -444,13 +474,17 @@ export default function ExcelUploadModal({
                 {validationResult.isValid && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <CheckCircle size={20} className="text-green-600 flex-shrink-0 mt-0.5" />
+                      <CheckCircle
+                        size={20}
+                        className="text-green-600 flex-shrink-0 mt-0.5"
+                      />
                       <div className="flex-1">
                         <h3 className="font-semibold text-green-900 mb-1">
                           Validation Successful!
                         </h3>
                         <p className="text-sm text-green-800">
-                          Found {validationResult.tasks.length} valid task(s) ready for upload.
+                          Found {validationResult.tasks.length} valid task(s)
+                          ready for upload.
                         </p>
                       </div>
                     </div>
@@ -466,28 +500,51 @@ export default function ExcelUploadModal({
                       <table className="min-w-[640px] w-full text-sm">
                         <thead className="bg-gray-50 sticky top-0">
                           <tr>
-                            <th className="px-3 py-2 text-left font-medium text-gray-700">Task ID</th>
-                            <th className="px-3 py-2 text-left font-medium text-gray-700">Phase</th>
-                            <th className="px-3 py-2 text-left font-medium text-gray-700">Title</th>
-                            <th className="px-3 py-2 text-left font-medium text-gray-700">Type</th>
-                            <th className="px-3 py-2 text-left font-medium text-gray-700">Duration</th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-700">
+                              Task ID
+                            </th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-700">
+                              Phase
+                            </th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-700">
+                              Title
+                            </th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-700">
+                              Type
+                            </th>
+                            <th className="px-3 py-2 text-left font-medium text-gray-700">
+                              Duration
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {validationResult.tasks.slice(0, 10).map((task, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="px-3 py-2 text-gray-900">{task.taskId}</td>
-                              <td className="px-3 py-2 text-gray-700">{task.phaseName}</td>
-                              <td className="px-3 py-2 text-gray-900">{task.taskTitle}</td>
-                              <td className="px-3 py-2 text-gray-700">{task.taskType}</td>
-                              <td className="px-3 py-2 text-gray-700">{task.duration} days</td>
-                            </tr>
-                          ))}
+                          {validationResult.tasks
+                            .slice(0, 10)
+                            .map((task, index) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="px-3 py-2 text-gray-900">
+                                  {task.taskId}
+                                </td>
+                                <td className="px-3 py-2 text-gray-700">
+                                  {task.phaseName}
+                                </td>
+                                <td className="px-3 py-2 text-gray-900">
+                                  {task.taskTitle}
+                                </td>
+                                <td className="px-3 py-2 text-gray-700">
+                                  {task.taskType}
+                                </td>
+                                <td className="px-3 py-2 text-gray-700">
+                                  {task.duration} days
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                       {validationResult.tasks.length > 10 && (
                         <p className="text-xs text-gray-500 text-center mt-2">
-                          Showing first 10 of {validationResult.tasks.length} tasks
+                          Showing first 10 of {validationResult.tasks.length}{" "}
+                          tasks
                         </p>
                       )}
                     </div>
@@ -510,10 +567,7 @@ export default function ExcelUploadModal({
             </button>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <button
-                onClick={onClose}
-                className={responsive.secondaryButton}
-              >
+              <button onClick={onClose} className={responsive.secondaryButton}>
                 Cancel
               </button>
               <button

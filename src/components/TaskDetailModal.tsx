@@ -503,7 +503,10 @@ export default function TaskDetailModal({
                       <p className="text-sm text-gray-500">No dependencies</p>
                     ) : (
                       (editedTask.dependencies || []).map((dep, index) => (
-                        <div key={index} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                        <div
+                          key={index}
+                          className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center"
+                        >
                           <select
                             value={dep.taskId}
                             onChange={(e) =>
