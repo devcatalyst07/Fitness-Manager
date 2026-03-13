@@ -515,7 +515,10 @@ export function useTaskManagement(projectId: string) {
         const payload = JSON.parse((event as MessageEvent).data);
         const activityIds = (payload.activityIds || []) as string[];
 
-        if (!Array.isArray(activityIds) || payload.taskId !== selectedTask._id) {
+        if (
+          !Array.isArray(activityIds) ||
+          payload.taskId !== selectedTask._id
+        ) {
           return;
         }
 
