@@ -130,6 +130,7 @@ export default function ProjectBudgetPage() {
   const canViewOverview = !hasRoleData || hasPermission("projects-view-details-overview", permissions);
   const canViewTasks = !hasRoleData || hasPermission("projects-view-details-task", permissions);
   const canViewBudget = !hasRoleData || hasPermission("projects-view-details-budget", permissions);
+  const canViewTender = !hasRoleData || hasPermission("projects-view-details-tender", permissions);
   const canViewDocuments = !hasRoleData || hasPermission("projects-view-details-documents", permissions);
   const canViewTeam = !hasRoleData || hasPermission("projects-view-details-team", permissions);
 
@@ -137,7 +138,7 @@ export default function ProjectBudgetPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminSidebar pathname={pathname} setPathname={setPathname} userRole="user" permissions={permissions} />
       <AdminHeader />
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
         <div className="mb-6">
           <button onClick={() => router.push("/user/projects")} className="text-gray-600 hover:text-black mb-4 flex items-center gap-2"><ArrowLeft size={20} /><span>{projectName || "Back to Project"}</span></button>
           <div className="flex items-center justify-between">
@@ -149,11 +150,12 @@ export default function ProjectBudgetPage() {
           </div>
         </div>
 
-        <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-          <div className="flex gap-6 whitespace-nowrap">
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
+          <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
             {canViewOverview && <button onClick={() => router.push(`/user/projects/${params.id}/overview`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Overview</button>}
             {canViewTasks && <button onClick={() => router.push(`/user/projects/${params.id}/tasks`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Tasks</button>}
             {canViewBudget && <button className="pb-3 px-1 text-sm font-medium border-b-2 border-black text-black">Budget</button>}
+            {canViewTender && <button onClick={() => router.push(`/user/projects/${params.id}/tender`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Tender</button>}
             {canViewDocuments && <button onClick={() => router.push(`/user/projects/${params.id}/documents`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Documents</button>}
             {canViewTeam && <button onClick={() => router.push(`/user/projects/${params.id}/team`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Team</button>}
           </div>
@@ -194,8 +196,8 @@ export default function ProjectBudgetPage() {
                   <React.Fragment key={category.category}>
                     <tr className="bg-gray-100 border-t-2 border-gray-300"><td colSpan={7} className="px-6 py-3"><button onClick={() => toggleCategory(ci)} className="flex items-center justify-between w-full"><div className="flex items-center gap-3">{category.expanded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}<span className="font-bold text-gray-900">{category.category}</span><span className="text-sm text-gray-600">({category.itemCount} items)</span></div><span className="font-bold text-gray-900">Total: {formatCurrency(category.totalSpent)}</span></button></td></tr>
                     {category.expanded && category.items.length === 0 && <tr className="border-b border-gray-200"><td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">No items in this category yet</td></tr>}
-                    {category.expanded && category.items.map((item) => (
-                      <tr key={item._id} className="border-b border-gray-200 hover:bg-gray-50">
+                    {category.expanded && category.items.map((item, itemIndex) => (
+                      <tr key={`${item._id || `${item.description}-${item.vendor}`}-${itemIndex}`} className="border-b border-gray-200 hover:bg-gray-50">
                         <td className="px-6 py-4 text-sm text-gray-900">{item.description}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{item.vendor}</td>
                         <td className="px-6 py-4 text-sm text-gray-900">{item.quantity}</td>

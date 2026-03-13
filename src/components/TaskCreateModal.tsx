@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Flag, Users, FileText, Clock, Layers, Link2, AlertCircle } from 'lucide-react';
 import { Task } from '@/types/task.types';
+import { responsive } from '@/utils/responsive';
 
 interface TeamMember {
   _id: string;
@@ -156,11 +157,11 @@ export default function TaskCreateModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-6">
+      <div className="bg-white w-full max-w-[min(64rem,100vw-1rem)] rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 sm:px-8 py-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div>
                 <h2 className="text-xl sm:text-2xl font-semibold text-white">
@@ -182,7 +183,7 @@ export default function TaskCreateModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="space-y-6">
             {/* Task Title */}
             <div>
@@ -346,7 +347,7 @@ export default function TaskCreateModal({
               {dependenciesExpanded && (
                 <div className="p-4 space-y-3">
                   {formData.dependencies.map((dep, index) => (
-                    <div key={index} className="flex gap-2 items-start">
+                    <div key={index} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-start">
                       <select
                         value={dep.taskId}
                         onChange={(e) => handleDependencyChange(index, 'taskId', e.target.value)}
@@ -363,7 +364,7 @@ export default function TaskCreateModal({
                       <select
                         value={dep.type}
                         onChange={(e) => handleDependencyChange(index, 'type', e.target.value)}
-                        className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       >
                         <option value="FS">Finish→Start</option>
                         <option value="SS">Start→Start</option>
@@ -372,7 +373,7 @@ export default function TaskCreateModal({
                       <button
                         type="button"
                         onClick={() => handleRemoveDependency(index)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors self-end sm:self-auto"
                       >
                         <X size={16} />
                       </button>
@@ -526,11 +527,11 @@ export default function TaskCreateModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 sm:px-8 py-4 bg-gray-50">
+        <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50">
           <div className="flex flex-col-reverse sm:flex-row gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-all"
+              className={responsive.secondaryButton}
             >
               Cancel
             </button>

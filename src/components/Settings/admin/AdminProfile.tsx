@@ -361,7 +361,7 @@ export default function AdminProfile() {
       <div className="flex min-h-screen bg-gray-50">
         <AdminSidebar />
         <AdminHeader />
-        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 flex-1">
+        <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 flex-1 transition-all duration-300">
           <div className="text-center text-gray-400 text-sm mt-24">
             Loading profile…
           </div>
@@ -375,7 +375,7 @@ export default function AdminProfile() {
       <AdminSidebar />
       <AdminHeader />
 
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 flex-1">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 flex-1 transition-all duration-300">
         {/* ── Page Header ── */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">

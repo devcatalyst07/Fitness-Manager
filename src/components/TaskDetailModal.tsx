@@ -180,14 +180,14 @@ export default function TaskDetailModal({
   const fileSelectHandler = onFileSelect || handleFileSelect;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-8 py-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div>
-                <h2 className="text-2xl font-semibold text-white">
+                <h2 className="text-xl sm:text-2xl font-semibold text-white break-words">
                   {task.title}
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
@@ -206,7 +206,7 @@ export default function TaskDetailModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end sm:self-auto">
               {canEdit &&
                 (!isEditing ? (
                   <button
@@ -234,8 +234,8 @@ export default function TaskDetailModal({
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex px-8">
+        <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto">
+          <div className="flex px-3 sm:px-6 lg:px-8 min-w-max">
             <button
               onClick={() => setActiveTab("details")}
               className={`px-6 py-4 font-medium transition-all ${
@@ -270,7 +270,7 @@ export default function TaskDetailModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {activeTab === "details" && (
             <div className="space-y-6">
               <div>
@@ -483,7 +483,7 @@ export default function TaskDetailModal({
               </div>
 
               <div className="border border-gray-200 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                   <label className="text-sm font-semibold text-gray-700">
                     Dependencies
                   </label>
@@ -503,7 +503,7 @@ export default function TaskDetailModal({
                       <p className="text-sm text-gray-500">No dependencies</p>
                     ) : (
                       (editedTask.dependencies || []).map((dep, index) => (
-                        <div key={index} className="flex gap-2 items-center">
+                        <div key={index} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                           <select
                             value={dep.taskId}
                             onChange={(e) =>
@@ -532,7 +532,7 @@ export default function TaskDetailModal({
                                 e.target.value,
                               )
                             }
-                            className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           >
                             <option value="FS">Finish to Start</option>
                             <option value="SS">Start to Start</option>
@@ -540,7 +540,7 @@ export default function TaskDetailModal({
 
                           <button
                             onClick={() => handleRemoveDependency(index)}
-                            className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+                            className="w-full sm:w-auto px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
                           >
                             Remove
                           </button>
@@ -560,12 +560,12 @@ export default function TaskDetailModal({
                         return (
                           <div
                             key={index}
-                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg"
                           >
-                            <span className="text-sm text-gray-700">
+                            <span className="text-sm text-gray-700 break-words">
                               {depTask?.title || "Unknown Task"}
                             </span>
-                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                            <span className="self-start sm:self-auto text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                               {getDependencyTypeLabel(dep.type)}
                             </span>
                           </div>
@@ -748,8 +748,8 @@ export default function TaskDetailModal({
                   </div>
                 )}
 
-                <div className="flex items-center justify-between mt-3">
-                  <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3">
+                  <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 self-start">
                     <input
                       type="file"
                       multiple
@@ -764,7 +764,7 @@ export default function TaskDetailModal({
                       uploadingFiles ||
                       (!newComment.trim() && selectedFiles.length === 0)
                     }
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-sm font-medium"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-sm font-medium"
                   >
                     {uploadingFiles ? "Uploading..." : "Post Comment"}
                   </button>
@@ -794,7 +794,7 @@ export default function TaskDetailModal({
                               {getInitials(commentAuthorName)}
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
                                 <span className="font-semibold text-gray-900">
                                   {commentAuthorName}
                                 </span>

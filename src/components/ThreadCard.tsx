@@ -130,14 +130,14 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
         </div>
       )}
 
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 pr-2">
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="flex-1 min-w-0 pr-2">
           <h3 className="font-semibold text-gray-900 text-base sm:text-lg mb-1 line-clamp-2">
             {thread.title}
           </h3>
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
-            <span className="font-medium text-gray-700">{thread.createdByName}</span>
-            <span>•</span>
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-500">
+            <span className="font-medium text-gray-700 break-words">{thread.createdByName}</span>
+            <span className="hidden sm:inline">•</span>
             <div className="flex items-center gap-1">
               <Calendar size={12} />
               <span>{formatDate(thread.createdAt)}</span>
@@ -203,8 +203,8 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-        <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-gray-100">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <button
             onClick={handleLike}
             disabled={isProcessing}
@@ -223,11 +223,11 @@ export default function ThreadCard({ thread, currentUserId, onClick, onUpdate, o
         </div>
 
         {thread.projectId ? (
-          <span className="bg-purple-100 text-purple-700 px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
+          <span className="self-start sm:self-auto bg-purple-100 text-purple-700 px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
             Project Thread
           </span>
         ) : (
-          <span className="bg-gray-100 text-gray-700 px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
+          <span className="self-start sm:self-auto bg-gray-100 text-gray-700 px-2 sm:px-3 py-1 rounded-full text-xs font-medium">
             General
           </span>
         )}

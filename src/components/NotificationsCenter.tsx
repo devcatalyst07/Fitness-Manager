@@ -111,7 +111,7 @@ export default function NotificationsCenter({
   );
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <button
           onClick={() => {
@@ -131,20 +131,22 @@ export default function NotificationsCenter({
         </h1>
       </div>
 
-      <div className="mb-4 inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
-        {(Object.keys(tabLabels) as FilterTab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-              activeTab === tab
-                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-300"
-            }`}
-          >
-            {tabLabels[tab]}
-          </button>
-        ))}
+      <div className="mb-4 overflow-x-auto -mx-1 px-1">
+        <div className="inline-flex min-w-max rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+          {(Object.keys(tabLabels) as FilterTab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                activeTab === tab
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-600 dark:text-gray-300"
+              }`}
+            >
+              {tabLabels[tab]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mb-3 text-xs text-gray-500 dark:text-gray-400">
@@ -162,9 +164,9 @@ export default function NotificationsCenter({
             No notifications found
           </div>
         ) : (
-          notifications.map((notification) => (
+          notifications.map((notification, index) => (
             <div
-              key={notification._id}
+              key={`${notification._id || `${notification.title}-${notification.createdAt}`}-${index}`}
               className={`p-4 border-b last:border-b-0 border-gray-200 dark:border-gray-700 ${
                 !notification.isRead ? "bg-blue-50 dark:bg-blue-900/20" : ""
               }`}
@@ -182,7 +184,7 @@ export default function NotificationsCenter({
                     }
                   }}
                 >
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       {notification.title}
                     </p>
@@ -197,7 +199,7 @@ export default function NotificationsCenter({
                     {formatRelativeTime(notification.createdAt)}
                   </p>
                 </button>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start">
                   {!notification.isRead && (
                     <button
                       onClick={() => markAsRead(notification._id)}

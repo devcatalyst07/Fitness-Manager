@@ -142,22 +142,33 @@ export default function ProjectTeamPage() {
       <AdminSidebar pathname={pathname} setPathname={setPathname} />
       <AdminHeader />
 
-      <main className="lg:ml-64 mt-16 p-8">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
           <ArrowLeft size={20} /><span>{projectName}</span>
         </button>
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Team</h1>
             <p className="text-gray-600 mt-1">Team members for this project</p>
             {projectBrand && <p className="text-sm text-gray-500 mt-1">Brand: <span className="font-medium">{projectBrand}</span></p>}
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2 text-gray-600"><UserPlus size={20} /><span>{teamMembers.length} Members</span></div>
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+            <button onClick={() => setIsAddModalOpen(true)} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
               <UserPlus size={20} /><span>Add Member</span>
             </button>
+          </div>
+        </div>
+
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
+          <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
+            <button onClick={() => router.push(`/admin/projects/${params.id}/overview`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Overview</button>
+            <button onClick={() => router.push(`/admin/projects/${params.id}/tasks`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Tasks</button>
+            <button onClick={() => router.push(`/admin/projects/${params.id}/budget`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Budget</button>
+            <button onClick={() => router.push(`/admin/projects/${params.id}/tender`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Tender</button>
+            <button onClick={() => router.push(`/admin/projects/${params.id}/documents`)} className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Documents</button>
+            <button className="pb-3 px-1 text-sm font-medium border-b-2 border-black text-black">Team</button>
           </div>
         </div>
 
@@ -184,14 +195,14 @@ export default function ProjectTeamPage() {
           ) : (
             <div className="space-y-4">
               {filteredMembers.map((member) => (
-                <div key={member._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                <div key={member._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-blue-600 font-semibold text-lg">{member.userId.name.charAt(0).toUpperCase()}</span>
                     </div>
                     <div><h3 className="font-semibold text-gray-900">{member.userId.name}</h3><p className="text-sm text-gray-600">{member.userId.email}</p></div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">{member.roleId?.name || "No Role"}</span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${member.status === "active" ? "bg-green-100 text-green-700" : member.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700"}`}>{member.status}</span>
                     <button onClick={() => handleRemoveMember(member._id)} className="text-red-600 hover:text-red-700"><X size={20} /></button>
@@ -204,8 +215,8 @@ export default function ProjectTeamPage() {
       </main>
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Add Team Member</h2>
               <button onClick={() => setIsAddModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
@@ -227,9 +238,9 @@ export default function ProjectTeamPage() {
                 </select>
                 {roles.length === 0 && !loadingRoles && <p className="text-xs text-amber-600 mt-1">Please create roles for this brand in Brand Management first</p>}
               </div>
-              <div className="flex gap-3 pt-4">
-                <button onClick={() => setIsAddModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button onClick={handleAddMember} disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300">{saving ? "Adding..." : "Add Member"}</button>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button onClick={() => setIsAddModalOpen(false)} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={handleAddMember} disabled={saving} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300">{saving ? "Adding..." : "Add Member"}</button>
               </div>
             </div>
           </div>

@@ -574,7 +574,7 @@ export default function NotificationBell({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div className="fixed top-4 right-4 z-[60] space-y-2 w-80">
+      <div className="fixed top-4 right-2 sm:right-4 z-[60] space-y-2 w-[min(20rem,calc(100vw-1rem))] sm:w-80">
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -622,13 +622,13 @@ export default function NotificationBell({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[600px] flex flex-col">
+        <div className="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-1rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 max-h-[min(75vh,600px)] flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Notifications
             </h3>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 onClick={toggleToastPreference}
                 disabled={savingToastPref}

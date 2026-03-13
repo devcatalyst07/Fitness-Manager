@@ -10,6 +10,7 @@ import {
 import BrandDashboardModal from "@/components/BrandDashboardModal";
 import AccessControlModal from "@/components/Accesscontrolmodal";
 import { apiClient } from "@/lib/axios";
+import { responsive } from "@/utils/responsive";
 
 interface Brand {
   _id: string;
@@ -137,19 +138,19 @@ export default function BrandManagement({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
+    <div className={responsive.sectionCard}>
+      <div className={responsive.sectionHeader}>
+        <div className={responsive.sectionTitleWrap}>
           <h2 className="text-xl font-semibold text-gray-900">Brand Management</h2>
           <p className="text-sm text-gray-500 mt-1">
             Select a brand to view threads or click dashboard icon for projects
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={responsive.actionsRow}>
           {canAddBrand && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className={responsive.primaryButton}
             >
               <Plus size={18} />
               <span>Add Brand</span>
@@ -158,7 +159,7 @@ export default function BrandManagement({
           {canAccessControl && (
             <button
               onClick={() => setIsAccessControlOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className={responsive.primaryButton}
             >
               <Plus size={18} />
               <span>Access Control</span>
@@ -261,7 +262,7 @@ export default function BrandManagement({
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className={responsive.formControl}
                     placeholder="e.g., Westfield Group"
                   />
                 </div>
@@ -270,15 +271,15 @@ export default function BrandManagement({
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className={responsive.formControl}
                     rows={3}
                     placeholder="Brief description about the brand..."
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setIsCreateModalOpen(false)} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                <button onClick={handleCreateBrand} disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <button onClick={() => setIsCreateModalOpen(false)} className={responsive.secondaryButton}>Cancel</button>
+                <button onClick={handleCreateBrand} disabled={saving} className={`${responsive.primaryButton} disabled:bg-gray-400`}>
                   {saving ? "Creating..." : "Create Brand"}
                 </button>
               </div>
@@ -307,7 +308,7 @@ export default function BrandManagement({
                     type="text"
                     value={selectedBrand.name}
                     onChange={(e) => setSelectedBrand({ ...selectedBrand, name: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className={responsive.formControl}
                   />
                 </div>
                 <div>
@@ -315,14 +316,14 @@ export default function BrandManagement({
                   <textarea
                     value={selectedBrand.description || ""}
                     onChange={(e) => setSelectedBrand({ ...selectedBrand, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className={responsive.formControl}
                     rows={3}
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => { setIsEditModalOpen(false); setSelectedBrand(null); }} className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                <button onClick={handleUpdateBrand} disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <button onClick={() => { setIsEditModalOpen(false); setSelectedBrand(null); }} className={responsive.secondaryButton}>Cancel</button>
+                <button onClick={handleUpdateBrand} disabled={saving} className={`${responsive.primaryButton} disabled:bg-gray-400`}>
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>

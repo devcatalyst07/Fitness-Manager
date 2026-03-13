@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Upload, FileText, AlertCircle } from "lucide-react";
 import { apiClient } from "@/lib/axios";
+import { responsive } from "@/utils/responsive";
 
 interface Project {
   _id: string;
@@ -194,8 +195,8 @@ export function UploadDocumentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-2xl rounded-lg relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-[min(42rem,100vw-1rem)] rounded-lg relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={handleClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-black transition-colors z-10"
@@ -203,7 +204,7 @@ export function UploadDocumentModal({
           <X size={24} />
         </button>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex items-center mb-2">
             <Upload size={24} className="mr-2" />
             <h2 className="text-2xl font-bold text-black">Upload Documents</h2>
@@ -287,7 +288,7 @@ export function UploadDocumentModal({
                 {selectedFiles.map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}
-                    className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between"
+                    className="p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <FileText className="text-blue-600" size={24} />
@@ -317,10 +318,10 @@ export function UploadDocumentModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
             <button
               onClick={handleClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className={responsive.secondaryButton}
               disabled={loading}
             >
               Cancel
@@ -330,7 +331,7 @@ export function UploadDocumentModal({
               disabled={
                 loading || !selectedProject || selectedFiles.length === 0
               }
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

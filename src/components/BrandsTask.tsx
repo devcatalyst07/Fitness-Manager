@@ -253,14 +253,14 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header */}
       <div className="p-3 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <h2 className="text-lg font-semibold text-gray-900">Brands Task</h2>
 
           {/* Brand Filter Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-2 w-full sm:w-auto px-3 py-1.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <span className="text-sm font-medium text-gray-700">
                 {selectedBrand}
@@ -308,7 +308,7 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(["upcoming", "overdue", "completed"] as TabType[]).map((tab) => (
             <button
               key={tab}
@@ -369,11 +369,11 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
             </div>
 
             <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
-              {paginatedTasks.map((task) => (
+              {paginatedTasks.map((task, index) => (
                 <div
-                  key={task._id}
+                  key={`${task._id || `${task.title}-${task.dueDate || "no-date"}`}-${index}`}
                   onClick={() => onTaskClick(task)}
-                  className="flex items-center justify-between p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer group"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all cursor-pointer group"
                 >
                   <div className="flex items-start gap-3 flex-1">
                     {/* Status Icon */}
@@ -394,7 +394,7 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
                       <h3 className="font-medium text-gray-900 mb-1 group-hover:text-blue-600 transition-colors text-sm">
                         {task.title}
                       </h3>
-                      <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] text-gray-500">
                         <span className="flex items-center gap-1">
                           <span className="font-medium">Brand:</span>
                           {task.brand}
@@ -409,7 +409,7 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
                   </div>
 
                   {/* Status Badge */}
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-4 self-start sm:self-auto">
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${getPriorityColor(task.priority)}`}
                     >
@@ -433,7 +433,7 @@ export default function BrandsTask({ onTaskClick }: BrandsTaskProps) {
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}

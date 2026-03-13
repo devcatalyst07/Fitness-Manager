@@ -103,7 +103,7 @@ export default function ProjectTasksPage() {
 
       <AdminHeader />
 
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
         {/* Back Button with Project Name */}
         <div className="mb-4">
           <button
@@ -126,8 +126,8 @@ export default function ProjectTasksPage() {
         </div>
 
         {/* Project Navigation Tabs */}
-        <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-          <div className="flex gap-6 whitespace-nowrap">
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
+          <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
             {["Overview", "Tasks", "Budget", "Tender", "Documents", "Team"].map(
               (tab) => (
                 <button

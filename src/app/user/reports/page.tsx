@@ -254,7 +254,7 @@ export default function UserReportsPage() {
         <AdminSidebar userRole="user" permissions={permissions} />
         <AdminHeader />
 
-        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+        <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
@@ -335,8 +335,8 @@ export default function UserReportsPage() {
                 <h2 className="text-xl font-semibold text-gray-900">Brand Reports</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {brands.map((brand) => (
-                  <div key={brand._id} className="bg-white border border-gray-200 rounded-lg p-4">
+                {brands.map((brand, index) => (
+                  <div key={`${brand._id || brand.name}-${index}`} className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-3">{brand.name}</h3>
                     <div className="flex gap-2">
                       <button
@@ -373,8 +373,8 @@ export default function UserReportsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects.map((project) => (
-                  <div key={project._id} className="bg-white border border-gray-200 rounded-lg p-4">
+                {projects.map((project, index) => (
+                  <div key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`} className="bg-white border border-gray-200 rounded-lg p-4">
                     <h3 className="font-semibold text-gray-900 mb-1">{project.projectName}</h3>
                     <p className="text-sm text-gray-500 mb-3">{project.projectCode || project.brand}</p>
                     <div className="flex gap-2">

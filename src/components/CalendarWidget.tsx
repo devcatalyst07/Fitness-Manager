@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, MapPin, Clock, Plus, X } from "lucide-react";
+import { responsive } from "@/utils/responsive";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
@@ -127,7 +128,7 @@ export default function CalendarWidget({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-1">
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 flex items-center gap-2">
             <CalendarIcon size={28} />
@@ -142,7 +143,7 @@ export default function CalendarWidget({
             {canAddEvent && (
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 text-sm whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-1 w-full sm:w-auto px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm whitespace-nowrap"
               >
                 <Plus size={16} />
                 Add Event
@@ -198,8 +199,8 @@ export default function CalendarWidget({
 
       {/* Add Event Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md rounded-lg">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white w-full max-w-[min(28rem,100vw-1rem)] rounded-lg">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Add New Event</h2>
@@ -266,14 +267,14 @@ export default function CalendarWidget({
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className={responsive.secondaryButton}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddEvent}
                   disabled={!formData.title || !formData.startDate}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+                  className={`${responsive.primaryButton} disabled:bg-gray-300`}
                 >
                   Add Event
                 </button>

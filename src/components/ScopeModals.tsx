@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Edit2, AlertCircle, CheckCircle, Loader, Upload } from 'lucide-react';
 import ExcelUploadModal from './ExcelUploadModal';
 import { apiClient } from '@/lib/axios';
+import { responsive } from '@/utils/responsive';
 
 interface Brand { _id: string; name: string; }
 interface Scope { _id: string; name: string; description?: string; brandFilter: 'all' | 'specific'; brandId?: string; brandName?: string; isActive: boolean; }
@@ -21,9 +22,9 @@ function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel, confirmTex
       <div className="bg-white w-full max-w-md rounded-lg shadow-xl">
         <div className={`p-4 border-b ${variantStyles[variant]}`}><div className="flex items-center gap-3"><AlertCircle size={24} /><h3 className="text-lg font-bold">{title}</h3></div></div>
         <div className="p-6"><p className="text-gray-700">{message}</p></div>
-        <div className="flex gap-3 p-4 bg-gray-50 rounded-b-lg">
-          <button onClick={onCancel} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg font-medium">{cancelText}</button>
-          <button onClick={onConfirm} className={`flex-1 px-4 py-2 text-white rounded-lg font-medium ${buttonStyles[variant]}`}>{confirmText}</button>
+        <div className="flex flex-col sm:flex-row gap-3 p-4 bg-gray-50 rounded-b-lg">
+          <button onClick={onCancel} className={responsive.secondaryButton}>{cancelText}</button>
+          <button onClick={onConfirm} className={`${responsive.primaryButton} ${buttonStyles[variant]}`}>{confirmText}</button>
         </div>
       </div>
     </div>
@@ -54,13 +55,13 @@ function TaskFormModal({ isOpen, onClose, onSubmit, loading }: TaskFormModalProp
       <div className="bg-white w-full max-w-md rounded-lg shadow-xl">
         <div className="flex items-center justify-between p-4 border-b"><h3 className="text-lg font-bold text-gray-900">Add New Task</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20} /></button></div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Task Title <span className="text-red-500">*</span></label><input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Enter task title" required autoFocus /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none" placeholder="Optional description..." /></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Priority</label><select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value as Task['priority'] })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option></select></div>
-          <div><label className="block text-sm font-medium text-gray-700 mb-1">Estimate Hours</label><input type="number" value={formData.estimateHours} onChange={(e) => setFormData({ ...formData, estimateHours: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Optional estimate" min="0" /></div>
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium" disabled={loading}>Cancel</button>
-            <button type="submit" disabled={loading || !formData.title.trim()} className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:bg-gray-400 flex items-center justify-center gap-2">{loading ? (<><Loader size={16} className="animate-spin" />Adding...</>) : ('Add Task')}</button>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Task Title <span className="text-red-500">*</span></label><input type="text" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className={responsive.formControl} placeholder="Enter task title" required autoFocus /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className={`${responsive.formControl} resize-none`} placeholder="Optional description..." /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Priority</label><select value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value as Task['priority'] })} className={responsive.formControl}><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option><option value="Critical">Critical</option></select></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Estimate Hours</label><input type="number" value={formData.estimateHours} onChange={(e) => setFormData({ ...formData, estimateHours: e.target.value })} className={responsive.formControl} placeholder="Optional estimate" min="0" /></div>
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <button type="button" onClick={onClose} className={responsive.secondaryButton} disabled={loading}>Cancel</button>
+            <button type="submit" disabled={loading || !formData.title.trim()} className={`${responsive.primaryButton} disabled:bg-gray-400`}>{loading ? (<><Loader size={16} className="animate-spin" />Adding...</>) : ('Add Task')}</button>
           </div>
         </form>
       </div>
@@ -108,10 +109,10 @@ export function CreateScopeModal({ brands, onClose, onSuccess }: CreateScopeModa
                   <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="brandFilter" checked={formData.brandFilter === 'specific'} onChange={() => setFormData({ ...formData, brandFilter: 'specific' })} className="text-blue-600" disabled={loading} /><span className="text-sm text-gray-700">Specific Brand</span></label>
                 </div>
               </div>
-              {formData.brandFilter === 'specific' && (<div><label className="block text-sm font-medium text-gray-700 mb-1">Select Brand <span className="text-red-500">*</span></label><select value={formData.brandId} onChange={(e) => setFormData({ ...formData, brandId: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" disabled={loading}><option value="">-- Select Brand --</option>{brands.map((brand) => (<option key={brand._id} value={brand._id}>{brand.name}</option>))}</select></div>)}
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium" disabled={loading}>Cancel</button>
-                <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:bg-gray-400 flex items-center justify-center gap-2">{loading ? (<><Loader size={16} className="animate-spin" />Creating...</>) : ('Create Scope')}</button>
+              {formData.brandFilter === 'specific' && (<div><label className="block text-sm font-medium text-gray-700 mb-1">Select Brand <span className="text-red-500">*</span></label><select value={formData.brandId} onChange={(e) => setFormData({ ...formData, brandId: e.target.value })} className={responsive.formControl} disabled={loading}><option value="">-- Select Brand --</option>{brands.map((brand) => (<option key={brand._id} value={brand._id}>{brand.name}</option>))}</select></div>)}
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="button" onClick={onClose} className={responsive.secondaryButton} disabled={loading}>Cancel</button>
+                <button type="submit" disabled={loading} className={`${responsive.primaryButton} disabled:bg-gray-400`}>{loading ? (<><Loader size={16} className="animate-spin" />Creating...</>) : ('Create Scope')}</button>
               </div>
             </form>
           </div>
@@ -153,9 +154,9 @@ export function EditScopeModal({ scope, brands, onClose, onSuccess }: EditScopeM
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Scope Name <span className="text-red-500">*</span></label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" disabled={loading} /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none" disabled={loading} /></div>
               <div><label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} className="text-blue-600" disabled={loading} /><span className="text-sm text-gray-700">Active</span></label></div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium" disabled={loading}>Cancel</button>
-                <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:bg-gray-400 flex items-center justify-center gap-2">{loading ? (<><Loader size={16} className="animate-spin" />Updating...</>) : ('Update Scope')}</button>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="button" onClick={onClose} className={responsive.secondaryButton} disabled={loading}>Cancel</button>
+                <button type="submit" disabled={loading} className={`${responsive.primaryButton} disabled:bg-gray-400`}>{loading ? (<><Loader size={16} className="animate-spin" />Updating...</>) : ('Update Scope')}</button>
               </div>
             </form>
           </div>
@@ -203,11 +204,11 @@ export function AddWorkflowModal({ scopeId, onClose, onSuccess }: AddWorkflowMod
             <h3 className="text-xl font-bold text-black mb-4">Add Workflow</h3>
             {error && (<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-red-700 text-sm"><AlertCircle size={18} className="flex-shrink-0 mt-0.5" /><span>{error}</span></div>)}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Workflow Name <span className="text-red-500">*</span></label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="e.g., Design & Build" disabled={loading} autoFocus /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 resize-none" disabled={loading} placeholder="Optional description..." /></div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium" disabled={loading}>Cancel</button>
-                <button type="submit" disabled={loading || !formData.name.trim()} className="flex-1 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium disabled:bg-gray-400 flex items-center justify-center gap-2">{loading ? (<><Loader size={16} className="animate-spin" />Adding...</>) : ('Add Workflow')}</button>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Workflow Name <span className="text-red-500">*</span></label><input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={responsive.formControl} placeholder="e.g., Design & Build" disabled={loading} autoFocus /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className={`${responsive.formControl} resize-none`} disabled={loading} placeholder="Optional description..." /></div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="button" onClick={onClose} className={responsive.secondaryButton} disabled={loading}>Cancel</button>
+                <button type="submit" disabled={loading || !formData.name.trim()} className={`${responsive.primaryButton} disabled:bg-gray-400`}>{loading ? (<><Loader size={16} className="animate-spin" />Adding...</>) : ('Add Workflow')}</button>
               </div>
             </form>
           </div>
@@ -294,9 +295,9 @@ export function ManageTasksModal({ scopeId, workflowId, onClose, onSuccess }: Ma
         <div className="bg-white w-full max-w-4xl rounded-lg relative max-h-[90vh] overflow-y-auto">
           <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-black z-10"><X size={24} /></button>
           <div className="p-8">
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
               <div><h2 className="text-2xl font-bold text-black">Manage Workflow Tasks</h2><p className="text-sm text-gray-600 mt-1">Create phases and predefined tasks</p></div>
-              <button onClick={() => setShowExcelUpload(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"><Upload size={18} />Upload Excel</button>
+              <button onClick={() => setShowExcelUpload(true)} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium w-full sm:w-auto"><Upload size={18} />Upload Excel</button>
             </div>
 
             {loading ? (

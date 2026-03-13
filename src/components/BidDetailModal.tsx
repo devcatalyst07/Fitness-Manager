@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, Download, Clock, User, DollarSign, MessageSquare } from 'lucide-react';
 import { apiClient } from '@/lib/axios';
+import { responsive } from '@/utils/responsive';
 
 interface BidAttachment {
   _id: string;
@@ -115,10 +116,10 @@ export default function BidDetailModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-4xl rounded-xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-[min(64rem,100vw-1rem)] rounded-xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-start justify-between gap-2 px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Bid Submission Detail</h2>
             {bid && (
@@ -136,7 +137,7 @@ export default function BidDetailModal({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -146,7 +147,7 @@ export default function BidDetailModal({
           ) : (
             <div className="space-y-6">
               {/* Status & Summary */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                     <DollarSign size={14} />
@@ -192,7 +193,8 @@ export default function BidDetailModal({
                 <div>
                   <h3 className="text-base font-semibold text-gray-900 mb-3">Price Breakdown</h3>
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[640px] text-sm">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="text-left px-4 py-2.5 text-gray-600 font-medium">Description</th>
@@ -220,6 +222,7 @@ export default function BidDetailModal({
                         </tr>
                       </tfoot>
                     </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -270,7 +273,7 @@ export default function BidDetailModal({
                         href={attachment.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition group"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition group"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <FileText size={18} className="text-blue-600 flex-shrink-0" />
@@ -314,10 +317,10 @@ export default function BidDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-stretch sm:justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-sm font-medium"
+            className={responsive.secondaryButton}
           >
             Close
           </button>

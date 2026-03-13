@@ -119,7 +119,7 @@ export default function ProjectDocumentsPage() {
     <div className="min-h-screen bg-gray-50">
       <AdminSidebar pathname={pathname} setPathname={setPathname} />
       <AdminHeader />
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
         <div className="mb-6">
           <button onClick={() => router.push(`/admin/projects/${params.id}`)} className="text-gray-600 hover:text-black mb-4 flex items-center gap-2">
             <ArrowLeft size={20} /><span>{projectName || 'Back to Project'}</span>
@@ -129,8 +129,8 @@ export default function ProjectDocumentsPage() {
           </div>
         </div>
 
-      <div className="mb-6 border-b border-gray-200">
-  <div className="flex gap-6">
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
+      <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
     {['Overview', 'Tasks', 'Budget', 'Tender', 'Documents', 'Team'].map((tab) => (
       <button key={tab}
         className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${tab === 'Documents' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}

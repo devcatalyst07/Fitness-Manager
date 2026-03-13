@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, AlertTriangle, Calendar } from 'lucide-react';
 import { apiClient } from '@/lib/axios';
+import { responsive } from '@/utils/responsive';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -197,8 +198,8 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-lg rounded-lg relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-[min(40rem,100vw-1rem)] rounded-lg relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-black transition-colors z-10"
@@ -206,7 +207,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
           <X size={24} />
         </button>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="flex items-center mb-2">
             <Plus size={24} className="mr-2" />
             <h2 className="text-2xl font-bold text-black">Create New Project</h2>
@@ -464,17 +465,17 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              className={responsive.secondaryButton}
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || brands.length === 0 || scopes.length === 0}
-              className="flex-1 px-4 py-3 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Creating...' : 'Create Project'}
             </button>

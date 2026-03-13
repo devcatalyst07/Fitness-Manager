@@ -66,7 +66,7 @@ export default function TaskBoardView({
           >
             {/* Column Header */}
             <div className="p-4 border-b border-gray-300 bg-white rounded-t-lg">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl"></span>
                   <h3 className="font-semibold text-gray-900">
@@ -86,9 +86,9 @@ export default function TaskBoardView({
                   No tasks in {column.title.toLowerCase()}
                 </div>
               ) : (
-                columnTasks.map((task) => (
+                columnTasks.map((task, index) => (
                   <div
-                    key={task._id}
+                    key={`${task._id || `${task.title}-${task.dueDate || "no-date"}`}-${index}`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task)}
                     onClick={() => onTaskClick(task)}
@@ -107,7 +107,7 @@ export default function TaskBoardView({
                     )}
 
                     {/* Priority & Status Badges */}
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPriorityBadge(task.priority)}`}
                       >
@@ -117,7 +117,7 @@ export default function TaskBoardView({
 
                     {/* Progress Bar */}
                     <div className="mb-3">
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs text-gray-600">Progress</span>
                         <span className="text-xs font-medium text-gray-700">
                           {task.progress}%
@@ -132,7 +132,7 @@ export default function TaskBoardView({
                     </div>
 
                     {/* Footer: Assignees & Due Date */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 border-t border-gray-100">
                       {/* Assignees */}
                       <div className="flex -space-x-2">
                         {task.assignees && task.assignees.length > 0 ? (
@@ -161,7 +161,7 @@ export default function TaskBoardView({
 
                       {/* Due Date */}
                       {task.dueDate && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 self-start sm:self-auto">
                            {formatDate(task.dueDate)}
                         </span>
                       )}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, File, X as CloseIcon } from 'lucide-react';
+import { responsive } from '@/utils/responsive';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
@@ -132,11 +133,11 @@ export default function CreateThreadModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-2xl rounded-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-[min(42rem,100vw-1rem)] rounded-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-start justify-between gap-2 mb-6">
             <h2 className="text-xl font-bold text-gray-900">Create New Thread</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-black">
               <X size={24} />
@@ -203,7 +204,7 @@ export default function CreateThreadModal({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Attachments (Optional)
               </label>
-              <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label className="flex flex-col sm:flex-row items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-center">
                 <Upload size={18} className="text-gray-500" />
                 <span className="text-sm text-gray-600">Click to upload files</span>
                 <input
@@ -225,7 +226,7 @@ export default function CreateThreadModal({
                 {selectedFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 bg-gray-50 rounded border border-gray-200"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <File size={16} className="text-gray-500 flex-shrink-0" />
@@ -247,17 +248,17 @@ export default function CreateThreadModal({
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg"
+              className={responsive.secondaryButton}
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || uploading}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg disabled:bg-gray-400"
+              className={`${responsive.primaryButton} disabled:bg-gray-400`}
             >
               {uploading ? 'Uploading files...' : saving ? 'Creating...' : 'Create Thread'}
             </button>

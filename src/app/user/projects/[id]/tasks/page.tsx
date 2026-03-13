@@ -127,6 +127,21 @@ export default function UserProjectTasksPage() {
     ? hasPermission("projects-view-details-task", roleData.permissions)
     : false;
 
+  const permissions = roleData?.permissions || [];
+  const hasRoleData = !!roleData;
+  const canViewOverview =
+    !hasRoleData || hasPermission("projects-view-details-overview", permissions);
+  const canViewTasks =
+    !hasRoleData || hasPermission("projects-view-details-task", permissions);
+  const canViewBudget =
+    !hasRoleData || hasPermission("projects-view-details-budget", permissions);
+  const canViewTender =
+    !hasRoleData || hasPermission("projects-view-details-tender", permissions);
+  const canViewDocuments =
+    !hasRoleData || hasPermission("projects-view-details-documents", permissions);
+  const canViewTeam =
+    !hasRoleData || hasPermission("projects-view-details-team", permissions);
+
   if (authLoading || loading) return <FitoutLoadingSpinner />;
   if (!user || user.role !== "user") return <FitoutLoadingSpinner />;
 
@@ -135,7 +150,7 @@ export default function UserProjectTasksPage() {
       <UserSidebar />
       <UserHeader />
 
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
         <div className="mb-4">
           <button
             onClick={() => router.push(`/user/projects/${params.id}`)}
@@ -155,26 +170,53 @@ export default function UserProjectTasksPage() {
           </p>
         </div>
 
-        <div className="mb-6 border-b border-gray-200 overflow-x-auto">
-          <div className="flex gap-6 whitespace-nowrap">
-            {["Overview", "Tasks", "Budget", "Documents", "Team"].map((tab) => (
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
+          <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
+            {canViewOverview && (
               <button
-                key={tab}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${tab === "Tasks" ? "border-black text-black" : "border-transparent text-gray-500 hover:text-gray-700"}`}
-                onClick={() => {
-                  if (tab === "Overview")
-                    router.push(`/user/projects/${params.id}`);
-                  if (tab === "Budget")
-                    router.push(`/user/projects/${params.id}/budget`);
-                  if (tab === "Documents")
-                    router.push(`/user/projects/${params.id}/documents`);
-                  if (tab === "Team")
-                    router.push(`/user/projects/${params.id}/team`);
-                }}
+                onClick={() => router.push(`/user/projects/${params.id}`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
               >
-                {tab}
+                Overview
               </button>
-            ))}
+            )}
+            {canViewTasks && (
+              <button className="pb-3 px-1 text-sm font-medium border-b-2 border-black text-black">
+                Tasks
+              </button>
+            )}
+            {canViewBudget && (
+              <button
+                onClick={() => router.push(`/user/projects/${params.id}/budget`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Budget
+              </button>
+            )}
+            {canViewTender && (
+              <button
+                onClick={() => router.push(`/user/projects/${params.id}/tender`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Tender
+              </button>
+            )}
+            {canViewDocuments && (
+              <button
+                onClick={() => router.push(`/user/projects/${params.id}/documents`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Documents
+              </button>
+            )}
+            {canViewTeam && (
+              <button
+                onClick={() => router.push(`/user/projects/${params.id}/team`)}
+                className="pb-3 px-1 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+              >
+                Team
+              </button>
+            )}
           </div>
         </div>
 

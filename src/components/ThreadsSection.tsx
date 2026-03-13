@@ -178,7 +178,7 @@ export default function ThreadsSection({
   const currentUserId = (user as any)?.id || (user as any)?._id || "";
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div>
@@ -189,7 +189,7 @@ export default function ThreadsSection({
             Collaborate and share updates for{" "}
             <span className="font-medium text-gray-700">{brandName}</span>
           </p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
             <div className="flex items-center gap-1">
               <span>{generalThreadsCount} General</span>
             </div>
@@ -201,7 +201,7 @@ export default function ThreadsSection({
         {canAddThread && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full sm:w-auto justify-center flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             <span>New Thread</span>
           </button>
@@ -220,7 +220,7 @@ export default function ThreadsSection({
           />
         </div>
 
-        <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 min-w-[200px]">
+        <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-auto sm:min-w-[220px]">
           <span className="text-sm text-gray-500">Filter:</span>
           <select
             value={selectedProjectFilter}
@@ -253,7 +253,7 @@ export default function ThreadsSection({
       {/* Filter Info Banner */}
       {selectedProjectFilter !== "all" && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-start gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-2">
             <div className="flex-1">
               <p className="text-sm text-blue-900 font-medium">
                 {selectedProjectFilter === "general" ? (
@@ -274,7 +274,7 @@ export default function ThreadsSection({
             </div>
             <button
               onClick={() => setSelectedProjectFilter("all")}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="self-start sm:self-auto text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
               Clear
             </button>

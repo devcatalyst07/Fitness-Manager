@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Plus, Edit2, Trash2, GripVertical } from 'lucide-react';
+import { responsive } from '@/utils/responsive';
 
 interface Phase {
   _id: string;
@@ -94,13 +95,13 @@ export default function PhaseManagementModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-[min(56rem,100vw-1rem)] rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-6 py-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-semibold text-white">
+              <h2 className="text-xl sm:text-2xl font-semibold text-white">
                 Manage Phases
               </h2>
               <p className="text-white/80 text-sm mt-1">
@@ -117,7 +118,7 @@ export default function PhaseManagementModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Add/Edit Form */}
           {isAdding && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -172,17 +173,17 @@ export default function PhaseManagementModal({
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={handleSubmit}
                     disabled={saving || !formData.name.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                      className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
                   >
                     {saving ? 'Saving...' : editingPhaseId ? 'Update Phase' : 'Add Phase'}
                   </button>
                   <button
                     onClick={resetForm}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      className={responsive.secondaryButton}
                   >
                     Cancel
                   </button>
@@ -215,7 +216,7 @@ export default function PhaseManagementModal({
                 .map((phase, index) => (
                   <div
                     key={phase._id}
-                    className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
                   >
                     {/* Drag Handle */}
                     <div className="cursor-move text-gray-400">
@@ -270,7 +271,7 @@ export default function PhaseManagementModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+        <div className="border-t border-gray-200 px-4 sm:px-6 py-4 bg-gray-50">
           <button
             onClick={onClose}
             className="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all"

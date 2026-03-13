@@ -95,7 +95,7 @@ export default function ProjectsPage() {
         <AdminSidebar userRole="admin" />
         <AdminHeader />
 
-        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+        <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
           {/* Page Header */}
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">

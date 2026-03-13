@@ -3,6 +3,7 @@ import { X, UserPlus, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import BrandLineGraph from "./BrandLineGraph";
 import { apiClient } from "@/lib/axios";
+import { responsive } from "@/utils/responsive";
 
 interface Brand {
   _id: string;
@@ -148,16 +149,16 @@ export default function BrandDashboardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleBackdropClick}>
-      <div className="bg-white w-full max-w-5xl rounded-xl max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white border-b px-8 py-6 flex items-center justify-between rounded-t-xl z-10">
-          <h2 className="text-2xl font-bold text-gray-900">{brand.name}</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={handleBackdropClick}>
+      <div className="bg-white w-full max-w-[min(72rem,100vw-1rem)] rounded-xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="sticky top-0 bg-white border-b px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center justify-between rounded-t-xl z-10 gap-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{brand.name}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
             <X size={28} />
           </button>
         </div>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {loading ? (
             <div className="space-y-8 animate-pulse">
               <div className="bg-gray-100 rounded-lg h-80"></div>
@@ -192,13 +193,13 @@ export default function BrandDashboardModal({
               </div>
 
               <div className="mb-8">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">Projects & Tasks</h3>
                   <div className="relative">
                     <select
                       value={projectStatusFilter}
                       onChange={(e) => setProjectStatusFilter(e.target.value)}
-                      className="appearance-none px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      className="appearance-none w-full sm:w-auto min-w-0 px-4 py-2 pr-10 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     >
                       <option value="all">All Projects</option>
                       <option value="active">Active</option>
@@ -217,7 +218,7 @@ export default function BrandDashboardModal({
                       const statusBadge = getStatusBadge(project);
                       return (
                         <div key={project._id} onClick={() => handleProjectClick(project._id)} className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all cursor-pointer bg-white">
-                          <div className="flex items-start justify-between mb-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,7 +227,7 @@ export default function BrandDashboardModal({
                               </div>
                               <h4 className="font-semibold text-gray-900 text-lg">{project.projectName}</h4>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusBadge.className}`}>{statusBadge.text}</span>
+                            <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-medium ${statusBadge.className}`}>{statusBadge.text}</span>
                           </div>
                           <div className="mb-4">
                             <div className="flex items-center justify-between text-sm mb-2">
@@ -253,7 +254,7 @@ export default function BrandDashboardModal({
               {canAddUser && (
                 <div className="mt-8">
                   <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
-                    <button type="button" onClick={() => setIsAddUserExpanded(!isAddUserExpanded)} className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition">
+                    <button type="button" onClick={() => setIsAddUserExpanded(!isAddUserExpanded)} className="w-full flex items-center justify-between px-4 sm:px-6 py-4 hover:bg-gray-50 transition gap-2">
                       <div className="flex items-center gap-3">
                         <div className="bg-blue-50 p-2 rounded-md"><UserPlus size={18} className="text-blue-600" /></div>
                         <div>
@@ -264,16 +265,16 @@ export default function BrandDashboardModal({
                       <X size={20} className={`text-gray-400 transform transition-transform ${isAddUserExpanded ? "rotate-45" : ""}`} />
                     </button>
                     {isAddUserExpanded && (
-                      <div className="border-t border-gray-100 p-6 bg-gray-50">
+                      <div className="border-t border-gray-100 p-4 sm:p-6 bg-gray-50">
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                             <input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="name@company.com" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                             <p className="text-xs text-gray-500 mt-2">The invited user will receive an email to join this brand's team.</p>
                           </div>
-                          <div className="flex items-center justify-end gap-3 pt-2">
-                            <button type="button" onClick={() => setIsAddUserExpanded(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-100 transition-colors font-medium">Cancel</button>
-                            <button type="button" onClick={handleAddUser} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
+                            <button type="button" onClick={() => setIsAddUserExpanded(false)} className={responsive.secondaryButton}>Cancel</button>
+                            <button type="button" onClick={handleAddUser} disabled={saving} className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium disabled:opacity-50">
                               {saving ? "Adding..." : "Add User"}
                             </button>
                           </div>

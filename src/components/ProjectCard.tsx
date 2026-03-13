@@ -51,12 +51,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Link href={`${basePath}/projects/${project._id}`}>
       <div className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer group">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
           <div className="flex-1">
             <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
               {project.projectName}
             </h3>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="text-sm text-gray-600">{project.brand}</span>
               <span className="text-gray-400">•</span>
               <span className="text-sm text-gray-600">{project.scope}</span>
@@ -104,12 +104,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
           {/* Budget */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0">
                 <DollarSign size={16} className="text-gray-400" />
                 <span>Budget</span>
               </div>
-              <span className="text-sm font-semibold text-gray-900">
+              <span className="text-sm font-semibold text-gray-900 break-all sm:break-normal">
                 ${project.spent.toLocaleString()} / ${project.budget.toLocaleString()}
               </span>
             </div>
@@ -128,8 +128,8 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-          <span>Workflow: {project.workflow}</span>
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-gray-500">
+          <span className="min-w-0 truncate">Workflow: {project.workflow}</span>
           <span className="text-blue-600 group-hover:text-blue-700 font-medium">
             View Details →
           </span>

@@ -54,7 +54,7 @@ export default function TaskListView({
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[900px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -81,9 +81,9 @@ export default function TaskListView({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {sortedTasks.map((task) => (
+            {sortedTasks.map((task, index) => (
               <tr
-                key={task._id}
+                key={`${task._id || `${task.title}-${task.dueDate || "no-date"}`}-${index}`}
                 className="hover:bg-gray-50 cursor-pointer transition-colors"
                 onClick={() => onTaskClick(task)}
               >

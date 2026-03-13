@@ -226,7 +226,7 @@ export default function UserFinancePage() {
         <AdminSidebar userRole="user" permissions={permissions} />
         <AdminHeader />
 
-        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+        <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">
               Financial Control Centre
@@ -247,8 +247,8 @@ export default function UserFinancePage() {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Pending Approvals</h3>
                     <ul className="text-sm text-gray-600 space-y-1">
-                      {financeData.pendingApprovals.slice(0, 2).map((approval) => (
-                        <li key={approval._id}>
+                      {financeData.pendingApprovals.slice(0, 2).map((approval, index) => (
+                        <li key={`${approval._id || `${approval.projectId?._id || approval.projectId?.projectName}-${approval.type}`}-${index}`}>
                           • {approval.projectId.projectName} — {approval.description} (
                           {formatCurrency(approval.amount)})
                         </li>
@@ -396,8 +396,8 @@ export default function UserFinancePage() {
                 </thead>
 
                 <tbody className="divide-y divide-gray-200">
-                  {financeData?.projects.map((project) => (
-                    <tr key={project._id} className="hover:bg-gray-50">
+                  {financeData?.projects.map((project, index) => (
+                    <tr key={`${project._id || `${project.projectName}-${project.brand}`}-${index}`} className="hover:bg-gray-50">
                       <td className="px-6 py-5">
                         <div className="font-medium text-gray-900">{project.projectName}</div>
                         <div className="text-xs text-gray-500">{project.brand} • {project.region}</div>

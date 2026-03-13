@@ -286,6 +286,11 @@ export default function AdminProjectBudgetPage() {
     ? ((projectFinance.committed / projectFinance.totalBudget) * 100).toFixed(1)
     : '0';
 
+  const getBudgetItemRowKey = (item: BudgetItem, index: number) => {
+    const baseKey = item._id || item.tenderId || `${item.description}-${item.createdAt}`;
+    return `${baseKey}-${index}`;
+  };
+
   if (authLoading || loading) return <FitoutLoadingSpinner />;
   if (!user || user.role !== 'admin') return <FitoutLoadingSpinner />;
 
@@ -417,7 +422,7 @@ export default function AdminProjectBudgetPage() {
       <AdminSidebar pathname={pathname} setPathname={setPathname} />
       <AdminHeader />
 
-      <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
         {/* Header */}
         <div className="mb-6">
           <button
@@ -444,8 +449,8 @@ export default function AdminProjectBudgetPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-6 border-b border-gray-200">
-          <div className="flex gap-6">
+        <div className="mb-6 border-b border-gray-200 overflow-x-auto -mx-1 px-1">
+          <div className="flex min-w-max gap-4 sm:gap-6 whitespace-nowrap">
             {['Overview', 'Tasks', 'Budget', 'Tender', 'Documents', 'Team'].map((tab) => (
               <button
                 key={tab}
@@ -608,10 +613,10 @@ export default function AdminProjectBudgetPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredItems.map((item) => {
+                  {filteredItems.map((item, index) => {
                     const total = item.totalCost || item.quantity * item.unitCost;
                     return (
-                      <tr key={item._id} className="hover:bg-gray-50">
+                      <tr key={getBudgetItemRowKey(item, index)} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900 text-sm">{item.description}</div>
                           {item.notes && <div className="text-xs text-gray-500 truncate max-w-[200px]">{item.notes}</div>}

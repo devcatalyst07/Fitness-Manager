@@ -106,7 +106,6 @@ export default function TaskPhaseView({
 
   const TaskRow = ({ task }: { task: Task }) => (
     <tr
-      key={task._id}
       className="hover:bg-gray-50 cursor-pointer transition-colors"
       onClick={() => onTaskClick(task)}
     >
@@ -278,12 +277,12 @@ export default function TaskPhaseView({
   return (
     <div className="space-y-4">
       {/* Render phases in order */}
-      {sortedPhases.map((phase) => {
+      {sortedPhases.map((phase, phaseIndex) => {
         const phaseTasks = tasksByPhase[phase._id] || [];
         const isCollapsed = collapsedPhases.has(phase._id);
 
         return (
-          <div key={phase._id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div key={`${phase._id || phase.name}-${phaseIndex}`} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             {/* Phase Header */}
             <div
               className="flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
@@ -319,7 +318,7 @@ export default function TaskPhaseView({
                     <p className="text-sm">No tasks in this phase yet</p>
                   </div>
                 ) : (
-                  <table className="w-full">
+                  <table className="w-full min-w-[980px]">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -349,8 +348,8 @@ export default function TaskPhaseView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {phaseTasks.map((task) => (
-                        <TaskRow key={task._id} task={task} />
+                      {phaseTasks.map((task, taskIndex) => (
+                        <TaskRow key={`${task._id || `${task.title}-${task.dueDate || 'no-date'}`}-${taskIndex}`} task={task} />
                       ))}
                     </tbody>
                   </table>
@@ -388,7 +387,7 @@ export default function TaskPhaseView({
 
           {!collapsedPhases.has('unassigned') && (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[980px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -418,8 +417,8 @@ export default function TaskPhaseView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {tasksByPhase['unassigned'].map((task) => (
-                    <TaskRow key={task._id} task={task} />
+                  {tasksByPhase['unassigned'].map((task, taskIndex) => (
+                    <TaskRow key={`${task._id || `${task.title}-${task.dueDate || 'no-date'}`}-${taskIndex}`} task={task} />
                   ))}
                 </tbody>
               </table>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, Upload, GripVertical } from 'lucide-react';
+import { responsive } from '@/utils/responsive';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fitout-manager-api.vercel.app';
 
@@ -89,7 +90,7 @@ export function EditWorkflowModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white w-full max-w-md rounded-lg relative">
         <button
           onClick={onClose}
@@ -133,17 +134,17 @@ export function EditWorkflowModal({
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+              className={responsive.secondaryButton}
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition-colors disabled:bg-gray-400"
             >
               {loading ? 'Updating...' : 'Update'}
             </button>
@@ -346,8 +347,8 @@ export function ManageTasksModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-4xl rounded-lg relative max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white w-full max-w-[min(64rem,100vw-1rem)] rounded-lg relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-black transition-colors z-10"
@@ -355,7 +356,7 @@ export function ManageTasksModal({
           <X size={24} />
         </button>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-black mb-2">
               Manage Workflow Tasks
@@ -366,10 +367,10 @@ export function ManageTasksModal({
           </div>
 
           {/* Import Excel Button */}
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-stretch sm:justify-end mb-4">
             <button
               onClick={() => setShowImportExcel(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Upload size={18} />
               <span>Import from Excel</span>
@@ -384,7 +385,7 @@ export function ManageTasksModal({
                 className="border border-gray-200 rounded-lg overflow-hidden"
               >
                 {/* Phase Header */}
-                <div className="flex items-center justify-between p-4 bg-gray-50">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gray-50">
                   {editingPhase === phase._id ? (
                     <input
                       type="text"
@@ -438,7 +439,7 @@ export function ManageTasksModal({
                       {phase.tasks.map((task) => (
                         <div
                           key={task._id}
-                          className="flex items-start justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                         >
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{task.title}</div>
@@ -504,11 +505,11 @@ export function ManageTasksModal({
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <div className="flex gap-2 mt-3">
+                <div className="flex flex-col sm:flex-row gap-2 mt-3">
                   <button
                     onClick={handleAddPhase}
                     disabled={!newPhaseName.trim() || saving}
-                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:bg-gray-400"
                   >
                     Add Phase
                   </button>
@@ -517,7 +518,7 @@ export function ManageTasksModal({
                       setIsAddingPhase(false);
                       setNewPhaseName('');
                     }}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
@@ -534,10 +535,10 @@ export function ManageTasksModal({
             )}
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-stretch sm:justify-end mt-6">
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
             >
               Done
             </button>
@@ -547,8 +548,8 @@ export function ManageTasksModal({
 
       {/* Import Excel Modal */}
       {showImportExcel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white w-full max-w-md rounded-lg p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-2 sm:p-4">
+          <div className="bg-white w-full max-w-md rounded-lg p-4 sm:p-6">
             <h3 className="text-lg font-bold mb-4">Import Tasks from Excel</h3>
             <p className="text-sm text-gray-600 mb-4">
               Upload an Excel file with your predefined tasks. The file should have
@@ -565,7 +566,7 @@ export function ManageTasksModal({
             />
             <button
               onClick={() => setShowImportExcel(false)}
-              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className={responsive.secondaryButton}
             >
               Cancel
             </button>

@@ -14,6 +14,7 @@ import ThreadsSection from "@/components/ThreadsSection";
 import BrandsTask from "@/components/BrandsTask";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import { apiClient } from "@/lib/axios";
+import { responsive } from "@/utils/responsive";
 
 interface ProjectStats {
   totalProjects: number;
@@ -78,9 +79,11 @@ function DashboardCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className={responsive.sectionCard}>
       <h3 className="text-sm font-medium text-gray-600 mb-2">{title}</h3>
-      <p className="text-3xl font-bold text-gray-900 mb-2">{value}</p>
+      <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+        {value}
+      </p>
       <p className={`text-sm ${changeColor[changeType]}`}>{change}</p>
     </div>
   );
@@ -219,11 +222,11 @@ export default function AdminDashboard() {
 
   return (
     <SessionGuard>
-      <div className="min-h-screen bg-gray-50">
+      <div className={`min-h-screen bg-gray-50 ${responsive.page}`}>
         <AdminSidebar userRole="admin" />
         <AdminHeader onRoleRequestClick={handleRoleRequestClick} />
 
-        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
+        <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">
             Dashboard
           </h1>

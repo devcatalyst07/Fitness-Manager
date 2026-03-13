@@ -76,14 +76,14 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
           const progress = calculateProgress(project);
           return (
             <div key={project._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
                   <Calendar size={16} className="text-blue-600" />
-                  <h4 className="font-semibold text-gray-900">{project.projectName}</h4>
+                  <h4 className="font-semibold text-gray-900 truncate">{project.projectName}</h4>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>{project.status}</span>
+                <span className={`self-start sm:self-auto px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>{project.status}</span>
               </div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-3 mb-2">
                 <span className="text-sm text-gray-600">Tasks</span>
                 <span className="text-sm font-medium text-gray-900">{tasks.completed}/{tasks.total}</span>
               </div>
@@ -92,7 +92,7 @@ export default function BrandProjectsList({ projects, brandName }: BrandProjects
                   <div className="bg-green-500 h-full rounded-full transition-all duration-300" style={{ width: `${tasks.total > 0 ? (tasks.completed / tasks.total) * 100 : 0}%` }} />
                 </div>
               </div>
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-gray-600">Budget</span>
                 <span className="font-medium text-gray-900">${project.budget.toLocaleString()}</span>
               </div>

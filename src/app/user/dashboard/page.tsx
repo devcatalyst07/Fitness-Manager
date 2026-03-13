@@ -324,7 +324,7 @@ export default function UserDashboard() {
         <AdminSidebar userRole="user" permissions={permissions} />
         <AdminHeader />
 
-        <main className="lg:ml-64 mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
+        <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
           <div className="mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               My Dashboard

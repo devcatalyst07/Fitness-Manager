@@ -355,11 +355,11 @@ export default function ThreadDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white w-full max-w-4xl max-h-[95vh] rounded-lg flex flex-col">
+      <div className="bg-white w-full max-w-[min(64rem,100vw-1rem)] max-h-[95vh] rounded-lg flex flex-col">
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 pr-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-2 sm:pr-4">
               {isEditingThread ? (
                 <input
                   type="text"
@@ -372,12 +372,12 @@ export default function ThreadDetailModal({
                   {thread.title}
                 </h2>
               )}
-              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600">
                 <div className="flex items-center gap-1">
                   <User size={14} />
-                  <span className="font-medium">{thread.createdByName}</span>
+                  <span className="font-medium break-words">{thread.createdByName}</span>
                 </div>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <div className="flex items-center gap-1">
                   <Calendar size={14} />
                   <span>{formatDate(thread.createdAt)}</span>
@@ -385,7 +385,7 @@ export default function ThreadDetailModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {isThreadOwner && (
                 <div className="relative">
                   <button
@@ -447,11 +447,11 @@ export default function ThreadDetailModal({
                   className="w-full p-3 border-2 border-blue-500 rounded-lg focus:outline-none resize-none"
                   rows={6}
                 />
-                <div className="flex gap-2 mt-3">
+                <div className="flex flex-col sm:flex-row gap-2 mt-3">
                   <button
                     onClick={handleUpdateThread}
                     disabled={submitting}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                   >
                     {submitting ? "Saving..." : "Save"}
                   </button>
@@ -461,7 +461,7 @@ export default function ThreadDetailModal({
                       setEditedTitle(thread.title);
                       setEditedContent(thread.content);
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Cancel
                   </button>
@@ -484,14 +484,14 @@ export default function ThreadDetailModal({
                     href={file.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                    className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {getFileIcon(file.fileType)}
                       <span className="text-sm text-gray-700 truncate">
                         {file.fileName}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="hidden sm:inline text-xs text-gray-500">
                         ({formatFileSize(file.fileSize)})
                       </span>
                     </div>
@@ -530,13 +530,13 @@ export default function ThreadDetailModal({
                       key={comment._id}
                       className="bg-gray-50 rounded-lg p-4"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-sm text-gray-600 min-w-0">
                           <User size={14} />
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-gray-900 break-words">
                             {comment.createdByName}
                           </span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className="text-xs">
                             {formatDate(comment.createdAt)}
                           </span>
@@ -601,17 +601,17 @@ export default function ThreadDetailModal({
                             className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             rows={3}
                           />
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex flex-col sm:flex-row gap-2 mt-2">
                             <button
                               onClick={() => handleUpdateComment(comment._id)}
                               disabled={submitting}
-                              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:bg-gray-400"
+                              className="w-full sm:w-auto px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:bg-gray-400"
                             >
                               {submitting ? "Saving..." : "Save"}
                             </button>
                             <button
                               onClick={() => setEditingCommentId(null)}
-                              className="px-3 py-1.5 border text-sm rounded hover:bg-gray-50"
+                              className="w-full sm:w-auto px-3 py-1.5 border text-sm rounded hover:bg-gray-50"
                             >
                               Cancel
                             </button>
@@ -700,7 +700,7 @@ export default function ThreadDetailModal({
               </div>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <label className="cursor-pointer p-2 hover:bg-gray-200 rounded">
                 <Paperclip size={20} className="text-gray-600" />
                 <input
@@ -717,7 +717,7 @@ export default function ThreadDetailModal({
                   submitting ||
                   (!newComment.trim() && selectedFiles.length === 0)
                 }
-                className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm"
+                className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm"
               >
                 <Send size={16} />
                 <span>{submitting ? "Sending..." : "Send"}</span>

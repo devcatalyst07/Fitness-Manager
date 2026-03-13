@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Plus, ChevronRight, Edit2, Trash2, Filter, X, Check } from 'lucide-react';
 import { CreateScopeModal, EditScopeModal, AddWorkflowModal, ManageTasksModal } from './ScopeModals';
 import { apiClient } from '@/lib/axios';
+import { responsive } from '@/utils/responsive';
 
 interface Brand {
   _id: string;
@@ -192,27 +193,27 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div>
+    <div className={responsive.sectionCard}>
+      <div className={responsive.sectionHeader}>
+        <div className={`${responsive.sectionTitleWrap} flex items-center gap-3`}>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-gray-900">Scope & Workflow Architecture</h2>
             <p className="text-sm text-gray-600 mt-1">Define project scopes, workflows, and task templates</p>
           </div>
         </div>
-        <button onClick={() => setIsCreateScopeModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button onClick={() => setIsCreateScopeModalOpen(true)} className={responsive.primaryButton}>
           <Plus size={20} />
           <span>Create Scope</span>
         </button>
       </div>
 
       {/* Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className={responsive.filterPanel}>
         <div className="flex items-center gap-2">
           <Filter size={20} className="text-gray-600" />
           <span className="text-sm font-medium text-gray-700">Filter by:</span>
         </div>
-        <div className="flex-1 flex flex-wrap gap-3">
+        <div className={responsive.filterOptions}>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="radio" name="brandFilter" value="all" checked={filterType === 'all'} onChange={() => { setFilterType('all'); setSelectedBrandFilter(''); }} className="text-blue-600" />
             <span className="text-sm text-gray-700">All Brands</span>
@@ -223,7 +224,7 @@ export default function ScopeWorkflowArchitecture({ onRefresh }: ScopeWorkflowAr
           </label>
         </div>
         {filterType === 'specific' && (
-          <select value={selectedBrandFilter} onChange={(e) => setSelectedBrandFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm">
+          <select value={selectedBrandFilter} onChange={(e) => setSelectedBrandFilter(e.target.value)} className={responsive.formControl}>
             <option value="">Select Brand</option>
             {brands.map((brand) => (<option key={brand._id} value={brand._id}>{brand.name}</option>))}
           </select>
@@ -299,19 +300,19 @@ function ScopeItem({ scope, isExpanded, expandedWorkflow, onToggle, onToggleWork
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
         <button onClick={onToggle} className="flex-1 flex items-center gap-3 text-left">
           <ChevronRight size={20} className={`text-gray-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900">{scope.name}</h3>
-            <div className="flex items-center gap-3 mt-1">
+            <div className={responsive.inlineMeta}>
               <span className="text-xs text-gray-600">{scope.brandFilter === 'all' ? 'All Brands' : scope.brandName}</span>
               <span className="text-xs text-gray-400">•</span>
               <span className="text-xs text-gray-600">{scope.workflows.length} workflow{scope.workflows.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-2 text-gray-600 hover:text-blue-600 rounded"><Edit2 size={16} /></button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-2 text-gray-600 hover:text-red-600 rounded"><Trash2 size={16} /></button>
         </div>
@@ -319,9 +320,9 @@ function ScopeItem({ scope, isExpanded, expandedWorkflow, onToggle, onToggleWork
 
       {isExpanded && (
         <div className="p-4 bg-white border-t border-gray-200">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h4 className="text-sm font-semibold text-gray-700">Workflows</h4>
-            <button onClick={() => setIsAddWorkflowModalOpen(true)} className="flex items-center gap-1 text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
+            <button onClick={() => setIsAddWorkflowModalOpen(true)} className="inline-flex items-center justify-center gap-1 text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 w-full sm:w-auto">
               <Plus size={14} /><span>Add Workflow</span>
             </button>
           </div>
