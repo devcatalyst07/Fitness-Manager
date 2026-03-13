@@ -108,6 +108,22 @@ export function AdminSidebar({
   // Use prop pathname if provided, otherwise use Next.js pathname
   const activePath = propPathname || currentPathname;
 
+  useEffect(() => {
+    const savedState = localStorage.getItem("fm_sidebar_collapsed");
+    if (savedState !== null) {
+      setIsCollapsed(savedState === "true");
+    }
+  }, []);
+
+  useEffect(() => {
+    const sidebarWidth = isCollapsed ? "5rem" : "16rem";
+    document.documentElement.style.setProperty(
+      "--fm-sidebar-width",
+      sidebarWidth,
+    );
+    localStorage.setItem("fm_sidebar_collapsed", String(isCollapsed));
+  }, [isCollapsed]);
+
   const userMenuItems: MenuItem[] = [
     {
       icon: Home,

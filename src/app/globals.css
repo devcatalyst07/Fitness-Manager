@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --fm-sidebar-width: 16rem;
 }
 
 @theme inline {
