@@ -359,9 +359,9 @@ export default function ProjectTeamPage() {
 
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 sm:p-6 w-full max-w-md border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 Add Team Member
               </h2>
               <button
@@ -373,7 +373,7 @@ export default function ProjectTeamPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   User <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -381,21 +381,30 @@ export default function ProjectTeamPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, selectedUser: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 >
-                  <option value="">-- Select User --</option>
+                  <option
+                    className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    value=""
+                  >
+                    -- Select User --
+                  </option>
                   {brandTeamMembers.map((member) => (
-                    <option key={member._id} value={member.email}>
+                    <option
+                      className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      key={member._id}
+                      value={member.email}
+                    >
                       {member.name} ({member.email})
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Users from {projectBrand} brand
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Role <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -403,10 +412,13 @@ export default function ProjectTeamPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, roleId: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   disabled={loadingRoles}
                 >
-                  <option value="">
+                  <option
+                    className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                    value=""
+                  >
                     {loadingRoles
                       ? "Loading roles..."
                       : roles.length === 0
@@ -414,7 +426,11 @@ export default function ProjectTeamPage() {
                         : "-- Choose Role --"}
                   </option>
                   {roles.map((role) => (
-                    <option key={role._id} value={role._id}>
+                    <option
+                      className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      key={role._id}
+                      value={role._id}
+                    >
                       {role.name}
                     </option>
                   ))}

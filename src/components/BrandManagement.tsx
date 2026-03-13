@@ -190,8 +190,8 @@ export default function BrandManagement({
               onClick={() => handleBrandClick(brand)}
               className={`border rounded-lg p-4 transition-all cursor-pointer ${
                 selectedBrandId === brand._id
-                  ? "border-blue-500 bg-blue-50 shadow-md"
-                  : "border-gray-200 hover:shadow-md hover:border-blue-300"
+                  ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20 shadow-md"
+                  : "border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500"
               }`}
             >
               <div className="flex items-start justify-between mb-2">
@@ -241,8 +241,8 @@ export default function BrandManagement({
                 <p>{new Date(brand.createdAt).toLocaleDateString()}</p>
               </div>
               {selectedBrandId === brand._id && (
-                <div className="mt-3 pt-3 border-t border-blue-200">
-                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800/60">
+                  <p className="text-xs text-blue-600 dark:text-blue-300 font-medium flex items-center gap-1">
                     <MessageSquare size={12} />
                     Viewing threads for this brand
                   </p>

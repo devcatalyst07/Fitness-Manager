@@ -193,7 +193,7 @@ export function AdminSidebar({
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -210,13 +210,13 @@ export function AdminSidebar({
       <div
         className={`
           ${isCollapsed ? "w-20" : "w-64"}
-          h-screen bg-white border-r border-gray-200 flex flex-col fixed left-0 top-0 z-40
+          h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed left-0 top-0 z-40
           transition-all duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <div
             className={`flex items-center ${isCollapsed ? "justify-center w-full" : ""}`}
           >
@@ -243,7 +243,7 @@ export function AdminSidebar({
         {/* Collapse Button - Hidden on mobile */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`hidden lg:flex px-6 py-4 items-center text-gray-600 hover:text-black border-b border-gray-200 ${
+          className={`hidden lg:flex px-6 py-4 items-center text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white border-b border-gray-200 dark:border-gray-700 ${
             isCollapsed ? "justify-center" : "space-x-2"
           }`}
         >
@@ -267,8 +267,8 @@ export function AdminSidebar({
                   isCollapsed ? "justify-center" : "space-x-3"
                 } ${
                   isActive
-                    ? "bg-gray-100 text-black font-medium border-r-2 border-black"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-black"
+                    ? "bg-gray-100 dark:bg-gray-800 text-black dark:text-white font-medium border-r-2 border-black dark:border-gray-200"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white"
                 }`}
               >
                 <Icon size={20} />
@@ -279,12 +279,12 @@ export function AdminSidebar({
 
           {/* Admin Section */}
           {!isCollapsed && (
-            <div className="mt-8 px-6 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <div className="mt-8 px-6 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               {isUser ? "Account" : "Admin"}
             </div>
           )}
           {isCollapsed && (
-            <div className="mt-8 border-t border-gray-200 pt-4" />
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-4" />
           )}
 
           {/* Settings Dropdown */}
@@ -295,8 +295,8 @@ export function AdminSidebar({
                 isCollapsed ? "justify-center" : ""
               } ${
                 isSettingsOpen
-                  ? "bg-gray-100 text-gray-700 border-r-2 border-gray-600"
-                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+                  ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100 border-r-2 border-gray-600 dark:border-gray-200"
+                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-white"
               }`}
             >
               <div
@@ -304,7 +304,9 @@ export function AdminSidebar({
               >
                 <Settings
                   size={20}
-                  className={isSettingsOpen ? "text-gray-700" : ""}
+                  className={
+                    isSettingsOpen ? "text-gray-700 dark:text-gray-100" : ""
+                  }
                 />
                 {!isCollapsed && (
                   <span className="font-medium text-sm">Settings</span>
@@ -326,13 +328,13 @@ export function AdminSidebar({
 
             {/* Settings Submenu */}
             {isSettingsOpen && !isCollapsed && (
-              <div className="bg-gradient-to-b from-gray-50 to-white border-t border-gray-100">
+              <div className="bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-t border-gray-100 dark:border-gray-700">
                 <button
                   onClick={() => handleNavClick(profileHref)}
                   className={`w-full flex items-center space-x-3 px-8 py-3 text-sm transition-all duration-150 ${
                     activePath === profileHref
-                      ? "bg-gray-100 text-gray-700 font-medium border-r-2 border-gray-600"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-blue-700"
+                      ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 font-medium border-r-2 border-gray-600 dark:border-gray-200"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-700 dark:hover:text-blue-300"
                   }`}
                 >
                   <User size={16} />
@@ -342,8 +344,8 @@ export function AdminSidebar({
                   onClick={() => handleNavClick(changePasswordHref)}
                   className={`w-full flex items-center space-x-3 px-8 py-3 text-sm transition-all duration-150 ${
                     activePath === changePasswordHref
-                      ? "bg-gray-100 text-gray-700 font-medium border-r-2 border-gray-600"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-700"
+                      ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-100 font-medium border-r-2 border-gray-600 dark:border-gray-200"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-white"
                   }`}
                 >
                   <Lock size={16} />
@@ -356,7 +358,7 @@ export function AdminSidebar({
 
         {/* Footer */}
         {!isCollapsed && (
-          <div className="p-6 border-t border-gray-200 text-xs text-gray-500">
+          <div className="p-6 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
             <div className="font-semibold">Fitout Manager</div>
             <div>2026 All Rights Reserved.</div>
           </div>

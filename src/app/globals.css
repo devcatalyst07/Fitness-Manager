@@ -1,9 +1,29 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
+  --surface: #ffffff;
+  --surface-muted: #f9fafb;
+  --surface-subtle: #f3f4f6;
+  --border: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
   --fm-sidebar-width: 16rem;
+}
+
+html.dark {
+  --background: #0b1220;
+  --foreground: #e5e7eb;
+  --surface: #111827;
+  --surface-muted: #1f2937;
+  --surface-subtle: #374151;
+  --border: #374151;
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
 }
 
 @theme inline {
@@ -13,22 +33,71 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
-  max-width: 100%;
-  overflow-x: hidden;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
 }
 
-html {
-  max-width: 100%;
-  overflow-x: hidden;
+html.light,
+html.dark {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark .bg-white {
+  background-color: var(--surface) !important;
+}
+
+html.dark .bg-gray-50 {
+  background-color: var(--surface-muted) !important;
+}
+
+html.dark .bg-gray-100,
+html.dark .bg-gray-200 {
+  background-color: var(--surface-subtle) !important;
+}
+
+html.dark .text-black,
+html.dark .text-gray-900 {
+  color: var(--text-primary) !important;
+}
+
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+  color: var(--text-muted) !important;
+}
+
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300 {
+  border-color: var(--border) !important;
+}
+
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #273449 !important;
+}
+
+html.dark .hover\:text-black:hover {
+  color: #ffffff !important;
 }
