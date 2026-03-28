@@ -226,7 +226,7 @@ export function AdminSidebar({
                 alt="Fitout Manager Icon"
                 width={48}
                 height={48}
-                className="object-contain"
+                className="object-contain dark:invert"
               />
             ) : (
               <Image
@@ -234,7 +234,7 @@ export function AdminSidebar({
                 alt="Fitout Manager Logo"
                 width={200}
                 height={48}
-                className="object-contain"
+                className="object-contain dark:invert"
               />
             )}
           </div>

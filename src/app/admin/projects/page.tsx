@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Filter } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +9,9 @@ import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
 import ProjectCard from "@/components/ProjectCard";
+import CompletedAndCancelledProjects from "@/components/CompletedAndCancelledProjects";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
+import EditProjectModal from "@/components/EditProjectModal";
 import { apiClient } from "@/lib/axios";
 
 interface Project {
@@ -21,6 +23,9 @@ interface Project {
   status: string;
   budget: number;
   spent: number;
+  description?: string;
+  region?: string;
+  projectCode?: string;
   startDate?: string;
   endDate?: string;
   calculatedStartDate?: string;
@@ -28,6 +33,8 @@ interface Project {
   isAtRisk?: boolean;
   riskReason?: string;
 }
+
+const ARCHIVED_STATUSES = ["Completed", "Cancelled"];
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -37,16 +44,14 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
-  // Role-based redirect
   useEffect(() => {
     if (!authLoading && user && user.role !== "admin") {
-      console.log("⚠️ User role is not admin, redirecting");
       router.replace("/user/projects");
     }
   }, [user, authLoading, router]);
 
-  // Fetch data when user is ready
   useEffect(() => {
     if (user && user.role === "admin") {
       fetchProjects();
@@ -64,30 +69,45 @@ export default function ProjectsPage() {
     }
   };
 
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch =
-      project.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.scope.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleStatusChange = useCallback((projectId: string, newStatus: string) => {
+    setProjects((prev) =>
+      prev.map((p) => (p._id === projectId ? { ...p, status: newStatus } : p)),
+    );
+  }, []);
 
-    const matchesStatus =
-      statusFilter === "all" || project.status === statusFilter;
+  const handleProjectUpdated = useCallback((updatedProject: Project) => {
+    setProjects((prev) =>
+      prev.map((p) => (p._id === updatedProject._id ? updatedProject : p)),
+    );
+  }, []);
 
-    return matchesSearch && matchesStatus;
-  });
+  const handleDelete = useCallback((projectId: string) => {
+    setProjects((prev) => prev.filter((p) => p._id !== projectId));
+  }, []);
+
+  const handleEditOpen = useCallback((project: Project) => {
+    setEditingProject(project);
+  }, []);
 
   const handleProjectCreated = () => {
     fetchProjects();
     setIsCreateModalOpen(false);
   };
 
-  if (authLoading || (loading && user?.role === "admin")) {
-    return <FitoutLoadingSpinner />;
-  }
+  const allFiltered = projects.filter((project) => {
+    const matchesSearch =
+      project.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.scope.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-  if (user && user.role !== "admin") {
-    return <FitoutLoadingSpinner />;
-  }
+  const activeProjects = allFiltered.filter((p) => !ARCHIVED_STATUSES.includes(p.status));
+  const archivedProjects = projects.filter((p) => ARCHIVED_STATUSES.includes(p.status));
+
+  if (authLoading || (loading && user?.role === "admin")) return <FitoutLoadingSpinner />;
+  if (user && user.role !== "admin") return <FitoutLoadingSpinner />;
 
   return (
     <SessionGuard>
@@ -96,18 +116,12 @@ export default function ProjectsPage() {
         <AdminHeader />
 
         <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
-          {/* Page Header */}
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                  Projects
-                </h1>
-                <p className="text-sm text-gray-600">
-                  Manage all your fitout projects
-                </p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Projects</h1>
+                <p className="text-sm text-gray-600">Manage all your fitout projects</p>
               </div>
-
               <button
                 onClick={() => setIsCreateModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -117,12 +131,12 @@ export default function ProjectsPage() {
               </button>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Total Projects</p>
+                <p className="text-sm text-gray-600 mb-1">Total Active</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {projects.length}
+                  {projects.filter((p) => !ARCHIVED_STATUSES.includes(p.status)).length}
                 </p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -134,7 +148,7 @@ export default function ProjectsPage() {
               <div className="bg-white border border-gray-200 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-1">At Risk</p>
                 <p className="text-2xl font-bold text-yellow-600">
-                  {projects.filter((p) => p.isAtRisk).length}
+                  {projects.filter((p) => p.isAtRisk || p.status === "At Risk").length}
                 </p>
               </div>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -145,13 +159,10 @@ export default function ProjectsPage() {
               </div>
             </div>
 
-            {/* Search and Filter */}
+            {/* Search + Filter */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={20}
-                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
                   placeholder="Search projects..."
@@ -160,7 +171,6 @@ export default function ProjectsPage() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
               <div className="flex items-center gap-2">
                 <Filter size={20} className="text-gray-400" />
                 <select
@@ -168,23 +178,20 @@ export default function ProjectsPage() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
-                  <option value="all">All Status</option>
+                  <option value="all">All Active</option>
                   <option value="Planning">Planning</option>
                   <option value="In Progress">In Progress</option>
+                  <option value="At Risk">At Risk</option>
                   <option value="On Hold">On Hold</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Projects Grid */}
-          {filteredProjects.length === 0 ? (
+          {/* Active Projects Grid */}
+          {activeProjects.length === 0 ? (
             <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No projects found
-              </h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No active projects found</h3>
               <p className="text-gray-500 mb-4">
                 {searchQuery || statusFilter !== "all"
                   ? "Try adjusting your search or filters"
@@ -201,18 +208,38 @@ export default function ProjectsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProjects.map((project) => (
-                <ProjectCard key={project._id} project={project} />
+              {activeProjects.map((project) => (
+                <ProjectCard
+                  key={project._id}
+                  project={project}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                  onEdit={handleEditOpen}
+                />
               ))}
             </div>
           )}
+
+          {/* Archived section */}
+          <CompletedAndCancelledProjects
+            projects={archivedProjects}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+            onEdit={handleEditOpen}
+          />
         </main>
 
-        {/* Create Project Modal */}
         <CreateProjectModal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={handleProjectCreated}
+        />
+
+        <EditProjectModal
+          project={editingProject}
+          isOpen={!!editingProject}
+          onClose={() => setEditingProject(null)}
+          onSuccess={handleProjectUpdated}
         />
       </div>
     </SessionGuard>
