@@ -73,7 +73,7 @@ const StepIndicator: React.FC<{ steps: string[]; current: number }> = ({ steps, 
   <div className="flex items-center mb-7">
     {steps.map((label, i) => (
       <React.Fragment key={i}>
-        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+        <div className="flex shrink-0 flex-col items-center gap-1">
           <div
             className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
             style={{
@@ -189,7 +189,7 @@ const ErrorBanner: React.FC<{ message: string }> = ({ message }) =>
       className="flex items-start gap-2.5 p-3.5 rounded-xl text-sm mb-4"
       style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.22)", color: "#fca5a5" }}
     >
-      <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
       {message}
@@ -295,7 +295,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs"
         style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", color: "#64748b" }}
       >
-        <ShieldCheck className="w-4 h-4 flex-shrink-0" style={{ color: "#6366f1" }} />
+        <ShieldCheck className="h-4 w-4 shrink-0" style={{ color: "#6366f1" }} />
         <span>
           Secured by <strong className="text-slate-400">Stripe</strong> · PCI-DSS Level 1 ·
           256-bit TLS encryption
@@ -351,6 +351,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // clientSecret is fetched right after email verification (admin only)
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [pendingSubscriptionId, setPendingSubscriptionId] = useState<string | null>(null);
   const [paymentDone,  setPaymentDone]  = useState(false);
 
   useEffect(() => { if (preselectedPlan) setSubscriptionType(preselectedPlan); }, [preselectedPlan]);
@@ -373,7 +374,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setStep(0); setLoading(false); setError("");
     setVerificationCode(""); setVerifyLoading(false); setResendLoading(false); setResendMsg(""); setResendCooldown(0);
     setRequestAdminEmail(""); setRequestLoading(false); setRequestSuccess(false);
-    setClientSecret(null); setPaymentDone(false);
+    setClientSecret(null); setPendingSubscriptionId(null); setPaymentDone(false);
   };
   const handleClose = () => { resetAll(); onClose(); };
 
@@ -413,8 +414,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       await authService.verifyEmailCode(email, verificationCode.trim());
       if (isAdminReg) {
         // Pre-fetch the PaymentIntent so Elements mounts immediately
-        const res = await apiClient.post("/api/payments/create-intent", { planId: subscriptionType, email });
-        setClientSecret(res.data.clientSecret);
+        const res = await apiClient.post<{
+          clientSecret: string;
+          subscriptionId: string;
+        }>("/api/payments/create-intent", { planId: subscriptionType, email });
+        setClientSecret(res.clientSecret);
+        setPendingSubscriptionId(res.subscriptionId);
       }
       setStep(2);
     } catch (err: any) {
@@ -450,6 +455,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // ── Step 2 admin: payment done ──
   const handlePaymentSuccess = async () => {
+    if (!pendingSubscriptionId) {
+      setError("Subscription activation is missing. Please retry payment.");
+      return;
+    }
+
+    try {
+      await apiClient.post("/api/payments/confirm-subscription", {
+        email,
+        subscriptionId: pendingSubscriptionId,
+      });
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          "Payment succeeded but subscription activation failed. Please contact support.",
+      );
+      return;
+    }
+
     setPaymentDone(true);
     try { await login(email, password, false, "admin"); } catch {}
     setTimeout(() => onClose(), 2200);
@@ -490,7 +513,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       >
         {/* Top accent line */}
         <div
-          className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl"
+          className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl"
           style={{ background: "linear-gradient(90deg,transparent,#6366f1 40%,#8b5cf6 60%,transparent)" }}
         />
 
@@ -509,7 +532,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* ── LOGO: original black square + white building icon ── */}
           <div className="flex items-center gap-3 mb-7">
             <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
               style={{ background: "#000" }}
             >
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
