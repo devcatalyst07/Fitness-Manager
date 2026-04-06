@@ -8,6 +8,7 @@ import {
   DollarSign,
   BarChart3,
   FileText,
+  MessageSquare,
   Settings,
   ChevronLeft,
   Menu,
@@ -155,6 +156,13 @@ export function AdminSidebar({
       href: "/user/documents",
       permissionId: "documents",
     },
+    {
+      icon: MessageSquare,
+      label: "Messages",
+      href: "/user/messages",
+      // Messages is a core communication feature - available to all users
+      // permissionId: "messages",
+    },
   ];
 
   const adminMenuItems: MenuItem[] = [
@@ -163,13 +171,16 @@ export function AdminSidebar({
     { icon: DollarSign, label: "Finance", href: "/admin/finance" },
     { icon: BarChart3, label: "Reports", href: "/admin/reports" },
     { icon: FileText, label: "Documents", href: "/admin/documents" },
+    { icon: MessageSquare, label: "Messages", href: "/admin/messages" },
   ];
 
   const menuItems = isUser
     ? userMenuItems.filter((item) =>
-        permissions && item.permissionId
-          ? hasPermission(item.permissionId, permissions)
-          : false,
+        item.permissionId
+          ? permissions
+            ? hasPermission(item.permissionId, permissions)
+            : false
+          : true,
       )
     : adminMenuItems;
 

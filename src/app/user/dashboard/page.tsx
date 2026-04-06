@@ -230,7 +230,7 @@ export default function UserDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      const data = await apiClient.get("/api/dashboard");
+      const data = await apiClient.get("/api/admin/dashboard/stats");
       setStats(data);
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
