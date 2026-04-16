@@ -14,7 +14,17 @@ import {
 } from "@stripe/react-stripe-js";
 
 // ─── Stripe init ─────────────────────────────────────────────────────────────
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const getStripe = (() => {
+  let promise: ReturnType<typeof loadStripe> | null = null;
+  return () => {
+    if (!promise) {
+      const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      if (!key) throw new Error("Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY — check .env.local and restart the dev server");
+      promise = loadStripe(key);
+    }
+    return promise;
+  };
+})();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type LoginType   = "user" | "admin";
@@ -714,10 +724,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* ──────────── STEP 2 (admin): Stripe Payment ──────────── */}
           {modalType === "register" && step === 2 && isAdminReg && !paymentDone && clientSecret && (
-            <Elements
-              stripe={stripePromise}
-              options={{ clientSecret, appearance: stripeAppearance }}
-            >
+           <Elements
+  stripe={getStripe()}
+  options={{ clientSecret, appearance: stripeAppearance }}
+>
               <PaymentForm
                 planId={subscriptionType} email={email} name={name} password={password}
                 onSuccess={handlePaymentSuccess} onStripeError={(msg) => setError(msg)}

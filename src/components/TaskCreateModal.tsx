@@ -88,20 +88,19 @@ export default function TaskCreateModal({
   if (!isOpen) return null;
 
   const handleAddAssignee = (email: string) => {
+    if (!email) return;
+
     const selectedMember = teamMembers.find(
       (member) => member.userId.email === email,
     );
 
     if (!selectedMember) return;
 
+    // Silently skip if already added — no alert
     const alreadyAdded = selectedAssignees.some(
       (a) => a.email === selectedMember.userId.email,
     );
-
-    if (alreadyAdded) {
-      alert("This member is already added!");
-      return;
-    }
+    if (alreadyAdded) return;
 
     const newAssignee = {
       email: selectedMember.userId.email,

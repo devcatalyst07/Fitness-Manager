@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Task,
   Comment,
@@ -34,14 +34,525 @@ interface TaskDetailModalProps {
   uploadingFiles: boolean;
   phases: Phase[];
   allTasks: Task[];
-  onUpdateTask?: (taskId: string, data: Partial<Task>) => void;
+  onUpdateTask?: (taskId: string, data: Partial<Task>) => Promise<void>;
   teamMembers?: TeamMember[];
-  isEditing?: boolean;
-  setIsEditing?: (editing: boolean) => void;
   onFileSelect?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveFile?: (index: number) => void;
   canEdit?: boolean;
+  onUpdateDependentTask?: (taskId: string, updates: Partial<Task>) => Promise<void>;
 }
+
+// ─── Working-day helpers ──────────────────────────────────────────────────────
+
+function addWorkingDays(startDateStr: string, days: number): string {
+  if (!startDateStr || !days || days <= 0) return startDateStr ?? "";
+  const date = new Date(startDateStr + "T00:00:00");
+  if (isNaN(date.getTime())) return startDateStr;
+  let added = 0;
+  const target = Math.max(days - 1, 0);
+  while (added < target) {
+    date.setDate(date.getDate() + 1);
+    const dow = date.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  return date.toISOString().split("T")[0];
+}
+
+function addOneDayStr(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+}
+
+// ─── TeamMember helpers ───────────────────────────────────────────────────────
+
+function getMemberName(member: TeamMember): string {
+  return member.userId?.name ?? (member as any).name ?? "";
+}
+function getMemberEmail(member: TeamMember): string {
+  return member.userId?.email ?? (member as any).email ?? "";
+}
+function getMemberId(member: TeamMember): string {
+  return member.userId?._id ?? member._id ?? "";
+}
+
+function normaliseMembers(members: TeamMember[]): TeamMember[] {
+  return members.map((m) => {
+    if (m.userId && typeof m.userId === "object" && m.userId.name) return m;
+    const flat = m as any;
+    if (!m.userId && flat.name && flat.email) {
+      return {
+        ...m,
+        userId: { _id: flat._id ?? "", name: flat.name, email: flat.email },
+      } as TeamMember;
+    }
+    return m;
+  });
+}
+
+// ─── Editable Text ───────────────────────────────────────────────────────────
+
+function EditableText({
+  value,
+  onSave,
+  placeholder = "Click to edit...",
+  className = "",
+}: {
+  value: string;
+  onSave: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    if (draft.trim() !== value) onSave(draft.trim());
+  };
+
+  return editing ? (
+    <input
+      ref={inputRef}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") { setDraft(value); setEditing(false); }
+      }}
+      className={`w-full px-3 py-2 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white ${className}`}
+    />
+  ) : (
+    <p
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className={`cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-900 hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all min-h-[36px] ${
+        !value ? "text-gray-400 italic" : ""
+      } ${className}`}
+    >
+      {value || placeholder}
+    </p>
+  );
+}
+
+// ─── Editable Textarea ───────────────────────────────────────────────────────
+
+function EditableTextarea({
+  value,
+  onSave,
+  placeholder = "Click to add a description...",
+}: {
+  value: string;
+  onSave: (val: string) => void;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => { setDraft(value); }, [value]);
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    if (draft !== value) onSave(draft);
+  };
+
+  return editing ? (
+    <textarea
+      ref={ref}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { setDraft(value); setEditing(false); }
+      }}
+      rows={4}
+      className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white resize-none"
+    />
+  ) : (
+    <p
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className={`cursor-pointer rounded-lg px-3 py-2 text-sm hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all min-h-[72px] whitespace-pre-wrap ${
+        !value ? "text-gray-400 italic" : "text-gray-700"
+      }`}
+    >
+      {value || placeholder}
+    </p>
+  );
+}
+
+// ─── Editable Select ─────────────────────────────────────────────────────────
+
+function EditableSelect<T extends string>({
+  value,
+  options,
+  onSave,
+  renderValue,
+}: {
+  value: T;
+  options: { label: string; value: T }[];
+  onSave: (val: T) => void;
+  renderValue?: (val: T) => React.ReactNode;
+}) {
+  const [editing, setEditing] = useState(false);
+  const ref = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  const commit = (val: T) => {
+    setEditing(false);
+    if (val !== value) onSave(val);
+  };
+
+  return editing ? (
+    <select
+      ref={ref}
+      defaultValue={value}
+      onBlur={(e) => commit(e.target.value as T)}
+      onChange={(e) => commit(e.target.value as T)}
+      className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+      autoFocus
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  ) : (
+    <div
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className="cursor-pointer rounded-lg px-3 py-2 hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all inline-flex items-center"
+    >
+      {renderValue ? renderValue(value) : (
+        <span className="text-sm text-gray-900">{value}</span>
+      )}
+    </div>
+  );
+}
+
+// ─── Editable Number ─────────────────────────────────────────────────────────
+
+function EditableNumber({
+  value,
+  onSave,
+  min = 0,
+  max,
+  suffix = "",
+}: {
+  value: number;
+  onSave: (val: number) => void;
+  min?: number;
+  max?: number;
+  suffix?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setDraft(String(value)); }, [value]);
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const parsed = parseInt(draft) || min;
+    const clamped =
+      max !== undefined
+        ? Math.min(Math.max(parsed, min), max)
+        : Math.max(parsed, min);
+    if (clamped !== value) onSave(clamped);
+  };
+
+  return editing ? (
+    <input
+      ref={ref}
+      type="number"
+      value={draft}
+      min={min}
+      max={max}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") { setDraft(String(value)); setEditing(false); }
+      }}
+      className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+    />
+  ) : (
+    <p
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-900 hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all"
+    >
+      {value}{suffix}
+    </p>
+  );
+}
+
+// ─── Editable Date ───────────────────────────────────────────────────────────
+
+function EditableDate({
+  value,
+  onSave,
+  placeholder = "Set date",
+}: {
+  value: string;
+  onSave: (val: string) => void;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) ref.current?.showPicker?.();
+  }, [editing]);
+
+  const commit = (val: string) => {
+    setEditing(false);
+    if (val !== value) onSave(val);
+  };
+
+  return editing ? (
+    <input
+      ref={ref}
+      type="date"
+      defaultValue={value}
+      onChange={(e) => commit(e.target.value)}
+      onBlur={() => setEditing(false)}
+      className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+      autoFocus
+    />
+  ) : (
+    <p
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className={`cursor-pointer rounded-lg px-3 py-2 text-sm hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all ${
+        value ? "text-gray-900" : "text-gray-400 italic"
+      }`}
+    >
+      {value ? formatDate(value) : placeholder}
+    </p>
+  );
+}
+
+// ─── Editable Progress ───────────────────────────────────────────────────────
+
+function EditableProgress({
+  value,
+  onSave,
+}: {
+  value: number;
+  onSave: (val: number) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft(value); }, [value]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
+          <div
+            className="bg-blue-500 h-full rounded-full transition-all duration-200"
+            style={{ width: `${draft}%` }}
+          />
+        </div>
+        <span className="text-sm font-medium text-gray-700 w-10 text-right">{draft}%</span>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value={draft}
+        onChange={(e) => setDraft(parseInt(e.target.value))}
+        onMouseUp={() => { if (draft !== value) onSave(draft); }}
+        onTouchEnd={() => { if (draft !== value) onSave(draft); }}
+        className="w-full h-1.5 accent-blue-600 cursor-pointer"
+      />
+    </div>
+  );
+}
+
+// ─── Editable Assignees ──────────────────────────────────────────────────────
+
+function EditableAssignees({
+  assignees,
+  teamMembers = [],
+  onSave,
+  canEdit,
+}: {
+  assignees: Array<{ email: string; name: string }>;
+  teamMembers: TeamMember[];
+  onSave: (assignees: Array<{ email: string; name: string }>) => void;
+  canEdit: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Array<{ email: string; name: string }>>(() => [...assignees]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSelected([...assignees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignees.map(a => a.email).join(",")]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const eligibleMembers = useMemo(() => {
+    return normaliseMembers(teamMembers).filter((m) => {
+      const email = getMemberEmail(m);
+      return email && email.includes("@");
+    });
+  }, [teamMembers]);
+
+  const isSelected = useCallback(
+    (member: TeamMember) => selected.some((a) => a.email === getMemberEmail(member)),
+    [selected],
+  );
+
+  const toggle = (member: TeamMember) => {
+    const email = getMemberEmail(member);
+    const name = getMemberName(member);
+    const next = isSelected(member)
+      ? selected.filter((a) => a.email !== email)
+      : [...selected, { email, name }];
+    setSelected(next);
+    onSave(next);
+  };
+
+  const removeAssignee = (assignee: { email: string; name: string }, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = selected.filter((a) => a.email !== assignee.email);
+    setSelected(next);
+    onSave(next);
+  };
+
+  return (
+    <div ref={containerRef} className="px-3 py-2 relative">
+      <div
+        onClick={() => canEdit && setOpen((o) => !o)}
+        title={canEdit ? "Click to assign team members" : undefined}
+        className={`flex flex-wrap gap-2 min-h-[36px] rounded-lg transition-all ${
+          canEdit ? "cursor-pointer p-1 hover:bg-blue-50 hover:ring-1 hover:ring-blue-200" : ""
+        }`}
+      >
+        {selected.length > 0 ? (
+          selected.map((assignee, i) => (
+            <div
+              key={assignee.email || i}
+              className="flex items-center gap-2 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg"
+            >
+              <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-semibold">
+                {getInitials(assignee.name)}
+              </div>
+              <span className="text-sm text-gray-800">{assignee.name || assignee.email}</span>
+              {canEdit && (
+                <button
+                  onClick={(e) => removeAssignee(assignee, e)}
+                  className="ml-0.5 text-blue-300 hover:text-red-500 transition-colors text-base leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-gray-400 italic py-1">
+            {canEdit ? "Click to assign team members" : "No assignees"}
+          </p>
+        )}
+      </div>
+
+      {open && canEdit && (
+        <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-20 py-1.5 max-h-52 overflow-y-auto">
+          {eligibleMembers.length === 0 ? (
+            <p className="text-xs text-gray-400 px-4 py-3 italic">
+              No team members available
+            </p>
+          ) : (
+            eligibleMembers.map((member) => {
+              const checked = isSelected(member);
+              const name = getMemberName(member);
+              const email = getMemberEmail(member);
+              const id = getMemberId(member);
+              return (
+                <div
+                  key={id || email}
+                  onClick={(e) => { e.stopPropagation(); toggle(member); }}
+                  className="flex items-center gap-3 px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                >
+                  <div
+                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      checked ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                    }`}
+                  >
+                    {checked && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0">
+                    {getInitials(name || email)}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-sm text-gray-800 truncate block">{name || email}</span>
+                    {name && <span className="text-[10px] text-gray-400 truncate block">{email}</span>}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Badge helpers ───────────────────────────────────────────────────────────
+
+const getTaskTypeBadge = (taskType: string) => {
+  const badges: Record<string, string> = {
+    Task: "bg-blue-50 text-blue-800 border-blue-200",
+    Deliverable: "bg-purple-50 text-purple-800 border-purple-200",
+    Milestone: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  };
+  return badges[taskType] || "bg-gray-50 text-gray-700 border-gray-200";
+};
+
+const getDependencyTypeLabel = (type: string) =>
+  type === "FS" ? "Finish to Start" : "Start to Start";
+
+// ─── Field wrapper ───────────────────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 px-1">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function TaskDetailModal({
   isOpen,
@@ -63,819 +574,695 @@ export default function TaskDetailModal({
   phases,
   allTasks,
   onUpdateTask,
-  teamMembers,
-  isEditing: externalIsEditing,
-  setIsEditing: externalSetIsEditing,
+  teamMembers = [],
   onFileSelect,
   onRemoveFile,
   canEdit = true,
+  onUpdateDependentTask,
 }: TaskDetailModalProps) {
-  const [internalIsEditing, setInternalIsEditing] = useState(false);
-  const [editedTask, setEditedTask] = useState<Partial<Task>>({});
+  type Dep = { taskId: string; type: "FS" | "SS" };
 
-  const isEditing =
-    externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
-  const setIsEditing = externalSetIsEditing || setInternalIsEditing;
+  // ── Local state ──────────────────────────────────────────────────────────────
+  const [localDeps, setLocalDeps] = useState<Dep[]>([]);
+  const [pendingDepIndexes, setPendingDepIndexes] = useState<Set<number>>(new Set());
+  const [localDuration, setLocalDuration] = useState<number>(task?.duration ?? 1);
+  const [localStartDate, setLocalStartDate] = useState<string>(task?.startDate ?? "");
+  const [localDueDate, setLocalDueDate] = useState<string>(task?.dueDate ?? "");
 
+  const savingRef = useRef(false);
+
+  // Sync all local state when the task itself changes
   useEffect(() => {
-    if (task) {
-      setEditedTask({
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        taskType: task.taskType || "Task",
-        duration: task.duration || 1,
-        startDate: task.startDate,
-        dueDate: task.dueDate,
-        progress: task.progress,
-        phaseId: task.phaseId,
-        dependencies: task.dependencies || [],
-      });
-    }
-  }, [task]);
+    setLocalDeps(task?.dependencies ?? []);
+    setPendingDepIndexes(new Set());
+    setLocalDuration(task?.duration ?? 1);
+    setLocalStartDate(task?.startDate ?? "");
+    setLocalDueDate(task?.dueDate ?? "");
+  }, [task?._id]);
 
-  useEffect(() => {
-    if (isOpen && task && canEdit && externalSetIsEditing) {
-      setEditedTask(task);
-      externalSetIsEditing(true);
-    }
-  }, [isOpen, task, canEdit, externalSetIsEditing]);
+  // Sync individual fields when the server pushes an update
+  useEffect(() => { if (task?.duration !== undefined) setLocalDuration(task.duration); }, [task?.duration]);
+  useEffect(() => { if (task?.startDate !== undefined) setLocalStartDate(task.startDate ?? ""); }, [task?.startDate]);
+  useEffect(() => { if (task?.dueDate !== undefined) setLocalDueDate(task.dueDate ?? ""); }, [task?.dueDate]);
+  useEffect(() => { if (task?.dependencies) setLocalDeps(task.dependencies); }, [task?.dependencies]);
 
-  if (!isOpen || !task) return null;
+  // ── Silent save helper ───────────────────────────────────────────────────────
+  const save = useCallback(async (updates: Partial<Task>) => {
+    if (!task?._id) return;
 
-  const handleSave = () => {
-    if (editedTask.taskType === "Milestone" && (editedTask.duration || 0) > 1) {
-      alert("Milestone tasks can have a maximum duration of 1 day");
-      return;
+    if (updates.dependencies) {
+      updates = {
+        ...updates,
+        dependencies: updates.dependencies.filter(
+          (d) => d.taskId && d.taskId.trim() !== "",
+        ),
+      };
     }
 
-    if (onUpdateTask && task._id) {
-      onUpdateTask(task._id, editedTask);
-    } else {
-      onUpdate(task._id, editedTask);
+    try {
+      if (onUpdateTask) {
+        await onUpdateTask(task._id, updates);
+      } else {
+        await (onUpdate as any)(task._id, updates);
+      }
+    } catch (err) {
+      console.error("[TaskDetailModal] save failed (silent):", err);
     }
-    setIsEditing(false);
-  };
+  }, [task?._id, onUpdateTask, onUpdate]);
 
-  const handleAddDependency = () => {
-    setEditedTask({
-      ...editedTask,
-      dependencies: [
-        ...(editedTask.dependencies || []),
-        { taskId: "", type: "FS" as const },
-      ],
-    });
-  };
-
-  const handleRemoveDependency = (index: number) => {
-    setEditedTask({
-      ...editedTask,
-      dependencies: (editedTask.dependencies || []).filter(
-        (_, i) => i !== index,
-      ),
-    });
-  };
-
-  const handleDependencyChange = (
-    index: number,
-    field: "taskId" | "type",
-    value: string,
+  // ── Dependency cascade propagation ──────────────────────────────────────────
+  const propagateDueDateChange = useCallback(async (
+    changedTaskId: string,
+    newDueDate: string,
+    visited: Set<string> = new Set(),
   ) => {
-    const updated = [...(editedTask.dependencies || [])];
-    if (field === "taskId") {
-      updated[index].taskId = value;
-    } else {
-      updated[index].type = value as "FS" | "SS";
-    }
-    setEditedTask({
-      ...editedTask,
-      dependencies: updated,
-    });
-  };
+    if (visited.has(changedTaskId)) return;
+    visited.add(changedTaskId);
 
-  const getTaskTypeBadge = (taskType: string) => {
-    const badges: Record<string, string> = {
-      Task: "bg-blue-100 text-blue-700 border-blue-200",
-      Deliverable: "bg-purple-100 text-purple-700 border-purple-200",
-      Milestone: "bg-green-100 text-green-700 border-green-200",
-    };
-    return badges[taskType] || "bg-gray-100 text-gray-700 border-gray-200";
-  };
-
-  const getDependencyTypeLabel = (type: string) => {
-    return type === "FS" ? "Finish to Start" : "Start to Start";
-  };
-
-  const getAvailableTasks = (currentIndex: number) => {
-    const selectedTaskIds = (editedTask.dependencies || [])
-      .filter((_, i) => i !== currentIndex)
-      .map((d) => d.taskId);
-
-    return allTasks.filter(
-      (t) => t._id !== task._id && !selectedTaskIds.includes(t._id),
+    const dependentTasks = allTasks.filter((t) =>
+      t._id !== changedTaskId &&
+      t.dependencies?.some((d) => d.taskId === changedTaskId),
     );
-  };
+
+    for (const depTask of dependentTasks) {
+      const depRel = depTask.dependencies?.find((d) => d.taskId === changedTaskId);
+      if (!depRel) continue;
+
+      let newDepStart: string;
+      if (depRel.type === "FS") {
+        newDepStart = addOneDayStr(newDueDate);
+      } else {
+        newDepStart = depTask.startDate || addOneDayStr(newDueDate);
+      }
+
+      const duration = Math.max(depTask.duration ?? 1, 1);
+      const newDepDue = addWorkingDays(newDepStart, duration);
+
+      if (newDepStart === depTask.startDate && newDepDue === depTask.dueDate) continue;
+
+      const depUpdates: Partial<Task> = {
+        startDate: newDepStart,
+        dueDate: newDepDue,
+      };
+
+      try {
+        if (onUpdateDependentTask) {
+          await onUpdateDependentTask(depTask._id, depUpdates);
+        } else if (onUpdateTask) {
+          await onUpdateTask(depTask._id, depUpdates);
+        } else {
+          await (onUpdate as any)(depTask._id, depUpdates);
+        }
+      } catch (err) {
+        console.error("[TaskDetailModal] dependent task save failed (silent):", err);
+      }
+
+      await propagateDueDateChange(depTask._id, newDepDue, visited);
+    }
+  }, [allTasks, onUpdateDependentTask, onUpdateTask, onUpdate]);
+
+  // ── Duration change ──────────────────────────────────────────────────────────
+  const handleDurationChange = useCallback((newDuration: number) => {
+    const safeDuration = Math.max(1, newDuration);
+    const startDate = localStartDate || task?.startDate || "";
+    const newDueDate = startDate ? addWorkingDays(startDate, safeDuration) : localDueDate;
+
+    setLocalDuration(safeDuration);
+    if (newDueDate) setLocalDueDate(newDueDate);
+
+    const updates: Partial<Task> = { duration: safeDuration };
+    if (newDueDate) updates.dueDate = newDueDate;
+    save(updates).then(() => {
+      if (newDueDate && task?._id) propagateDueDateChange(task._id, newDueDate);
+    });
+  }, [localStartDate, localDueDate, task, save, propagateDueDateChange]);
+
+  // ── Start date change ────────────────────────────────────────────────────────
+  const handleStartDateChange = useCallback((newStartDate: string) => {
+    if (!newStartDate) return;
+    const duration = Math.max(1, localDuration ?? task?.duration ?? 1);
+    const newDueDate = addWorkingDays(newStartDate, duration);
+
+    setLocalStartDate(newStartDate);
+    if (newDueDate) setLocalDueDate(newDueDate);
+
+    const updates: Partial<Task> = { startDate: newStartDate };
+    if (newDueDate) updates.dueDate = newDueDate;
+    save(updates).then(() => {
+      if (newDueDate && task?._id) propagateDueDateChange(task._id, newDueDate);
+    });
+  }, [localDuration, task, save, propagateDueDateChange]);
+
+  // ── EARLY RETURN — must come after ALL hooks ─────────────────────────────────
+  if (!isOpen || !task) return null;
 
   const fileSelectHandler = onFileSelect || handleFileSelect;
 
+  // ── Dependency helpers ───────────────────────────────────────────────────────
+
+  const getAvailableTasks = (excludeTaskIds: string[]) =>
+    allTasks.filter((t) => t._id !== task._id && !excludeTaskIds.includes(t._id));
+
+  const addDependency = () => {
+    const newIndex = localDeps.length;
+    const updated: Dep[] = [...localDeps, { taskId: "", type: "FS" }];
+    setLocalDeps(updated);
+    setPendingDepIndexes((prev) => new Set(prev).add(newIndex));
+  };
+
+  const updateDep = (index: number, field: keyof Dep, val: string) => {
+    const updated = localDeps.map((d, i) =>
+      i === index ? { ...d, [field]: val } : d
+    ) as Dep[];
+    setLocalDeps(updated);
+
+    if (field === "taskId") {
+      if (!val) {
+        setPendingDepIndexes((prev) => new Set(prev).add(index));
+        return;
+      }
+      setPendingDepIndexes((prev) => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
+    }
+
+    const currentPending = new Set(pendingDepIndexes);
+    if (field === "taskId") {
+      if (val) currentPending.delete(index);
+      else currentPending.add(index);
+    }
+
+    const readyDeps = updated.filter((d, i) => d.taskId && !currentPending.has(i));
+    save({ dependencies: readyDeps });
+  };
+
+  const removeDep = (index: number) => {
+    const updated = localDeps.filter((_, i) => i !== index);
+    setLocalDeps(updated);
+    setPendingDepIndexes((prev) => {
+      const next = new Set<number>();
+      prev.forEach((i) => {
+        if (i < index) next.add(i);
+        else if (i > index) next.add(i - 1);
+      });
+      return next;
+    });
+    const readyDeps = updated.filter((d) => d.taskId);
+    save({ dependencies: readyDeps });
+  };
+
+  const handleDelete = () => {
+    onDelete(task._id);
+    onClose();
+  };
+
+  const TABS = [
+    { id: "details" as const, label: "Details" },
+    { id: "comments" as const, label: `Comments (${comments.length})` },
+    { id: "activity" as const, label: "Activity" },
+  ];
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white w-full max-w-5xl rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-white break-words">
-                  {task.title}
-                </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getTaskTypeBadge(task.taskType || "Task")}`}
-                  >
-                    {task.taskType || "Task"}
-                  </span>
-                  {task.duration && (
-                    <span className="text-white/80 text-xs">
-                      {task.duration} working day
-                      {task.duration !== 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
 
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              {canEdit &&
-                (!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-white/20 text-white hover:bg-white/30 rounded-lg transition-all"
-                  >
-                    Edit
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSave}
-                    className="px-4 py-2 bg-green-500 text-white hover:bg-green-600 rounded-lg transition-all"
-                  >
-                    Save
-                  </button>
-                ))}
-              <button
-                onClick={onClose}
-                className="text-white/80 hover:text-white hover:bg-white/10 px-3 py-2 rounded-lg transition-all"
-              >
-                Close
-              </button>
+        {/* ── Header ── */}
+        <div className="flex items-start justify-between px-6 py-5 border-b border-gray-100 gap-4">
+          <div className="flex-1 min-w-0">
+            {canEdit ? (
+              <EditableText
+                value={task.title}
+                onSave={(val) => save({ title: val })}
+                className="text-lg font-semibold !px-2 !py-1"
+              />
+            ) : (
+              <h2 className="text-lg font-semibold text-gray-900 px-2">{task.title}</h2>
+            )}
+            <div className="flex items-center gap-2 mt-1 px-2">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${getTaskTypeBadge(task.taskType || "Task")}`}>
+                {task.taskType || "Task"}
+              </span>
+              {localDuration > 0 && (
+                <span className="text-xs text-gray-400">
+                  {localDuration} working day{localDuration !== 1 ? "s" : ""}
+                </span>
+              )}
+              {canEdit && (
+                <span className="text-[10px] text-gray-300 ml-1">· click any field to edit</span>
+              )}
             </div>
           </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-lg transition-all shrink-0"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto">
-          <div className="flex px-3 sm:px-6 lg:px-8 min-w-max">
+        {/* ── Tabs ── */}
+        <div className="flex border-b border-gray-100 px-4 bg-white overflow-x-auto shrink-0">
+          {TABS.map((tab) => (
             <button
-              onClick={() => setActiveTab("details")}
-              className={`px-6 py-4 font-medium transition-all ${
-                activeTab === "details"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-all border-b-2 ${
+                activeTab === tab.id
+                  ? "text-blue-600 border-blue-500"
+                  : "text-gray-500 border-transparent hover:text-gray-800"
               }`}
             >
-              Details
+              {tab.label}
             </button>
-            <button
-              onClick={() => setActiveTab("comments")}
-              className={`px-6 py-4 font-medium transition-all ${
-                activeTab === "comments"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Comments ({comments.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("activity")}
-              className={`px-6 py-4 font-medium transition-all ${
-                activeTab === "activity"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Activity
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        {/* ── Scrollable Body ── */}
+        <div className="flex-1 overflow-y-auto">
+
+          {/* ════ Details Tab ════ */}
           {activeTab === "details" && (
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Task Title
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editedTask.title || ""}
-                    onChange={(e) =>
-                      setEditedTask({ ...editedTask, title: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium">{task.title}</p>
-                )}
-              </div>
+            <div className="p-6 space-y-6">
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Description
-                </label>
-                {isEditing ? (
-                  <textarea
-                    value={editedTask.description || ""}
-                    onChange={(e) =>
-                      setEditedTask({
-                        ...editedTask,
-                        description: e.target.value,
-                      })
-                    }
-                    rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              {/* Description */}
+              <Field label="Description">
+                {canEdit ? (
+                  <EditableTextarea
+                    value={task.description || ""}
+                    onSave={(val) => save({ description: val })}
                   />
                 ) : (
-                  <p className="text-gray-700">
-                    {task.description || "No description provided"}
+                  <p className="text-sm text-gray-700 px-3 py-2">
+                    {task.description || <span className="text-gray-400 italic">No description</span>}
                   </p>
                 )}
-              </div>
+              </Field>
 
+              {/* Status / Priority / Type */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Status
-                  </label>
-                  {isEditing ? (
-                    <select
-                      value={editedTask.status || ""}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          status: e.target.value as any,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Backlog">Backlog</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Blocked">Blocked</option>
-                      <option value="Done">Done</option>
-                    </select>
-                  ) : (
-                    <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getStatusBadge(task.status)}`}
-                    >
-                      {task.status}
-                    </span>
-                  )}
-                </div>
+                <Field label="Status">
+                  <EditableSelect
+                    value={task.status as any}
+                    options={[
+                      { label: "Backlog", value: "Backlog" },
+                      { label: "In Progress", value: "In Progress" },
+                      { label: "Blocked", value: "Blocked" },
+                      { label: "Done", value: "Done" },
+                    ]}
+                    onSave={(val) => save({ status: val as any })}
+                    renderValue={(val) => (
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(val)}`}>
+                        {val}
+                      </span>
+                    )}
+                  />
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Priority
-                  </label>
-                  {isEditing ? (
-                    <select
-                      value={editedTask.priority || ""}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          priority: e.target.value as any,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                      <option value="Critical">Critical</option>
-                    </select>
-                  ) : (
-                    <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getPriorityBadge(task.priority)}`}
-                    >
-                      {task.priority}
-                    </span>
-                  )}
-                </div>
+                <Field label="Priority">
+                  <EditableSelect
+                    value={task.priority as any}
+                    options={[
+                      { label: "Low", value: "Low" },
+                      { label: "Medium", value: "Medium" },
+                      { label: "High", value: "High" },
+                      { label: "Critical", value: "Critical" },
+                    ]}
+                    onSave={(val) => save({ priority: val as any })}
+                    renderValue={(val) => (
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getPriorityBadge(val)}`}>
+                        {val}
+                      </span>
+                    )}
+                  />
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Task Type
-                  </label>
-                  {isEditing ? (
-                    <select
-                      value={editedTask.taskType || "Task"}
-                      onChange={(e) => {
-                        const newType = e.target.value as
-                          | "Task"
-                          | "Deliverable"
-                          | "Milestone";
-                        setEditedTask({
-                          ...editedTask,
-                          taskType: newType,
-                          duration:
-                            newType === "Milestone" ? 1 : editedTask.duration,
-                        });
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="Task">Task</option>
-                      <option value="Deliverable">Deliverable</option>
-                      <option value="Milestone">Milestone</option>
-                    </select>
-                  ) : (
-                    <span
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border ${getTaskTypeBadge(task.taskType || "Task")}`}
-                    >
-                      {task.taskType || "Task"}
-                    </span>
-                  )}
-                </div>
+                <Field label="Task type">
+                  <EditableSelect
+                    value={(task.taskType || "Task") as any}
+                    options={[
+                      { label: "Task", value: "Task" },
+                      { label: "Deliverable", value: "Deliverable" },
+                      { label: "Milestone", value: "Milestone" },
+                    ]}
+                    onSave={(val) => {
+                      const isMilestone = val === "Milestone";
+                      const newDuration = isMilestone ? 1 : (localDuration ?? 1);
+                      const updates: Partial<Task> = { taskType: val as any, duration: newDuration };
+                      if (localStartDate) {
+                        const newDueDate = addWorkingDays(localStartDate, newDuration);
+                        if (newDueDate) {
+                          updates.dueDate = newDueDate;
+                          setLocalDueDate(newDueDate);
+                        }
+                      }
+                      setLocalDuration(newDuration);
+                      save(updates);
+                    }}
+                    renderValue={(val) => (
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getTaskTypeBadge(val)}`}>
+                        {val}
+                      </span>
+                    )}
+                  />
+                </Field>
               </div>
 
+              {/* Phase / Duration */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phase
-                  </label>
-                  {isEditing ? (
-                    <select
-                      value={editedTask.phaseId || ""}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          phaseId: e.target.value || null,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">No Phase (Unassigned)</option>
-                      {phases
+                <Field label="Phase">
+                  <EditableSelect
+                    value={task.phaseId || ""}
+                    options={[
+                      { label: "No Phase (Unassigned)", value: "" },
+                      ...phases
                         .sort((a, b) => a.order - b.order)
-                        .map((phase) => (
-                          <option key={phase._id} value={phase._id}>
-                            {phase.name}
-                          </option>
-                        ))}
-                    </select>
-                  ) : (
-                    <p className="text-gray-900">
-                      {task.phaseId
-                        ? phases.find((p) => p._id === task.phaseId)?.name ||
-                          "Unknown Phase"
-                        : "No Phase (Unassigned)"}
-                    </p>
-                  )}
-                </div>
+                        .map((p) => ({ label: p.name, value: p._id })),
+                    ]}
+                    onSave={(val) => save({ phaseId: val || null })}
+                    renderValue={(val) => (
+                      <span className="text-sm text-gray-900">
+                        {val
+                          ? phases.find((p) => p._id === val)?.name || "Unknown Phase"
+                          : <span className="text-gray-400 italic">No phase</span>}
+                      </span>
+                    )}
+                  />
+                </Field>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Duration (Working Days)
-                  </label>
-                  {isEditing ? (
-                    <div>
-                      <input
-                        type="number"
-                        min="0"
-                        max={
-                          editedTask.taskType === "Milestone" ? 1 : undefined
-                        }
-                        value={editedTask.duration || 1}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value) || 0;
-                          const maxValue =
-                            editedTask.taskType === "Milestone" ? 1 : value;
-                          setEditedTask({
-                            ...editedTask,
-                            duration: Math.min(value, maxValue),
-                          });
-                        }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                <Field label="Duration (working days)">
+                  {canEdit ? (
+                    <>
+                      <EditableNumber
+                        value={localDuration}
+                        min={1}
+                        max={task.taskType === "Milestone" ? 1 : undefined}
+                        suffix={` day${localDuration !== 1 ? "s" : ""}`}
+                        onSave={handleDurationChange}
                       />
-                      {editedTask.taskType === "Milestone" && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Milestones can have a maximum duration of 1 day
+                      {task.taskType === "Milestone" && (
+                        <p className="text-[11px] text-gray-400 px-3">Milestones are capped at 1 day</p>
+                      )}
+                      {localStartDate && (
+                        <p className="text-[11px] text-gray-400 px-3 mt-0.5">
+                          Due date auto-updates from start date + duration
                         </p>
                       )}
-                    </div>
+                    </>
                   ) : (
-                    <p className="text-gray-900">
-                      {task.duration || 1} working day
-                      {(task.duration || 1) !== 1 ? "s" : ""}
+                    <p className="text-sm text-gray-900 px-3 py-2">
+                      {localDuration} day{localDuration !== 1 ? "s" : ""}
                     </p>
                   )}
-                </div>
+                </Field>
               </div>
 
-              <div className="border border-gray-200 rounded-xl p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                  <label className="text-sm font-semibold text-gray-700">
-                    Dependencies
-                  </label>
-                  {isEditing && (
-                    <button
-                      onClick={handleAddDependency}
-                      className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                    >
-                      Add Dependency
-                    </button>
+              {/* Start Date / Due Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <Field label="Start date">
+                  {canEdit ? (
+                    <EditableDate
+                      value={localStartDate}
+                      onSave={handleStartDateChange}
+                      placeholder="Set start date"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 px-3 py-2">{formatDate(localStartDate)}</p>
+                  )}
+                </Field>
+
+                <Field label="Due date">
+                  {canEdit ? (
+                    <EditableDate
+                      value={localDueDate}
+                      onSave={(val) => {
+                        setLocalDueDate(val);
+                        save({ dueDate: val }).then(() => {
+                          propagateDueDateChange(task._id, val);
+                        });
+                      }}
+                      placeholder="Set due date"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-900 px-3 py-2">{formatDate(localDueDate)}</p>
+                  )}
+                </Field>
+              </div>
+
+              {/* Progress */}
+              <Field label={`Progress — ${task.progress ?? 0}%`}>
+                <div className="px-3 py-2">
+                  {canEdit ? (
+                    <EditableProgress
+                      value={task.progress ?? 0}
+                      onSave={(val) => save({ progress: val })}
+                    />
+                  ) : (
+                    <div className="bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                      <div className="bg-blue-500 h-full rounded-full" style={{ width: `${task.progress ?? 0}%` }} />
+                    </div>
                   )}
                 </div>
+              </Field>
 
-                {isEditing ? (
-                  <div className="space-y-2">
-                    {(editedTask.dependencies || []).length === 0 ? (
-                      <p className="text-sm text-gray-500">No dependencies</p>
-                    ) : (
-                      (editedTask.dependencies || []).map((dep, index) => (
+              {/* Assigned to */}
+              <Field label="Assigned to">
+                <EditableAssignees
+                  assignees={task.assignees || []}
+                  teamMembers={teamMembers}
+                  canEdit={canEdit}
+                  onSave={(newAssignees) => save({ assignees: newAssignees as any })}
+                />
+              </Field>
+
+              {/* Dependencies */}
+              <Field label="Dependencies">
+                <div className="px-3 py-2 space-y-2">
+                  {canEdit && (
+                    <button
+                      onClick={addDependency}
+                      className="text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                    >
+                      + Add dependency
+                    </button>
+                  )}
+
+                  {localDeps.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">No dependencies</p>
+                  ) : canEdit ? (
+                    localDeps.map((dep, index) => {
+                      const isPending = pendingDepIndexes.has(index);
+                      const otherSelected = localDeps
+                        .filter((_, i) => i !== index)
+                        .map((d) => d.taskId)
+                        .filter(Boolean);
+                      const available = getAvailableTasks(otherSelected);
+
+                      return (
                         <div
                           key={index}
-                          className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center"
+                          className={`flex flex-col sm:flex-row gap-2 items-stretch sm:items-center rounded-lg p-2 ${
+                            isPending ? "bg-amber-50 border border-amber-200" : "bg-gray-50"
+                          }`}
                         >
                           <select
                             value={dep.taskId}
-                            onChange={(e) =>
-                              handleDependencyChange(
-                                index,
-                                "taskId",
-                                e.target.value,
-                              )
-                            }
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            onChange={(e) => updateDep(index, "taskId", e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                           >
-                            <option value="">Select Task</option>
-                            {getAvailableTasks(index).map((t) => (
-                              <option key={t._id} value={t._id}>
-                                {t.title} ({t.taskType})
-                              </option>
+                            <option value="">Select task…</option>
+                            {available.map((t) => (
+                              <option key={t._id} value={t._id}>{t.title}</option>
                             ))}
                           </select>
-
                           <select
                             value={dep.type}
-                            onChange={(e) =>
-                              handleDependencyChange(
-                                index,
-                                "type",
-                                e.target.value,
-                              )
-                            }
-                            className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            onChange={(e) => updateDep(index, "type", e.target.value)}
+                            className="w-full sm:w-36 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                           >
                             <option value="FS">Finish to Start</option>
                             <option value="SS">Start to Start</option>
                           </select>
-
                           <button
-                            onClick={() => handleRemoveDependency(index)}
-                            className="w-full sm:w-auto px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+                            onClick={() => removeDep(index)}
+                            className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-xs transition-colors"
                           >
                             Remove
                           </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {!task.dependencies || task.dependencies.length === 0 ? (
-                      <p className="text-sm text-gray-500">No dependencies</p>
-                    ) : (
-                      task.dependencies.map((dep, index) => {
-                        const depTask = allTasks.find(
-                          (t) => t._id === dep.taskId,
-                        );
-                        return (
-                          <div
-                            key={index}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg"
-                          >
-                            <span className="text-sm text-gray-700 break-words">
-                              {depTask?.title || "Unknown Task"}
+                          {isPending && (
+                            <span className="text-[10px] text-amber-600 sm:hidden">
+                              Select a task to save
                             </span>
-                            <span className="self-start sm:self-auto text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                              {getDependencyTypeLabel(dep.type)}
-                            </span>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Assigned To
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {task.assignees && task.assignees.length > 0 ? (
-                    task.assignees.map((assignee, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
-                      >
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                          {getInitials(assignee.name)}
+                          )}
                         </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {assignee.name}
-                        </span>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
-                    <p className="text-gray-500">No assignees</p>
+                    localDeps.map((dep, index) => {
+                      const depTask = allTasks.find((t) => t._id === dep.taskId);
+                      return (
+                        <div key={index} className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg">
+                          <span className="text-sm text-gray-700">{depTask?.title || "Unknown task"}</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full">
+                            {getDependencyTypeLabel(dep.type)}
+                          </span>
+                        </div>
+                      );
+                    })
                   )}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Start Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={editedTask.startDate || ""}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          startDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-900">
-                      {formatDate(task.startDate)}
+                  {canEdit && pendingDepIndexes.size > 0 && (
+                    <p className="text-[11px] text-amber-600 hidden sm:block">
+                      Select a task for each highlighted row to save the dependency.
                     </p>
                   )}
                 </div>
+              </Field>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Due Date
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={editedTask.dueDate || ""}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          dueDate: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="text-gray-900">{formatDate(task.dueDate)}</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Progress: {isEditing ? editedTask.progress : task.progress}%
-                </label>
-                {isEditing ? (
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editedTask.progress || 0}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          progress: parseInt(e.target.value),
-                        })
-                      }
-                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={editedTask.progress || 0}
-                      onChange={(e) =>
-                        setEditedTask({
-                          ...editedTask,
-                          progress: parseInt(e.target.value),
-                        })
-                      }
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                ) : (
-                  <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full"
-                      style={{ width: `${task.progress}%` }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {!isEditing && canEdit && (
-                <div className="pt-4 border-t border-gray-200">
+              {/* Delete */}
+              {canEdit && (
+                <div className="pt-2 border-t border-gray-100">
                   <button
-                    onClick={() => {
-                      if (
-                        confirm("Are you sure you want to delete this task?")
-                      ) {
-                        onDelete(task._id);
-                        onClose();
-                      }
-                    }}
-                    className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors text-sm font-medium"
+                    onClick={handleDelete}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    Delete Task
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete task
                   </button>
                 </div>
               )}
             </div>
           )}
 
+          {/* ════ Comments Tab ════ */}
           {activeTab === "comments" && (
-            <div className="space-y-6">
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div className="p-6 space-y-5">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
+                  placeholder="Write a comment…"
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm bg-white"
                 />
 
                 {selectedFiles.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectedFiles.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-2 rounded-lg text-sm"
-                      >
+                      <div key={index} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-xs">
+                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
                         <span className="text-gray-700">{file.name}</span>
                         <button
                           onClick={() => {
                             if (onRemoveFile) {
                               onRemoveFile(index);
                             } else {
-                              setSelectedFiles(
-                                selectedFiles.filter((_, i) => i !== index),
-                              );
+                              setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
                             }
                           }}
-                          className="text-gray-400 hover:text-red-600 px-1"
+                          className="text-gray-400 hover:text-red-500 transition-colors"
                         >
-                          Remove
+                          ×
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3">
-                  <label className="cursor-pointer text-sm text-blue-600 hover:text-blue-700 self-start">
-                    <input
-                      type="file"
-                      multiple
-                      onChange={fileSelectHandler}
-                      className="hidden"
-                    />
+                <div className="flex items-center justify-between mt-3 gap-2">
+                  <label className="cursor-pointer text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
+                    <input type="file" multiple onChange={fileSelectHandler} className="hidden" />
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
                     Attach files
                   </label>
                   <button
                     onClick={onAddComment}
-                    disabled={
-                      uploadingFiles ||
-                      (!newComment.trim() && selectedFiles.length === 0)
-                    }
-                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 text-sm font-medium"
+                    disabled={uploadingFiles || (!newComment.trim() && selectedFiles.length === 0)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 text-sm font-medium"
                   >
-                    {uploadingFiles ? "Uploading..." : "Post Comment"}
+                    {uploadingFiles ? "Uploading…" : "Post"}
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {comments.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">
-                    No comments yet
-                  </p>
+                  <div className="text-center py-10 text-gray-400 text-sm">No comments yet</div>
                 ) : (
-                  <React.Fragment>
-                    {comments.map((comment) => {
-                      const commentAuthorName =
-                        comment.userId?.name ||
-                        (comment as any).userName ||
-                        "Unknown User";
-
-                      return (
-                        <div
-                          key={comment._id}
-                          className="bg-white border border-gray-200 rounded-xl p-4"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                              {getInitials(commentAuthorName)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex flex-wrap items-center gap-2 mb-1">
-                                <span className="font-semibold text-gray-900">
-                                  {commentAuthorName}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(comment.createdAt).toLocaleString()}
-                                </span>
-                              </div>
-                              <p className="text-gray-700 text-sm whitespace-pre-wrap">
-                                {comment.comment}
-                              </p>
-                              {comment.attachments &&
-                                comment.attachments.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {comment.attachments.map((file, index) => {
-                                      const fileUrl =
-                                        (file as any)?.url ||
-                                        (file as any)?.fileUrl;
-                                      const fileName =
-                                        (file as any)?.name ||
-                                        (file as any)?.fileName ||
-                                        "Attachment";
-
-                                      if (!file || !fileUrl) return null;
-                                      return (
-                                        <button
-                                          key={index}
-                                          onClick={() =>
-                                            window.open(fileUrl, "_blank")
-                                          }
-                                          className="text-xs px-2 py-1 bg-gray-100 text-blue-600 rounded hover:bg-gray-200"
-                                        >
-                                          {fileName}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                            </div>
-                          </div>
+                  comments.map((comment) => {
+                    const authorName = comment.userId?.name || (comment as any).userName || "Unknown User";
+                    return (
+                      <div key={comment._id} className="flex gap-3 p-4 bg-white border border-gray-100 rounded-xl">
+                        <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                          {getInitials(authorName)}
                         </div>
-                      );
-                    })}
-                  </React.Fragment>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-baseline gap-2 mb-1">
+                            <span className="text-sm font-medium text-gray-900">{authorName}</span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment}</p>
+                          {comment.attachments && comment.attachments.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {comment.attachments.map((file, index) => {
+                                const fileUrl = (file as any)?.url || (file as any)?.fileUrl;
+                                const fileName = (file as any)?.name || (file as any)?.fileName || "Attachment";
+                                if (!file || !fileUrl) return null;
+                                return (
+                                  <button
+                                    key={index}
+                                    onClick={() => window.open(fileUrl, "_blank")}
+                                    className="text-xs px-2 py-1 bg-gray-100 text-blue-600 rounded hover:bg-gray-200 transition-colors"
+                                  >
+                                    {fileName}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
           )}
 
+          {/* ════ Activity Tab ════ */}
           {activeTab === "activity" && (
-            <div className="space-y-4">
+            <div className="p-6 space-y-3">
               {activityLogs.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">
-                  No activity yet
-                </p>
+                <div className="text-center py-10 text-gray-400 text-sm">No activity yet</div>
               ) : (
                 activityLogs.map((log) => {
-                  const activityUserName =
-                    log.user?.name || (log as any).userName || "Unknown User";
-
+                  const userName = log.user?.name || (log as any).userName || "Unknown User";
                   return (
-                    <div
-                      key={log._id}
-                      className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl"
-                    >
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold">
-                        {getInitials(activityUserName)}
+                    <div key={log._id} className="flex gap-3 p-4 bg-gray-50 rounded-xl">
+                      <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-xs font-semibold shrink-0">
+                        {getInitials(userName)}
                       </div>
                       <div className="flex-1">
                         <p className="text-sm text-gray-900">
-                          <span className="font-semibold">
-                            {activityUserName}
-                          </span>{" "}
+                          <span className="font-medium">{userName}</span>{" "}
                           {log.description}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(
-                            log.timestamp || log.createdAt || Date.now(),
-                          ).toLocaleString()}
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {new Date(log.timestamp || log.createdAt || Date.now()).toLocaleString()}
                         </p>
                       </div>
                     </div>
