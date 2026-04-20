@@ -13,7 +13,7 @@ export default function UserMessagesPage() {
         <AdminSidebar userRole="user" />
         <AdminHeader />
 
-        <main className="mt-16 lg:ml-(--fm-sidebar-width) transition-all duration-300 p-4 lg:p-6 h-[calc(100vh-4rem)] box-border overflow-hidden">
+        <main className="mt-16 lg:ml-[var(--fm-sidebar-width)] transition-all duration-300 p-4 lg:p-6 h-[calc(100vh-4rem)] box-border overflow-hidden">
           <MessagesPanel />
         </main>
       </div>

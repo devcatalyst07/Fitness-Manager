@@ -94,6 +94,14 @@ api.interceptors.request.use(
     ) {
       config.headers["X-CSRF-Token"] = csrfToken;
     }
+
+    // When sending FormData, allow the browser to set the multipart boundary.
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        delete config.headers["Content-Type"];
+      }
+    }
+
     return config;
   },
   (error: AxiosError) => {

@@ -91,10 +91,10 @@ export default function ConversationList({
         </h2>
         <button
           onClick={onNewChat}
-          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-          title="New group chat"
+          className="px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/35 dark:text-blue-300 rounded-lg transition-colors"
+          title="New message"
         >
-          <Users size={20} />
+          + New Message
         </button>
       </div>
 

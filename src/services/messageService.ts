@@ -1,5 +1,13 @@
 import { apiClient } from "@/lib/axios";
 
+export interface MessageAttachment {
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  publicId?: string;
+}
+
 export interface MessageMember {
   _id: string;
   name: string;
@@ -44,6 +52,7 @@ export interface ConversationData {
   };
   lastMessageAt: string;
   unreadCount: number;
+  isMuted?: boolean;
   createdAt: string;
 }
 
@@ -84,6 +93,22 @@ const messageService = {
     );
   },
 
+  /** Upload files to be attached to a message. */
+  async uploadAttachments(
+    files: File[],
+  ): Promise<MessageAttachment[]> {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const data = await apiClient.post<{
+      files: MessageAttachment[];
+    }>("/api/upload", formData);
+
+    return data.files;
+  },
+
   /** Get paginated messages for a conversation. */
   async getMessages(
     conversationId: string,
@@ -99,16 +124,39 @@ const messageService = {
   async sendMessage(
     conversationId: string,
     text: string,
+    attachments?: MessageAttachment[],
   ): Promise<MessageData> {
     return apiClient.post<MessageData>(
       `/api/messages/conversations/${conversationId}/messages`,
-      { text },
+      { text, attachments },
     );
   },
 
   /** Mark all messages in a conversation as read. */
   async markAsRead(conversationId: string): Promise<void> {
     await apiClient.post(`/api/messages/conversations/${conversationId}/read`);
+  },
+
+  /** Mute/unmute notifications for a conversation. */
+  async setConversationMuted(
+    conversationId: string,
+    muted: boolean,
+  ): Promise<{ conversationId: string; muted: boolean }> {
+    return apiClient.post<{ conversationId: string; muted: boolean }>(
+      `/api/messages/conversations/${conversationId}/mute`,
+      { muted },
+    );
+  },
+
+  /** Search messages inside a specific conversation. */
+  async searchConversationMessages(
+    conversationId: string,
+    query: string,
+  ): Promise<MessageData[]> {
+    const encoded = encodeURIComponent(query);
+    return apiClient.get<MessageData[]>(
+      `/api/messages/conversations/${conversationId}/search?q=${encoded}`,
+    );
   },
 };
 
