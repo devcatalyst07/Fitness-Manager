@@ -33,6 +33,7 @@ export default function MessagesPanel() {
   // ── UI state ────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
   const [messageInput, setMessageInput] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showNewChat, setShowNewChat] = useState(false);
   // typingMap: conversationId → userName
   const [typingMap, setTypingMap] = useState<Record<string, string>>({});
@@ -109,19 +110,32 @@ export default function MessagesPanel() {
   // ── Handlers ────────────────────────────────────────────────────
   const handleSend = async () => {
     const text = messageInput.trim();
-    if (!text || !activeConversationId) return;
+    if ((!text && selectedFiles.length === 0) || !activeConversationId) return;
     setMessageInput("");
 
+    let uploadedAttachments;
+    if (selectedFiles.length > 0) {
+      try {
+        uploadedAttachments = await messageService.uploadAttachments(selectedFiles);
+      } catch (err) {
+        console.error("Attachment upload failed:", err);
+        return;
+      }
+    }
+
     try {
-      await socketSend(activeConversationId, text);
+      await socketSend(activeConversationId, text, uploadedAttachments);
+      setSelectedFiles([]);
     } catch {
       // Fallback to REST if socket fails
       try {
         const msg = await messageService.sendMessage(
           activeConversationId,
           text,
+          uploadedAttachments,
         );
         setMessages((prev) => [...prev, msg]);
+        setSelectedFiles([]);
       } catch (err) {
         console.error("Send message failed:", err);
       }
@@ -135,6 +149,20 @@ export default function MessagesPanel() {
     setConversations((prev) =>
       prev.map((c) => (c._id === id ? { ...c, unreadCount: 0 } : c)),
     );
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const handleAddFiles = (files: File[]) => {
+    const currentTotal = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+    const incomingTotal = files.reduce((sum, file) => sum + file.size, 0);
+    if (currentTotal + incomingTotal > 100 * 1024 * 1024) {
+      console.error("Total attachments cannot exceed 100MB");
+      return;
+    }
+    setSelectedFiles((prev) => [...prev, ...files]);
   };
 
   const handleStartDirect = async (targetUserId: string) => {
@@ -193,7 +221,10 @@ export default function MessagesPanel() {
             messages={messages}
             currentUserId={currentUserId}
             messageInput={messageInput}
+            selectedFiles={selectedFiles}
             onInputChange={setMessageInput}
+            onAddFiles={handleAddFiles}
+            onRemoveFile={handleRemoveFile}
             onSend={handleSend}
             onTypingStart={() =>
               activeConversationId &&

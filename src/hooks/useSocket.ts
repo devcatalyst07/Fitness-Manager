@@ -36,6 +36,14 @@ export interface UseSocketOptions {
   onMessageRead?: (data: { conversationId: string; userId: string }) => void;
 }
 
+export interface MessageAttachment {
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  publicId?: string;
+}
+
 export function useSocket(opts: UseSocketOptions = {}) {
   const socketRef = useRef<Socket | null>(null);
   const optsRef = useRef(opts);
@@ -87,14 +95,18 @@ export function useSocket(opts: UseSocketOptions = {}) {
   }, []);
 
   const sendMessage = useCallback(
-    (conversationId: string, text: string): Promise<any> => {
+    (
+      conversationId: string,
+      text: string,
+      attachments?: MessageAttachment[],
+    ): Promise<any> => {
       return new Promise((resolve, reject) => {
         if (!socketRef.current?.connected) {
           return reject(new Error("Socket not connected"));
         }
         socketRef.current.emit(
           "message:send",
-          { conversationId, text },
+          { conversationId, text, attachments },
           (resp: any) => {
             if (resp?.ok) resolve(resp.message);
             else reject(new Error(resp?.error || "Send failed"));
