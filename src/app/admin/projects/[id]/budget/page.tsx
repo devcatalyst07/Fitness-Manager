@@ -138,7 +138,9 @@ interface FinanceCardProps {
 const FinanceCard = ({ label, value, subtitle, accent, icon, alert }: FinanceCardProps) => (
   <div
     className={`bg-white rounded-xl border ${
-      alert && value < 0 ? "border-red-200 shadow-red-50" : "border-gray-200"
+      alert && value < 0
+        ? "border-red-200 shadow-red-50"
+        : "border-gray-200"
     } p-5 shadow-sm`}
   >
     <div className="flex items-start justify-between mb-3">
@@ -551,7 +553,7 @@ export default function AdminProjectBudgetPage() {
       </div>
 
       {/* Total Cost preview */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between">
+      <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-blue-500">
             Total Cost
@@ -622,11 +624,11 @@ export default function AdminProjectBudgetPage() {
   // ─── Render ───────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50/80">
+    <div className="min-h-screen bg-gray-50">
       <AdminSidebar pathname={pathname} setPathname={() => {}} />
       <AdminHeader />
 
-      <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
+      <main className="lg:ml-(--fm-sidebar-width) mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
 
         {/* ── Breadcrumb & Header ── */}
         <div className="mb-8">
@@ -802,7 +804,7 @@ export default function AdminProjectBudgetPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 bg-white text-gray-900 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Search by description or vendor..."
               />
             </div>
@@ -811,7 +813,7 @@ export default function AdminProjectBudgetPage() {
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {categoryOptions.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -821,7 +823,7 @@ export default function AdminProjectBudgetPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -908,11 +910,11 @@ export default function AdminProjectBudgetPage() {
                         className="hover:bg-gray-50/80 transition-colors"
                       >
                         <td className="px-4 py-3.5">
-                          <div className="font-medium text-gray-900 truncate max-w-[200px]">
+                          <div className="font-medium text-gray-900 truncate max-w-50">
                             {item.description}
                           </div>
                           {item.notes && (
-                            <div className="text-xs text-gray-400 truncate max-w-[200px] mt-0.5">
+                            <div className="text-xs text-gray-400 truncate max-w-50 mt-0.5">
                               {item.notes}
                             </div>
                           )}
@@ -972,8 +974,8 @@ export default function AdminProjectBudgetPage() {
                               disabled={item.isTenderSynced}
                               className={`p-1.5 rounded-md transition-colors ${
                                 item.isTenderSynced
-                                  ? "text-gray-200 cursor-not-allowed"
-                                  : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                    ? "text-gray-200 cursor-not-allowed"
+                                    : "text-gray-400 hover:text-red-600 hover:bg-red-50"
                               }`}
                               title={
                                 item.isTenderSynced

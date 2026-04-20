@@ -31,6 +31,10 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
           textColor: "text-red-700",
           iconColor: "text-red-600",
           badgeColor: "bg-red-100 text-red-700",
+          iconSurface: "bg-white",
+          titleColor: "text-gray-900",
+          descriptionColor: "text-gray-700",
+          actionColor: "text-red-700 hover:text-red-800",
         };
       case "warning":
         return {
@@ -40,6 +44,10 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
           textColor: "text-yellow-700",
           iconColor: "text-yellow-600",
           badgeColor: "bg-yellow-100 text-yellow-700",
+          iconSurface: "bg-white",
+          titleColor: "text-gray-900",
+          descriptionColor: "text-gray-700",
+          actionColor: "text-yellow-700 hover:text-yellow-800",
         };
       default:
         return {
@@ -49,6 +57,10 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
           textColor: "text-blue-700",
           iconColor: "text-blue-600",
           badgeColor: "bg-blue-100 text-blue-700",
+          iconSurface: "bg-white",
+          titleColor: "text-gray-900",
+          descriptionColor: "text-gray-700",
+          actionColor: "text-blue-700 hover:text-blue-800",
         };
     }
   };
@@ -77,14 +89,14 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1">
-          <div className={`p-2 rounded-lg ${config.iconColor} bg-white`}>
+          <div className={`p-2 rounded-lg ${config.iconColor} ${config.iconSurface}`}>
             <Icon size={20} />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg"></span>
-              <h4 className="font-semibold text-gray-900">{insight.title}</h4>
+              <h4 className={`font-semibold ${config.titleColor}`}>{insight.title}</h4>
               {insight.count > 0 && (
                 <span
                   className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.badgeColor}`}
@@ -94,7 +106,7 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
               )}
             </div>
 
-            <p className="text-sm text-gray-700 mb-2">{insight.description}</p>
+            <p className={`text-sm mb-2 ${config.descriptionColor}`}>{insight.description}</p>
 
             <p className={`text-xs italic ${config.textColor} mb-3`}>
              {insight.recommendation}
@@ -102,7 +114,7 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
 
             <button
               onClick={() => onAction(insight.actionUrl)}
-              className={`inline-flex items-center gap-1 text-sm font-medium ${config.textColor} hover:underline`}
+              className={`inline-flex items-center gap-1 text-sm font-medium ${config.actionColor} hover:underline`}
             >
               {insight.actionLabel}
               <ChevronRight size={14} />
@@ -172,7 +184,7 @@ export function InsightsContainer({
       {insights.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <p className="text-4xl mb-2"></p>
-          <p className="font-medium">No insights - All systems nominal!</p>
+          <p className="font-medium text-gray-800">No insights - All systems nominal!</p>
           <p className="text-sm mt-1">
             Your project is on track with no issues detected
           </p>

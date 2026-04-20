@@ -34,6 +34,21 @@ export function DeadlineCard({
     }
   };
 
+  const getStatusColor = () => {
+    switch (status) {
+      case "Backlog":
+        return "bg-blue-100 text-blue-700";
+      case "Blocked":
+        return "bg-red-100 text-red-700";
+      case "In Progress":
+        return "bg-amber-100 text-amber-700";
+      case "Done":
+        return "bg-green-100 text-green-700";
+      default:
+        return "bg-blue-100 text-blue-700";
+    }
+  };
+
   const getDaysUntilDue = () => {
     const due = new Date(dueDate);
     const now = new Date();
@@ -64,7 +79,7 @@ export function DeadlineCard({
       </div>
       <div className="flex items-center gap-2 ml-3">
         {status && (
-          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
+          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor()}`}>
             {status}
           </span>
         )}
@@ -102,7 +117,7 @@ export function DeadlineFilter({
     <select
       value={currentDays}
       onChange={(e) => onFilterChange(parseInt(e.target.value))}
-      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -144,7 +159,7 @@ export function DeadlinesContainer({
       {deadlines.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Calendar size={48} className="mx-auto mb-3 text-gray-300" />
-          <p className="font-medium">No upcoming deadlines</p>
+          <p className="font-medium text-gray-800">No upcoming deadlines</p>
           <p className="text-sm">All tasks are on track or completed</p>
         </div>
       ) : (
