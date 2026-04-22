@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { FileDown, FileText, Folder, Download, Info } from "lucide-react";
+import { FileText, Folder, Download, Info } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import SessionGuard from "@/components/SessionGuard";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import FitoutLoadingSpinner from "@/components/FitoutLoadingSpinner";
-import { apiClient } from "@/lib/axios";
+import api, { apiClient } from "@/lib/axios";
 import {
   generatePortfolioPDF,
   generateProjectPDF,
@@ -17,9 +17,6 @@ import {
   type ProjectReportData,
   type BrandReportData,
 } from "@/utils/pdfGenerator";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://fitout-manager-api.vercel.app";
 
 interface Project {
   _id: string;
@@ -44,7 +41,6 @@ export default function ReportsPage() {
   // Role-based redirect
   useEffect(() => {
     if (!authLoading && user && user.role !== "admin") {
-      console.log("⚠️ User role is not admin, redirecting");
       router.replace("/user/reports");
     }
   }, [user, authLoading, router]);
@@ -72,27 +68,25 @@ export default function ReportsPage() {
     }
   };
 
+  // ── Shared CSV helper using the axios instance (cookies handled automatically) ──
+  const downloadCSV = async (url: string, filename: string) => {
+    const response = await api.get(url, { responseType: "blob" });
+    const blob = new Blob([response.data], { type: "text/csv" });
+    const objectUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(objectUrl);
+  };
+
   const downloadPortfolioCSV = async () => {
     setGeneratingReport("portfolio-csv");
     try {
-      const response = await fetch(
-        `${API_URL}/api/admin/reports/portfolio/csv`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
+      await downloadCSV(
+        "/api/admin/reports/portfolio/csv",
+        `portfolio-report-${Date.now()}.csv`,
       );
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `portfolio-report-${Date.now()}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert("Failed to generate CSV report");
-      }
     } catch (error) {
       console.error("Download CSV error:", error);
       alert("Failed to download CSV report");
@@ -119,24 +113,10 @@ export default function ReportsPage() {
   const downloadProjectCSV = async (projectId: string, projectName: string) => {
     setGeneratingReport(`project-csv-${projectId}`);
     try {
-      const response = await fetch(
-        `${API_URL}/api/admin/reports/project/${projectId}/csv`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
+      await downloadCSV(
+        `/api/admin/reports/project/${projectId}/csv`,
+        `${projectName}-report-${Date.now()}.csv`,
       );
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${projectName}-report-${Date.now()}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert("Failed to generate CSV report");
-      }
     } catch (error) {
       console.error("Download CSV error:", error);
       alert("Failed to download CSV report");
@@ -163,24 +143,10 @@ export default function ReportsPage() {
   const downloadBrandCSV = async (brandName: string) => {
     setGeneratingReport(`brand-csv-${brandName}`);
     try {
-      const response = await fetch(
-        `${API_URL}/api/admin/reports/brand/${encodeURIComponent(brandName)}/csv`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
+      await downloadCSV(
+        `/api/admin/reports/brand/${encodeURIComponent(brandName)}/csv`,
+        `${brandName}-report-${Date.now()}.csv`,
       );
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${brandName}-report-${Date.now()}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert("Failed to generate CSV report");
-      }
     } catch (error) {
       console.error("Download CSV error:", error);
       alert("Failed to download CSV report");
@@ -322,9 +288,7 @@ export default function ReportsPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => downloadBrandCSV(brand.name)}
-                        disabled={
-                          generatingReport === `brand-csv-${brand.name}`
-                        }
+                        disabled={generatingReport === `brand-csv-${brand.name}`}
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100"
                       >
                         {generatingReport === `brand-csv-${brand.name}`
@@ -333,9 +297,7 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => generateBrandPDFReport(brand.name)}
-                        disabled={
-                          generatingReport === `brand-pdf-${brand.name}`
-                        }
+                        disabled={generatingReport === `brand-pdf-${brand.name}`}
                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100"
                       >
                         {generatingReport === `brand-pdf-${brand.name}`

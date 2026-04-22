@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   X,
   Calendar,
@@ -11,25 +11,21 @@ import {
   Layers,
   Link2,
   AlertCircle,
+  ChevronDown,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Task } from "@/types/task.types";
-import { responsive } from "@/utils/responsive";
 
 interface TeamMember {
   _id: string;
-  userId: {
-    _id: string;
-    name: string;
-    email: string;
-  };
+  userId: { _id: string; name: string; email: string };
   status: string;
 }
-
 interface Assignee {
   email: string;
   name: string;
 }
-
 interface Phase {
   _id: string;
   name: string;
@@ -38,7 +34,6 @@ interface Phase {
   color?: string;
   projectId: string;
 }
-
 interface FormData {
   title: string;
   description: string;
@@ -53,7 +48,6 @@ interface FormData {
   phaseId: string | null;
   dependencies: { taskId: string; type: "FS" | "SS" }[];
 }
-
 interface TaskCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -69,560 +63,472 @@ interface TaskCreateModalProps {
   checkMemberHasActiveTask: (email: string) => boolean;
 }
 
+const AVATAR_COLORS = [
+  "bg-violet-500", "bg-sky-500", "bg-emerald-500",
+  "bg-rose-500", "bg-amber-500", "bg-indigo-500",
+];
+
+const priorityConfig = {
+  Low:      { dot: "bg-emerald-400", label: "Low",      ring: "ring-emerald-200" },
+  Medium:   { dot: "bg-amber-400",   label: "Medium",   ring: "ring-amber-200" },
+  High:     { dot: "bg-orange-400",  label: "High",     ring: "ring-orange-200" },
+  Critical: { dot: "bg-rose-500",    label: "Critical", ring: "ring-rose-200" },
+};
+
+const statusConfig = {
+  Backlog:     { color: "text-slate-500",   bg: "bg-slate-100"  },
+  "In Progress":{ color: "text-sky-600",    bg: "bg-sky-50"     },
+  Blocked:     { color: "text-rose-600",    bg: "bg-rose-50"    },
+  Done:        { color: "text-emerald-600", bg: "bg-emerald-50" },
+};
+
+function SectionLabel({ icon: Icon, children, required }: {
+  icon: React.ElementType; children: React.ReactNode; required?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+      <Icon size={12} />
+      {children}
+      {required && <span className="text-rose-400 normal-case tracking-normal text-sm ml-0.5">*</span>}
+    </label>
+  );
+}
+
+function Field({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`space-y-1.5 ${className}`}>{children}</div>;
+}
+
 export default function TaskCreateModal({
-  isOpen,
-  onClose,
-  formData,
-  setFormData,
-  selectedAssignees,
-  setSelectedAssignees,
-  teamMembers,
-  phases,
-  tasks,
-  onSubmit,
-  saving,
-  checkMemberHasActiveTask,
+  isOpen, onClose, formData, setFormData,
+  selectedAssignees, setSelectedAssignees,
+  teamMembers, phases, tasks, onSubmit, saving,
 }: TaskCreateModalProps) {
-  const [dependenciesExpanded, setDependenciesExpanded] = useState(false);
+  const [depsOpen, setDepsOpen] = useState(false);
 
   if (!isOpen) return null;
 
   const handleAddAssignee = (email: string) => {
     if (!email) return;
-
-    const selectedMember = teamMembers.find(
-      (member) => member.userId.email === email,
-    );
-
-    if (!selectedMember) return;
-
-    // Silently skip if already added — no alert
-    const alreadyAdded = selectedAssignees.some(
-      (a) => a.email === selectedMember.userId.email,
-    );
-    if (alreadyAdded) return;
-
-    const newAssignee = {
-      email: selectedMember.userId.email,
-      name: selectedMember.userId.name,
-    };
-
-    const updatedAssignees = [...selectedAssignees, newAssignee];
-
-    setSelectedAssignees(updatedAssignees);
-    setFormData({
-      ...formData,
-      assignees: updatedAssignees,
-    });
+    const m = teamMembers.find((m) => m.userId.email === email);
+    if (!m) return;
+    if (selectedAssignees.some((a) => a.email === m.userId.email)) return;
+    const updated = [...selectedAssignees, { email: m.userId.email, name: m.userId.name }];
+    setSelectedAssignees(updated);
+    setFormData({ ...formData, assignees: updated });
   };
 
   const handleRemoveAssignee = (index: number) => {
     const updated = selectedAssignees.filter((_, i) => i !== index);
     setSelectedAssignees(updated);
-    setFormData({
-      ...formData,
-      assignees: updated,
-    });
+    setFormData({ ...formData, assignees: updated });
   };
 
-  const handleAddDependency = () => {
-    setFormData({
-      ...formData,
-      dependencies: [
-        ...formData.dependencies,
-        { taskId: "", type: "FS" as const },
-      ],
-    });
-  };
+  const handleAddDep = () =>
+    setFormData({ ...formData, dependencies: [...formData.dependencies, { taskId: "", type: "FS" }] });
 
-  const handleRemoveDependency = (index: number) => {
-    setFormData({
-      ...formData,
-      dependencies: formData.dependencies.filter((_, i) => i !== index),
-    });
-  };
+  const handleRemoveDep = (i: number) =>
+    setFormData({ ...formData, dependencies: formData.dependencies.filter((_, idx) => idx !== i) });
 
-  const handleDependencyChange = (
-    index: number,
-    field: "taskId" | "type",
-    value: string,
-  ) => {
+  const handleDepChange = (i: number, field: "taskId" | "type", val: string) => {
     const updated = [...formData.dependencies];
-    if (field === "taskId") {
-      updated[index].taskId = value;
-    } else {
-      updated[index].type = value as "FS" | "SS";
-    }
-    setFormData({
-      ...formData,
-      dependencies: updated,
-    });
+    if (field === "taskId") updated[i].taskId = val;
+    else updated[i].type = val as "FS" | "SS";
+    setFormData({ ...formData, dependencies: updated });
   };
 
-  const getAvailableTasks = (currentIndex: number) => {
-    const selectedTaskIds = formData.dependencies
-      .filter((_, i) => i !== currentIndex)
-      .map((d) => d.taskId);
-
-    return tasks.filter((t) => !selectedTaskIds.includes(t._id));
+  const getAvailableTasks = (idx: number) => {
+    const taken = formData.dependencies.filter((_, i) => i !== idx).map((d) => d.taskId);
+    return tasks.filter((t) => !taken.includes(t._id));
   };
+
+  const inputBase =
+    "w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 " +
+    "placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 " +
+    "transition-all duration-150";
+
+  const selectBase = inputBase + " appearance-none cursor-pointer";
+
+  const canSubmit = !saving && formData.title.trim() && formData.assignees.length > 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-6">
-      <div className="bg-white w-full max-w-[min(64rem,100vw-1rem)] rounded-2xl shadow-2xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-blue-800 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-white">
-                  Create New Task
-                </h2>
-                <p className="text-white/80 text-sm mt-0.5">
-                  Fill in the details to create a task
-                </p>
-              </div>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 lg:p-6">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
 
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all"
-            >
-              <X size={24} />
-            </button>
-          </div>
+      {/* Modal */}
+      <div
+        className={
+          "relative bg-white w-full sm:max-w-2xl lg:max-w-3xl xl:max-w-4xl " +
+          "rounded-t-3xl sm:rounded-2xl shadow-2xl shadow-slate-900/20 " +
+          "flex flex-col max-h-[94dvh] sm:max-h-[90vh] overflow-hidden " +
+          "ring-1 ring-slate-900/5"
+        }
+      >
+        {/* Drag handle (mobile) */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden">
+          <div className="w-10 h-1 bg-slate-200 rounded-full" />
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="space-y-6">
-            {/* Task Title */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <FileText size={16} className="text-gray-500" />
-                Task Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                placeholder="Enter task title..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-            </div>
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-5 sm:px-7 pt-4 sm:pt-6 pb-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Create Task
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5 font-medium">
+              Fill in the details below to add a new task
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-            {/* Description */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <FileText size={16} className="text-gray-500" />
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder="Provide task details and requirements..."
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-              />
-            </div>
+        {/* ── Scrollable Body ── */}
+        <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 sm:py-6 space-y-6">
 
-            {/* Status, Priority, Task Type Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Flag size={16} className="text-gray-500" />
-                  Status <span className="text-red-500">*</span>
-                </label>
+          {/* Title */}
+          <Field>
+            <SectionLabel icon={FileText} required>Task Title</SectionLabel>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="e.g. Design homepage wireframes"
+              className={inputBase + " text-base font-medium"}
+            />
+          </Field>
+
+          {/* Description */}
+          <Field>
+            <SectionLabel icon={FileText}>Description</SectionLabel>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Add context, requirements, or notes…"
+              rows={3}
+              className={inputBase + " resize-none leading-relaxed"}
+            />
+          </Field>
+
+          {/* Status / Priority / Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field>
+              <SectionLabel icon={Flag} required>Status</SectionLabel>
+              <div className="relative">
                 <select
                   value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className={selectBase}
                 >
-                  <option value="" disabled>
-                    Select status
-                  </option>
-                  <option value="Backlog">📋 Backlog</option>
-                  <option value="In Progress">🔄 In Progress</option>
-                  <option value="Blocked">⚠️ Blocked</option>
-                  <option value="Done">✅ Done</option>
+                  <option value="" disabled>Select…</option>
+                  <option value="Backlog">Backlog</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Blocked">Blocked</option>
+                  <option value="Done">Done</option>
                 </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
+            </Field>
 
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Flag size={16} className="text-gray-500" />
-                  Priority <span className="text-red-500">*</span>
-                </label>
+            <Field>
+              <SectionLabel icon={Flag} required>Priority</SectionLabel>
+              <div className="relative">
                 <select
                   value={formData.priority}
-                  onChange={(e) =>
-                    setFormData({ ...formData, priority: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  className={selectBase}
                 >
-                  <option value="" disabled>
-                    Select priority
-                  </option>
-                  <option value="Low">🟢 Low</option>
-                  <option value="Medium">🟡 Medium</option>
-                  <option value="High">🟠 High</option>
-                  <option value="Critical">🔴 Critical</option>
+                  <option value="" disabled>Select…</option>
+                  {Object.keys(priorityConfig).map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
                 </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
+            </Field>
 
-              {/* Task Type */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Layers size={16} className="text-gray-500" />
-                  Task Type <span className="text-red-500">*</span>
-                </label>
+            <Field>
+              <SectionLabel icon={Layers} required>Type</SectionLabel>
+              <div className="relative">
                 <select
                   value={formData.taskType}
                   onChange={(e) => {
-                    const newType = e.target.value as
-                      | "Task"
-                      | "Deliverable"
-                      | "Milestone";
-                    setFormData({
-                      ...formData,
-                      taskType: newType,
-                      duration: newType === "Milestone" ? 1 : formData.duration,
-                    });
+                    const t = e.target.value as "Task" | "Deliverable" | "Milestone";
+                    setFormData({ ...formData, taskType: t, duration: t === "Milestone" ? 1 : formData.duration });
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                  className={selectBase}
                 >
                   <option value="Task">Task</option>
                   <option value="Deliverable">Deliverable</option>
                   <option value="Milestone">Milestone</option>
                 </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
-            </div>
+            </Field>
+          </div>
 
-            {/* Phase Selection & Duration */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Layers size={16} className="text-gray-500" />
-                  Phase
-                </label>
+          {/* Phase / Duration */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field>
+              <SectionLabel icon={Layers}>Phase</SectionLabel>
+              <div className="relative">
                 <select
                   value={formData.phaseId || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      phaseId: e.target.value || null,
-                    })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                  onChange={(e) => setFormData({ ...formData, phaseId: e.target.value || null })}
+                  className={selectBase}
                 >
-                  <option value="">No Phase (Unassigned)</option>
-                  {phases
-                    .sort((a, b) => a.order - b.order)
-                    .map((phase) => (
-                      <option key={phase._id} value={phase._id}>
-                        {phase.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {/* Duration */}
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Clock size={16} className="text-gray-500" />
-                  Duration (Working Days){" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max={formData.taskType === "Milestone" ? 1 : undefined}
-                  value={formData.duration}
-                  onChange={(e) => {
-                    const value = parseInt(e.target.value) || 0;
-                    const maxValue =
-                      formData.taskType === "Milestone" ? 1 : value;
-                    setFormData({
-                      ...formData,
-                      duration: Math.min(value, maxValue),
-                    });
-                  }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-                {formData.taskType === "Milestone" && (
-                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    Milestones can have a maximum duration of 1 day
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Dependencies Section (Collapsible) */}
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setDependenciesExpanded(!dependenciesExpanded)}
-                className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  <Link2 size={16} className="text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    Dependencies{" "}
-                    {formData.dependencies.length > 0 &&
-                      `(${formData.dependencies.length})`}
-                  </span>
-                </div>
-                <span className="text-gray-400">
-                  {dependenciesExpanded ? "▼" : "▶"}
-                </span>
-              </button>
-
-              {dependenciesExpanded && (
-                <div className="p-4 space-y-3">
-                  {formData.dependencies.map((dep, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-start"
-                    >
-                      <select
-                        value={dep.taskId}
-                        onChange={(e) =>
-                          handleDependencyChange(
-                            index,
-                            "taskId",
-                            e.target.value,
-                          )
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      >
-                        <option value="">-- Select Task --</option>
-                        {getAvailableTasks(index).map((task) => (
-                          <option key={task._id} value={task._id}>
-                            {task.title} ({task.taskType})
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        value={dep.type}
-                        onChange={(e) =>
-                          handleDependencyChange(index, "type", e.target.value)
-                        }
-                        className="w-full sm:w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      >
-                        <option value="FS">Finish→Start</option>
-                        <option value="SS">Start→Start</option>
-                      </select>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDependency(index)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors self-end sm:self-auto"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
+                  <option value="">No Phase</option>
+                  {phases.sort((a, b) => a.order - b.order).map((p) => (
+                    <option key={p._id} value={p._id}>{p.name}</option>
                   ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            </Field>
 
-                  <button
-                    type="button"
-                    onClick={handleAddDependency}
-                    className="w-full px-3 py-2 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-blue-500 hover:text-blue-600 transition-colors text-sm flex items-center justify-center gap-2"
-                  >
-                    <Link2 size={16} />
-                    Add Dependency
-                  </button>
-
-                  <p className="text-xs text-gray-500 mt-2">
-                    Dependencies determine when this task can start based on
-                    other tasks. Tasks can depend on tasks in any phase.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Assignees */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Users size={16} className="text-gray-500" />
-                Assign Team Members <span className="text-red-500">*</span>
-              </label>
-
-              <select
+            <Field>
+              <SectionLabel icon={Clock} required>Duration (working days)</SectionLabel>
+              <input
+                type="number"
+                min="0"
+                max={formData.taskType === "Milestone" ? 1 : undefined}
+                value={formData.duration}
                 onChange={(e) => {
-                  handleAddAssignee(e.target.value);
-                  e.target.value = "";
+                  const v = parseInt(e.target.value) || 0;
+                  setFormData({ ...formData, duration: formData.taskType === "Milestone" ? Math.min(v, 1) : v });
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white cursor-pointer"
+                className={inputBase}
+              />
+              {formData.taskType === "Milestone" && (
+                <p className="flex items-center gap-1 text-xs text-amber-600">
+                  <AlertCircle size={11} /> Milestones are capped at 1 day
+                </p>
+              )}
+            </Field>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field>
+              <SectionLabel icon={Calendar}>Start Date</SectionLabel>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className={inputBase}
+              />
+              <p className="text-xs text-slate-400">Auto-calculated from dependencies</p>
+            </Field>
+
+            <Field>
+              <SectionLabel icon={Calendar}>Due Date</SectionLabel>
+              <input
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                className={inputBase}
+              />
+              <p className="text-xs text-slate-400">Auto-calculated from start + duration</p>
+            </Field>
+          </div>
+
+          {/* Assignees */}
+          <Field>
+            <SectionLabel icon={Users} required>Assignees</SectionLabel>
+            <div className="relative">
+              <select
+                onChange={(e) => { handleAddAssignee(e.target.value); e.currentTarget.value = ""; }}
+                className={selectBase}
               >
-                <option value="">+ Add team member</option>
+                <option value="">Add a team member…</option>
                 {teamMembers
-                  .filter((member) => member.status === "active")
-                  .map((member) => (
-                    <option key={member._id} value={member.userId.email}>
-                      {member.userId.name}
-                    </option>
+                  .filter((m) => m.status === "active")
+                  .map((m) => (
+                    <option key={m._id} value={m.userId.email}>{m.userId.name}</option>
                   ))}
               </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
 
-              {selectedAssignees.length > 0 && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                  <p className="text-sm font-semibold text-blue-900 mb-3">
-                    Selected Members ({selectedAssignees.length})
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedAssignees.map((assignee, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2 bg-white border border-blue-200 px-3 py-2 rounded-lg shadow-sm"
-                      >
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                          {assignee.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {assignee.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAssignee(index)}
-                          className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-all"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
+            {selectedAssignees.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {selectedAssignees.map((a, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 bg-slate-50 border border-slate-200 pl-1.5 pr-2.5 py-1.5 rounded-full"
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}
+                    >
+                      {a.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-700">{a.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAssignee(i)}
+                      className="text-slate-300 hover:text-rose-500 transition-colors ml-0.5"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
+                ))}
+              </div>
+            )}
+          </Field>
+
+          {/* Progress */}
+          <Field>
+            <div className="flex items-center justify-between mb-2">
+              <SectionLabel icon={Clock}>Progress</SectionLabel>
+              <span className="text-xs font-bold text-slate-700 tabular-nums">{formData.progress}%</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 relative">
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-slate-700 to-slate-900 rounded-full transition-all duration-200"
+                    style={{ width: `${formData.progress}%` }}
+                  />
                 </div>
-              )}
-
-              {selectedAssignees.length === 0 && (
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                  <Users size={14} />
-                  No members assigned yet
-                </p>
-              )}
-            </div>
-
-            {/* Date Range */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Calendar size={16} className="text-gray-500" />
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Will be auto-calculated based on dependencies
-                </p>
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                  <Calendar size={16} className="text-gray-500" />
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dueDate: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Will be auto-calculated from start + duration
-                </p>
-              </div>
-            </div>
-
-            {/* Progress */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Clock size={16} className="text-gray-500" />
-                Progress: {formData.progress}%
-              </label>
-              <div className="flex items-center gap-4">
                 <input
                   type="range"
                   min="0"
                   max="100"
                   value={formData.progress}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      progress: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.progress}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      progress: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, progress: parseInt(e.target.value) || 0 })}
+                  className="absolute inset-0 w-full opacity-0 cursor-pointer h-2"
                 />
               </div>
-              <div className="mt-3 bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${formData.progress}%` }}
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={formData.progress}
+                onChange={(e) => setFormData({ ...formData, progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
+                className="w-16 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-center font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              />
             </div>
+          </Field>
+
+          {/* Dependencies (collapsible) */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setDepsOpen(!depsOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Link2 size={13} className="text-slate-500" />
+                <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  Dependencies
+                </span>
+                {formData.dependencies.length > 0 && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-slate-800 text-white text-[10px] font-bold rounded-full">
+                    {formData.dependencies.length}
+                  </span>
+                )}
+              </div>
+              <ChevronDown
+                size={14}
+                className={`text-slate-400 transition-transform duration-200 ${depsOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {depsOpen && (
+              <div className="p-4 space-y-3 border-t border-slate-100">
+                {formData.dependencies.map((dep, i) => (
+                  <div key={i} className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <select
+                        value={dep.taskId}
+                        onChange={(e) => handleDepChange(i, "taskId", e.target.value)}
+                        className={selectBase + " text-xs"}
+                      >
+                        <option value="">Select a task…</option>
+                        {getAvailableTasks(i).map((t) => (
+                          <option key={t._id} value={t._id}>{t.title}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                    <div className="relative sm:w-40">
+                      <select
+                        value={dep.type}
+                        onChange={(e) => handleDepChange(i, "type", e.target.value)}
+                        className={selectBase + " text-xs"}
+                      >
+                        <option value="FS">Finish → Start</option>
+                        <option value="SS">Start → Start</option>
+                      </select>
+                      <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDep(i)}
+                      className="self-end sm:self-auto p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={handleAddDep}
+                  className="w-full py-2 border border-dashed border-slate-300 text-slate-400 hover:border-slate-500 hover:text-slate-600 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Plus size={13} /> Add dependency
+                </button>
+
+                <p className="text-xs text-slate-400 pt-1">
+                  Dependencies control when this task can start relative to others.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 px-4 sm:px-6 lg:px-8 py-4 bg-gray-50">
-          <div className="flex flex-col-reverse sm:flex-row gap-3">
-            <button onClick={onClose} className={responsive.secondaryButton}>
+        {/* ── Footer ── */}
+        <div className="border-t border-slate-100 px-5 sm:px-7 py-4 bg-white">
+          <div className="flex flex-col-reverse sm:flex-row gap-2.5">
+            <button
+              onClick={onClose}
+              className="flex-1 sm:flex-none sm:w-28 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all"
+            >
               Cancel
             </button>
             <button
               onClick={onSubmit}
-              disabled={
-                saving || !formData.title || formData.assignees.length === 0
-              }
-              className="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl 
-                          hover:bg-blue-700 transition-all 
-                          disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={!canSubmit}
+              className="flex-1 sm:flex-[2] px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold
+                         hover:bg-slate-800 active:bg-slate-950 transition-all
+                         disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed
+                         flex items-center justify-center gap-2"
             >
               {saving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Creating...
-                </span>
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Creating…
+                </>
               ) : (
                 "Create Task"
               )}
             </button>
           </div>
+
+          {/* Validation hint */}
+          {(!formData.title.trim() || formData.assignees.length === 0) && (
+            <p className="text-xs text-slate-400 mt-2 text-center">
+              {!formData.title.trim() ? "Task title is required" : "At least one assignee is required"}
+            </p>
+          )}
         </div>
       </div>
     </div>

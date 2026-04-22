@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   Task,
   Comment,
@@ -58,7 +64,7 @@ function addWorkingDays(startDateStr: string, days: number): string {
   return date.toISOString().split("T")[0];
 }
 
-function addOneDayStr(dateStr: string): string {
+function nextWorkingDay(dateStr: string): string {
   if (!dateStr) return dateStr;
   const d = new Date(dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return dateStr;
@@ -67,51 +73,70 @@ function addOneDayStr(dateStr: string): string {
   return d.toISOString().split("T")[0];
 }
 
-// ─── TeamMember helpers ───────────────────────────────────────────────────────
-
-function getMemberName(member: TeamMember): string {
-  return member.userId?.name ?? (member as any).name ?? "";
-}
-function getMemberEmail(member: TeamMember): string {
-  return member.userId?.email ?? (member as any).email ?? "";
-}
-function getMemberId(member: TeamMember): string {
-  return member.userId?._id ?? member._id ?? "";
-}
+// ─── TeamMember normalisation ─────────────────────────────────────────────────
+// Handles multiple API response shapes:
+//   1. Populated:  { userId: { _id, name, email }, ... }
+//   2. Flat:       { _id, name, email, ... }
+//   3. String ref: { userId: "abc123", name, email, ... }
 
 function normaliseMembers(members: TeamMember[]): TeamMember[] {
   return members.map((m) => {
-    if (m.userId && typeof m.userId === "object" && m.userId.name) return m;
+    // Already fully populated
+    if (
+      m.userId &&
+      typeof m.userId === "object" &&
+      (m.userId as any).name
+    ) {
+      return m;
+    }
+
     const flat = m as any;
-    if (!m.userId && flat.name && flat.email) {
+
+    // Flat shape: name/email at top level, userId might be string or absent
+    if (flat.name || flat.email) {
       return {
         ...m,
-        userId: { _id: flat._id ?? "", name: flat.name, email: flat.email },
+        userId: {
+          _id: (typeof m.userId === "string" ? m.userId : flat._id) ?? "",
+          name: flat.name ?? "",
+          email: flat.email ?? "",
+        },
       } as TeamMember;
     }
+
     return m;
   });
 }
 
-// ─── Editable Text ───────────────────────────────────────────────────────────
+function getMemberName(m: TeamMember): string {
+  return (m.userId as any)?.name ?? (m as any).name ?? "";
+}
+function getMemberEmail(m: TeamMember): string {
+  return (m.userId as any)?.email ?? (m as any).email ?? "";
+}
+function getMemberId(m: TeamMember): string {
+  return (m.userId as any)?._id ?? (m as any)._id ?? "";
+}
+
+// ─── Editable primitives ──────────────────────────────────────────────────────
 
 function EditableText({
   value,
   onSave,
-  placeholder = "Click to edit...",
+  placeholder = "Click to edit…",
   className = "",
 }: {
   value: string;
-  onSave: (val: string) => void;
+  onSave: (v: string) => void;
   placeholder?: string;
   className?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setDraft(value); }, [value]);
-  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
   const commit = () => {
     setEditing(false);
@@ -120,7 +145,7 @@ function EditableText({
 
   return editing ? (
     <input
-      ref={inputRef}
+      ref={ref}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
@@ -143,15 +168,13 @@ function EditableText({
   );
 }
 
-// ─── Editable Textarea ───────────────────────────────────────────────────────
-
 function EditableTextarea({
   value,
   onSave,
-  placeholder = "Click to add a description...",
+  placeholder = "Click to add a description…",
 }: {
   value: string;
-  onSave: (val: string) => void;
+  onSave: (v: string) => void;
   placeholder?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -191,8 +214,6 @@ function EditableTextarea({
   );
 }
 
-// ─── Editable Select ─────────────────────────────────────────────────────────
-
 function EditableSelect<T extends string>({
   value,
   options,
@@ -201,17 +222,17 @@ function EditableSelect<T extends string>({
 }: {
   value: T;
   options: { label: string; value: T }[];
-  onSave: (val: T) => void;
-  renderValue?: (val: T) => React.ReactNode;
+  onSave: (v: T) => void;
+  renderValue?: (v: T) => React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLSelectElement>(null);
 
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
 
-  const commit = (val: T) => {
+  const commit = (v: T) => {
     setEditing(false);
-    if (val !== value) onSave(val);
+    if (v !== value) onSave(v);
   };
 
   return editing ? (
@@ -240,8 +261,6 @@ function EditableSelect<T extends string>({
   );
 }
 
-// ─── Editable Number ─────────────────────────────────────────────────────────
-
 function EditableNumber({
   value,
   onSave,
@@ -250,7 +269,7 @@ function EditableNumber({
   suffix = "",
 }: {
   value: number;
-  onSave: (val: number) => void;
+  onSave: (v: number) => void;
   min?: number;
   max?: number;
   suffix?: string;
@@ -298,15 +317,13 @@ function EditableNumber({
   );
 }
 
-// ─── Editable Date ───────────────────────────────────────────────────────────
-
 function EditableDate({
   value,
   onSave,
   placeholder = "Set date",
 }: {
   value: string;
-  onSave: (val: string) => void;
+  onSave: (v: string) => void;
   placeholder?: string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -316,9 +333,9 @@ function EditableDate({
     if (editing) ref.current?.showPicker?.();
   }, [editing]);
 
-  const commit = (val: string) => {
+  const commit = (v: string) => {
     setEditing(false);
-    if (val !== value) onSave(val);
+    if (v !== value) onSave(v);
   };
 
   return editing ? (
@@ -344,14 +361,12 @@ function EditableDate({
   );
 }
 
-// ─── Editable Progress ───────────────────────────────────────────────────────
-
 function EditableProgress({
   value,
   onSave,
 }: {
   value: number;
-  onSave: (val: number) => void;
+  onSave: (v: number) => void;
 }) {
   const [draft, setDraft] = useState(value);
   useEffect(() => { setDraft(value); }, [value]);
@@ -381,7 +396,9 @@ function EditableProgress({
   );
 }
 
-// ─── Editable Assignees ──────────────────────────────────────────────────────
+// ─── EditableAssignees ────────────────────────────────────────────────────────
+// Fix: normalise all member shapes upfront; include member if they have a name
+// OR an email (not strict @ filter that excluded partial data).
 
 function EditableAssignees({
   assignees,
@@ -395,18 +412,25 @@ function EditableAssignees({
   canEdit: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Array<{ email: string; name: string }>>(() => [...assignees]);
+  const [selected, setSelected] = useState<Array<{ email: string; name: string }>>(
+    () => [...assignees],
+  );
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sync whenever the assignees prop changes (e.g. modal re-opened with a different task)
   useEffect(() => {
     setSelected([...assignees]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignees.map(a => a.email).join(",")]);
+  }, [assignees.map((a) => a.email).join(",")]);
 
+  // Close dropdown on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     };
@@ -414,22 +438,27 @@ function EditableAssignees({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // ── Normalise and include all members that have at least a name or email ──
   const eligibleMembers = useMemo(() => {
-    return normaliseMembers(teamMembers).filter((m) => {
+    const normalised = normaliseMembers(teamMembers);
+    return normalised.filter((m) => {
+      const name = getMemberName(m);
       const email = getMemberEmail(m);
-      return email && email.includes("@");
+      // Include if we have EITHER identifier; require email for actual assignment
+      return name || email;
     });
   }, [teamMembers]);
 
   const isSelected = useCallback(
-    (member: TeamMember) => selected.some((a) => a.email === getMemberEmail(member)),
+    (m: TeamMember) => selected.some((a) => a.email === getMemberEmail(m)),
     [selected],
   );
 
-  const toggle = (member: TeamMember) => {
-    const email = getMemberEmail(member);
-    const name = getMemberName(member);
-    const next = isSelected(member)
+  const toggle = (m: TeamMember) => {
+    const email = getMemberEmail(m);
+    const name = getMemberName(m);
+    if (!email) return; // need email to assign
+    const next = isSelected(m)
       ? selected.filter((a) => a.email !== email)
       : [...selected, { email, name }];
     setSelected(next);
@@ -459,7 +488,7 @@ function EditableAssignees({
               className="flex items-center gap-2 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg"
             >
               <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-semibold">
-                {getInitials(assignee.name)}
+                {getInitials(assignee.name || assignee.email)}
               </div>
               <span className="text-sm text-gray-800">{assignee.name || assignee.email}</span>
               {canEdit && (
@@ -491,9 +520,12 @@ function EditableAssignees({
               const name = getMemberName(member);
               const email = getMemberEmail(member);
               const id = getMemberId(member);
+              const display = name || email;
+              const sub = name ? email : "";
+
               return (
                 <div
-                  key={id || email}
+                  key={id || email || name}
                   onClick={(e) => { e.stopPropagation(); toggle(member); }}
                   className="flex items-center gap-3 px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
                 >
@@ -509,11 +541,11 @@ function EditableAssignees({
                     )}
                   </div>
                   <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0">
-                    {getInitials(name || email)}
+                    {getInitials(display)}
                   </div>
                   <div className="min-w-0">
-                    <span className="text-sm text-gray-800 truncate block">{name || email}</span>
-                    {name && <span className="text-[10px] text-gray-400 truncate block">{email}</span>}
+                    <span className="text-sm text-gray-800 truncate block">{display}</span>
+                    {sub && <span className="text-[10px] text-gray-400 truncate block">{sub}</span>}
                   </div>
                 </div>
               );
@@ -525,21 +557,21 @@ function EditableAssignees({
   );
 }
 
-// ─── Badge helpers ───────────────────────────────────────────────────────────
+// ─── Badge helpers ────────────────────────────────────────────────────────────
 
 const getTaskTypeBadge = (taskType: string) => {
-  const badges: Record<string, string> = {
+  const map: Record<string, string> = {
     Task: "bg-blue-50 text-blue-800 border-blue-200",
     Deliverable: "bg-purple-50 text-purple-800 border-purple-200",
     Milestone: "bg-emerald-50 text-emerald-800 border-emerald-200",
   };
-  return badges[taskType] || "bg-gray-50 text-gray-700 border-gray-200";
+  return map[taskType] || "bg-gray-50 text-gray-700 border-gray-200";
 };
 
 const getDependencyTypeLabel = (type: string) =>
   type === "FS" ? "Finish to Start" : "Start to Start";
 
-// ─── Field wrapper ───────────────────────────────────────────────────────────
+// ─── Field wrapper ────────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -552,7 +584,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+type Dep = { taskId: string; type: "FS" | "SS" };
 
 export default function TaskDetailModal({
   isOpen,
@@ -580,138 +614,176 @@ export default function TaskDetailModal({
   canEdit = true,
   onUpdateDependentTask,
 }: TaskDetailModalProps) {
-  type Dep = { taskId: string; type: "FS" | "SS" };
-
   // ── Local state ──────────────────────────────────────────────────────────────
   const [localDeps, setLocalDeps] = useState<Dep[]>([]);
-  const [pendingDepIndexes, setPendingDepIndexes] = useState<Set<number>>(new Set());
   const [localDuration, setLocalDuration] = useState<number>(task?.duration ?? 1);
   const [localStartDate, setLocalStartDate] = useState<string>(task?.startDate ?? "");
   const [localDueDate, setLocalDueDate] = useState<string>(task?.dueDate ?? "");
 
-  const savingRef = useRef(false);
+  // ── Key fix: use a ref for pendingDepIndexes so we always have the latest
+  //    value synchronously, avoiding stale-closure bugs in updateDep. ──────────
+  const pendingRef = useRef<Set<number>>(new Set());
+  const [pendingDepIndexes, setPendingDepIndexes] = useState<Set<number>>(new Set());
 
-  // Sync all local state when the task itself changes
+  // Keep ref and state in sync
+  const setPending = useCallback((updater: (prev: Set<number>) => Set<number>) => {
+    const next = updater(pendingRef.current);
+    pendingRef.current = next;
+    setPendingDepIndexes(new Set(next)); // new Set to trigger re-render
+  }, []);
+
+  // ── Ref for allTasks so propagation always has fresh data ────────────────────
+  const allTasksRef = useRef<Task[]>(allTasks);
+  useEffect(() => { allTasksRef.current = allTasks; }, [allTasks]);
+
+  // ── Sync all local state when task identity changes ──────────────────────────
   useEffect(() => {
-    setLocalDeps(task?.dependencies ?? []);
+    if (!task) return;
+    setLocalDeps(task.dependencies ?? []);
+    pendingRef.current = new Set();
     setPendingDepIndexes(new Set());
-    setLocalDuration(task?.duration ?? 1);
-    setLocalStartDate(task?.startDate ?? "");
-    setLocalDueDate(task?.dueDate ?? "");
+    setLocalDuration(task.duration ?? 1);
+    setLocalStartDate(task.startDate ?? "");
+    setLocalDueDate(task.dueDate ?? "");
   }, [task?._id]);
 
-  // Sync individual fields when the server pushes an update
+  // Sync individual fields when parent updates them (without full task change)
   useEffect(() => { if (task?.duration !== undefined) setLocalDuration(task.duration); }, [task?.duration]);
   useEffect(() => { if (task?.startDate !== undefined) setLocalStartDate(task.startDate ?? ""); }, [task?.startDate]);
   useEffect(() => { if (task?.dueDate !== undefined) setLocalDueDate(task.dueDate ?? ""); }, [task?.dueDate]);
   useEffect(() => { if (task?.dependencies) setLocalDeps(task.dependencies); }, [task?.dependencies]);
 
-  // ── Silent save helper ───────────────────────────────────────────────────────
-  const save = useCallback(async (updates: Partial<Task>) => {
-    if (!task?._id) return;
+  // ── Silent save — no alerts, no popups, no page reload ──────────────────────
+  const save = useCallback(
+    async (updates: Partial<Task>): Promise<void> => {
+      if (!task?._id) return;
 
-    if (updates.dependencies) {
-      updates = {
-        ...updates,
-        dependencies: updates.dependencies.filter(
-          (d) => d.taskId && d.taskId.trim() !== "",
-        ),
-      };
-    }
-
-    try {
-      if (onUpdateTask) {
-        await onUpdateTask(task._id, updates);
-      } else {
-        await (onUpdate as any)(task._id, updates);
+      // Always strip deps with empty taskId before sending to backend
+      if (updates.dependencies) {
+        updates = {
+          ...updates,
+          dependencies: updates.dependencies.filter(
+            (d) => d.taskId && String(d.taskId).trim() !== "",
+          ),
+        };
       }
-    } catch (err) {
-      console.error("[TaskDetailModal] save failed (silent):", err);
-    }
-  }, [task?._id, onUpdateTask, onUpdate]);
-
-  // ── Dependency cascade propagation ──────────────────────────────────────────
-  const propagateDueDateChange = useCallback(async (
-    changedTaskId: string,
-    newDueDate: string,
-    visited: Set<string> = new Set(),
-  ) => {
-    if (visited.has(changedTaskId)) return;
-    visited.add(changedTaskId);
-
-    const dependentTasks = allTasks.filter((t) =>
-      t._id !== changedTaskId &&
-      t.dependencies?.some((d) => d.taskId === changedTaskId),
-    );
-
-    for (const depTask of dependentTasks) {
-      const depRel = depTask.dependencies?.find((d) => d.taskId === changedTaskId);
-      if (!depRel) continue;
-
-      let newDepStart: string;
-      if (depRel.type === "FS") {
-        newDepStart = addOneDayStr(newDueDate);
-      } else {
-        newDepStart = depTask.startDate || addOneDayStr(newDueDate);
-      }
-
-      const duration = Math.max(depTask.duration ?? 1, 1);
-      const newDepDue = addWorkingDays(newDepStart, duration);
-
-      if (newDepStart === depTask.startDate && newDepDue === depTask.dueDate) continue;
-
-      const depUpdates: Partial<Task> = {
-        startDate: newDepStart,
-        dueDate: newDepDue,
-      };
 
       try {
-        if (onUpdateDependentTask) {
-          await onUpdateDependentTask(depTask._id, depUpdates);
-        } else if (onUpdateTask) {
-          await onUpdateTask(depTask._id, depUpdates);
+        if (onUpdateTask) {
+          await onUpdateTask(task._id, updates);
         } else {
-          await (onUpdate as any)(depTask._id, depUpdates);
+          // onUpdate may be void; cast to Promise to handle both cases
+          await Promise.resolve((onUpdate as any)(task._id, updates));
         }
       } catch (err) {
-        console.error("[TaskDetailModal] dependent task save failed (silent):", err);
+        // Silent — log to console only, no UI notification
+        console.error("[TaskDetailModal] save error (silent):", err);
       }
+    },
+    [task?._id, onUpdateTask, onUpdate],
+  );
 
-      await propagateDueDateChange(depTask._id, newDepDue, visited);
-    }
-  }, [allTasks, onUpdateDependentTask, onUpdateTask, onUpdate]);
+  // ── Dependency cascade propagation ───────────────────────────────────────────
+  // Uses allTasksRef to avoid stale closure on allTasks.
+  const propagateDueDateChange = useCallback(
+    async (
+      changedTaskId: string,
+      newDueDate: string,
+      visited: Set<string> = new Set(),
+    ): Promise<void> => {
+      if (visited.has(changedTaskId)) return; // break cycles
+      visited.add(changedTaskId);
 
-  // ── Duration change ──────────────────────────────────────────────────────────
-  const handleDurationChange = useCallback((newDuration: number) => {
-    const safeDuration = Math.max(1, newDuration);
-    const startDate = localStartDate || task?.startDate || "";
-    const newDueDate = startDate ? addWorkingDays(startDate, safeDuration) : localDueDate;
+      const snapshot = allTasksRef.current;
+      const dependentTasks = snapshot.filter(
+        (t) =>
+          t._id !== changedTaskId &&
+          t.dependencies?.some((d) => d.taskId === changedTaskId),
+      );
 
-    setLocalDuration(safeDuration);
-    if (newDueDate) setLocalDueDate(newDueDate);
+      for (const depTask of dependentTasks) {
+        const rel = depTask.dependencies?.find((d) => d.taskId === changedTaskId);
+        if (!rel) continue;
 
-    const updates: Partial<Task> = { duration: safeDuration };
-    if (newDueDate) updates.dueDate = newDueDate;
-    save(updates).then(() => {
-      if (newDueDate && task?._id) propagateDueDateChange(task._id, newDueDate);
-    });
-  }, [localStartDate, localDueDate, task, save, propagateDueDateChange]);
+        const newDepStart =
+          rel.type === "FS"
+            ? nextWorkingDay(newDueDate)
+            : depTask.startDate || nextWorkingDay(newDueDate);
 
-  // ── Start date change ────────────────────────────────────────────────────────
-  const handleStartDateChange = useCallback((newStartDate: string) => {
-    if (!newStartDate) return;
-    const duration = Math.max(1, localDuration ?? task?.duration ?? 1);
-    const newDueDate = addWorkingDays(newStartDate, duration);
+        const duration = Math.max(depTask.duration ?? 1, 1);
+        const newDepDue = addWorkingDays(newDepStart, duration);
 
-    setLocalStartDate(newStartDate);
-    if (newDueDate) setLocalDueDate(newDueDate);
+        if (
+          newDepStart === depTask.startDate &&
+          newDepDue === depTask.dueDate
+        ) continue;
 
-    const updates: Partial<Task> = { startDate: newStartDate };
-    if (newDueDate) updates.dueDate = newDueDate;
-    save(updates).then(() => {
-      if (newDueDate && task?._id) propagateDueDateChange(task._id, newDueDate);
-    });
-  }, [localDuration, task, save, propagateDueDateChange]);
+        const depUpdates: Partial<Task> = {
+          startDate: newDepStart,
+          dueDate: newDepDue,
+        };
+
+        try {
+          if (onUpdateDependentTask) {
+            await onUpdateDependentTask(depTask._id, depUpdates);
+          } else if (onUpdateTask) {
+            await onUpdateTask(depTask._id, depUpdates);
+          } else {
+            await Promise.resolve((onUpdate as any)(depTask._id, depUpdates));
+          }
+        } catch (err) {
+          console.error("[TaskDetailModal] dependent propagation error (silent):", err);
+        }
+
+        await propagateDueDateChange(depTask._id, newDepDue, visited);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onUpdateDependentTask, onUpdateTask, onUpdate],
+    // allTasksRef intentionally omitted — accessed via ref to avoid stale closure
+  );
+
+  // ── Duration change handler ──────────────────────────────────────────────────
+  const handleDurationChange = useCallback(
+    (newDuration: number) => {
+      const safeDuration = Math.max(1, newDuration);
+      const start = localStartDate || task?.startDate || "";
+      const newDue = start ? addWorkingDays(start, safeDuration) : localDueDate;
+
+      // Optimistic local update first
+      setLocalDuration(safeDuration);
+      if (newDue) setLocalDueDate(newDue);
+
+      const updates: Partial<Task> = { duration: safeDuration };
+      if (newDue) updates.dueDate = newDue;
+
+      save(updates).then(() => {
+        if (newDue && task?._id) propagateDueDateChange(task._id, newDue);
+      });
+    },
+    [localStartDate, localDueDate, task, save, propagateDueDateChange],
+  );
+
+  // ── Start date change handler ────────────────────────────────────────────────
+  const handleStartDateChange = useCallback(
+    (newStartDate: string) => {
+      if (!newStartDate) return;
+      const duration = Math.max(1, localDuration ?? task?.duration ?? 1);
+      const newDue = addWorkingDays(newStartDate, duration);
+
+      // Optimistic local update first
+      setLocalStartDate(newStartDate);
+      if (newDue) setLocalDueDate(newDue);
+
+      const updates: Partial<Task> = { startDate: newStartDate };
+      if (newDue) updates.dueDate = newDue;
+
+      save(updates).then(() => {
+        if (newDue && task?._id) propagateDueDateChange(task._id, newDue);
+      });
+    },
+    [localDuration, task, save, propagateDueDateChange],
+  );
 
   // ── EARLY RETURN — must come after ALL hooks ─────────────────────────────────
   if (!isOpen || !task) return null;
@@ -720,56 +792,66 @@ export default function TaskDetailModal({
 
   // ── Dependency helpers ───────────────────────────────────────────────────────
 
-  const getAvailableTasks = (excludeTaskIds: string[]) =>
-    allTasks.filter((t) => t._id !== task._id && !excludeTaskIds.includes(t._id));
+  const getAvailableTasks = (excludeIds: string[]) =>
+    allTasks.filter((t) => t._id !== task._id && !excludeIds.includes(t._id));
 
   const addDependency = () => {
     const newIndex = localDeps.length;
     const updated: Dep[] = [...localDeps, { taskId: "", type: "FS" }];
     setLocalDeps(updated);
-    setPendingDepIndexes((prev) => new Set(prev).add(newIndex));
+    setPending((prev) => new Set(prev).add(newIndex));
+    // Do NOT save yet — wait for the user to select a task
   };
 
+  // ── Fix: compute newPending synchronously from the current ref value.
+  //    Never read `pendingDepIndexes` state after calling `setPending` —
+  //    that state is stale until the next render. Use pendingRef.current instead.
   const updateDep = (index: number, field: keyof Dep, val: string) => {
     const updated = localDeps.map((d, i) =>
-      i === index ? { ...d, [field]: val } : d
+      i === index ? { ...d, [field]: val } : d,
     ) as Dep[];
     setLocalDeps(updated);
 
+    // Build the NEW pending set synchronously using the ref (not stale state)
+    let newPending: Set<number>;
+
     if (field === "taskId") {
+      newPending = new Set(pendingRef.current);
       if (!val) {
-        setPendingDepIndexes((prev) => new Set(prev).add(index));
-        return;
+        newPending.add(index);
+        setPending(() => newPending);
+        return; // Don't save — dep is incomplete
       }
-      setPendingDepIndexes((prev) => {
-        const next = new Set(prev);
-        next.delete(index);
-        return next;
-      });
+      newPending.delete(index);
+      setPending(() => newPending);
+    } else {
+      // type field — pending set is unchanged
+      newPending = pendingRef.current;
     }
 
-    const currentPending = new Set(pendingDepIndexes);
-    if (field === "taskId") {
-      if (val) currentPending.delete(index);
-      else currentPending.add(index);
-    }
+    // Only save deps that are complete (have a taskId and are not pending)
+    const readyDeps = updated.filter(
+      (d, i) => d.taskId && String(d.taskId).trim() !== "" && !newPending.has(i),
+    );
 
-    const readyDeps = updated.filter((d, i) => d.taskId && !currentPending.has(i));
     save({ dependencies: readyDeps });
   };
 
   const removeDep = (index: number) => {
     const updated = localDeps.filter((_, i) => i !== index);
     setLocalDeps(updated);
-    setPendingDepIndexes((prev) => {
-      const next = new Set<number>();
-      prev.forEach((i) => {
-        if (i < index) next.add(i);
-        else if (i > index) next.add(i - 1);
-      });
-      return next;
+
+    // Re-index pending set synchronously using the ref
+    const newPending = new Set<number>();
+    pendingRef.current.forEach((i) => {
+      if (i < index) newPending.add(i);
+      else if (i > index) newPending.add(i - 1);
     });
-    const readyDeps = updated.filter((d) => d.taskId);
+    setPending(() => newPending);
+
+    const readyDeps = updated.filter(
+      (d) => d.taskId && String(d.taskId).trim() !== "",
+    );
     save({ dependencies: readyDeps });
   };
 
@@ -804,7 +886,11 @@ export default function TaskDetailModal({
               <h2 className="text-lg font-semibold text-gray-900 px-2">{task.title}</h2>
             )}
             <div className="flex items-center gap-2 mt-1 px-2">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${getTaskTypeBadge(task.taskType || "Task")}`}>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${getTaskTypeBadge(
+                  task.taskType || "Task",
+                )}`}
+              >
                 {task.taskType || "Task"}
               </span>
               {localDuration > 0 && (
@@ -813,7 +899,9 @@ export default function TaskDetailModal({
                 </span>
               )}
               {canEdit && (
-                <span className="text-[10px] text-gray-300 ml-1">· click any field to edit</span>
+                <span className="text-[10px] text-gray-300 ml-1">
+                  · click any field to edit
+                </span>
               )}
             </div>
           </div>
@@ -860,7 +948,9 @@ export default function TaskDetailModal({
                   />
                 ) : (
                   <p className="text-sm text-gray-700 px-3 py-2">
-                    {task.description || <span className="text-gray-400 italic">No description</span>}
+                    {task.description || (
+                      <span className="text-gray-400 italic">No description</span>
+                    )}
                   </p>
                 )}
               </Field>
@@ -878,7 +968,9 @@ export default function TaskDetailModal({
                     ]}
                     onSave={(val) => save({ status: val as any })}
                     renderValue={(val) => (
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(val)}`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadge(val)}`}
+                      >
                         {val}
                       </span>
                     )}
@@ -896,7 +988,9 @@ export default function TaskDetailModal({
                     ]}
                     onSave={(val) => save({ priority: val as any })}
                     renderValue={(val) => (
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getPriorityBadge(val)}`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getPriorityBadge(val)}`}
+                      >
                         {val}
                       </span>
                     )}
@@ -914,19 +1008,24 @@ export default function TaskDetailModal({
                     onSave={(val) => {
                       const isMilestone = val === "Milestone";
                       const newDuration = isMilestone ? 1 : (localDuration ?? 1);
-                      const updates: Partial<Task> = { taskType: val as any, duration: newDuration };
+                      const updates: Partial<Task> = {
+                        taskType: val as any,
+                        duration: newDuration,
+                      };
                       if (localStartDate) {
-                        const newDueDate = addWorkingDays(localStartDate, newDuration);
-                        if (newDueDate) {
-                          updates.dueDate = newDueDate;
-                          setLocalDueDate(newDueDate);
+                        const newDue = addWorkingDays(localStartDate, newDuration);
+                        if (newDue) {
+                          updates.dueDate = newDue;
+                          setLocalDueDate(newDue);
                         }
                       }
                       setLocalDuration(newDuration);
                       save(updates);
                     }}
                     renderValue={(val) => (
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getTaskTypeBadge(val)}`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getTaskTypeBadge(val)}`}
+                      >
                         {val}
                       </span>
                     )}
@@ -948,9 +1047,11 @@ export default function TaskDetailModal({
                     onSave={(val) => save({ phaseId: val || null })}
                     renderValue={(val) => (
                       <span className="text-sm text-gray-900">
-                        {val
-                          ? phases.find((p) => p._id === val)?.name || "Unknown Phase"
-                          : <span className="text-gray-400 italic">No phase</span>}
+                        {val ? (
+                          phases.find((p) => p._id === val)?.name || "Unknown Phase"
+                        ) : (
+                          <span className="text-gray-400 italic">No phase</span>
+                        )}
                       </span>
                     )}
                   />
@@ -967,7 +1068,9 @@ export default function TaskDetailModal({
                         onSave={handleDurationChange}
                       />
                       {task.taskType === "Milestone" && (
-                        <p className="text-[11px] text-gray-400 px-3">Milestones are capped at 1 day</p>
+                        <p className="text-[11px] text-gray-400 px-3">
+                          Milestones are capped at 1 day
+                        </p>
                       )}
                       {localStartDate && (
                         <p className="text-[11px] text-gray-400 px-3 mt-0.5">
@@ -993,7 +1096,9 @@ export default function TaskDetailModal({
                       placeholder="Set start date"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900 px-3 py-2">{formatDate(localStartDate)}</p>
+                    <p className="text-sm text-gray-900 px-3 py-2">
+                      {formatDate(localStartDate)}
+                    </p>
                   )}
                 </Field>
 
@@ -1004,13 +1109,15 @@ export default function TaskDetailModal({
                       onSave={(val) => {
                         setLocalDueDate(val);
                         save({ dueDate: val }).then(() => {
-                          propagateDueDateChange(task._id, val);
+                          if (task._id) propagateDueDateChange(task._id, val);
                         });
                       }}
                       placeholder="Set due date"
                     />
                   ) : (
-                    <p className="text-sm text-gray-900 px-3 py-2">{formatDate(localDueDate)}</p>
+                    <p className="text-sm text-gray-900 px-3 py-2">
+                      {formatDate(localDueDate)}
+                    </p>
                   )}
                 </Field>
               </div>
@@ -1025,7 +1132,10 @@ export default function TaskDetailModal({
                     />
                   ) : (
                     <div className="bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-blue-500 h-full rounded-full" style={{ width: `${task.progress ?? 0}%` }} />
+                      <div
+                        className="bg-blue-500 h-full rounded-full"
+                        style={{ width: `${task.progress ?? 0}%` }}
+                      />
                     </div>
                   )}
                 </div>
@@ -1068,7 +1178,9 @@ export default function TaskDetailModal({
                         <div
                           key={index}
                           className={`flex flex-col sm:flex-row gap-2 items-stretch sm:items-center rounded-lg p-2 ${
-                            isPending ? "bg-amber-50 border border-amber-200" : "bg-gray-50"
+                            isPending
+                              ? "bg-amber-50 border border-amber-200"
+                              : "bg-gray-50"
                           }`}
                         >
                           <select
@@ -1107,8 +1219,13 @@ export default function TaskDetailModal({
                     localDeps.map((dep, index) => {
                       const depTask = allTasks.find((t) => t._id === dep.taskId);
                       return (
-                        <div key={index} className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg">
-                          <span className="text-sm text-gray-700">{depTask?.title || "Unknown task"}</span>
+                        <div
+                          key={index}
+                          className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg"
+                        >
+                          <span className="text-sm text-gray-700">
+                            {depTask?.title || "Unknown task"}
+                          </span>
                           <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full">
                             {getDependencyTypeLabel(dep.type)}
                           </span>
@@ -1132,8 +1249,18 @@ export default function TaskDetailModal({
                     onClick={handleDelete}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                     Delete task
                   </button>
@@ -1157,9 +1284,22 @@ export default function TaskDetailModal({
                 {selectedFiles.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-xs">
-                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded-lg text-xs"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5 text-gray-400"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                          />
                         </svg>
                         <span className="text-gray-700">{file.name}</span>
                         <button
@@ -1182,8 +1322,18 @@ export default function TaskDetailModal({
                 <div className="flex items-center justify-between mt-3 gap-2">
                   <label className="cursor-pointer text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
                     <input type="file" multiple onChange={fileSelectHandler} className="hidden" />
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                      />
                     </svg>
                     Attach files
                   </label>
@@ -1199,28 +1349,43 @@ export default function TaskDetailModal({
 
               <div className="space-y-3">
                 {comments.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400 text-sm">No comments yet</div>
+                  <div className="text-center py-10 text-gray-400 text-sm">
+                    No comments yet
+                  </div>
                 ) : (
                   comments.map((comment) => {
-                    const authorName = comment.userId?.name || (comment as any).userName || "Unknown User";
+                    const authorName =
+                      comment.userId?.name ||
+                      (comment as any).userName ||
+                      "Unknown User";
                     return (
-                      <div key={comment._id} className="flex gap-3 p-4 bg-white border border-gray-100 rounded-xl">
+                      <div
+                        key={comment._id}
+                        className="flex gap-3 p-4 bg-white border border-gray-100 rounded-xl"
+                      >
                         <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0">
                           {getInitials(authorName)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-baseline gap-2 mb-1">
-                            <span className="text-sm font-medium text-gray-900">{authorName}</span>
+                            <span className="text-sm font-medium text-gray-900">
+                              {authorName}
+                            </span>
                             <span className="text-xs text-gray-400">
                               {new Date(comment.createdAt).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment}</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                            {comment.comment}
+                          </p>
                           {comment.attachments && comment.attachments.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {comment.attachments.map((file, index) => {
                                 const fileUrl = (file as any)?.url || (file as any)?.fileUrl;
-                                const fileName = (file as any)?.name || (file as any)?.fileName || "Attachment";
+                                const fileName =
+                                  (file as any)?.name ||
+                                  (file as any)?.fileName ||
+                                  "Attachment";
                                 if (!file || !fileUrl) return null;
                                 return (
                                   <button
@@ -1247,10 +1412,13 @@ export default function TaskDetailModal({
           {activeTab === "activity" && (
             <div className="p-6 space-y-3">
               {activityLogs.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-sm">No activity yet</div>
+                <div className="text-center py-10 text-gray-400 text-sm">
+                  No activity yet
+                </div>
               ) : (
                 activityLogs.map((log) => {
-                  const userName = log.user?.name || (log as any).userName || "Unknown User";
+                  const userName =
+                    log.user?.name || (log as any).userName || "Unknown User";
                   return (
                     <div key={log._id} className="flex gap-3 p-4 bg-gray-50 rounded-xl">
                       <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-xs font-semibold shrink-0">
@@ -1262,7 +1430,9 @@ export default function TaskDetailModal({
                           {log.description}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {new Date(log.timestamp || log.createdAt || Date.now()).toLocaleString()}
+                          {new Date(
+                            log.timestamp || log.createdAt || Date.now(),
+                          ).toLocaleString()}
                         </p>
                       </div>
                     </div>

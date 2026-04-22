@@ -10,7 +10,6 @@ import AdminHeader from "@/components/AdminHeader";
 import ScopeWorkflowArchitecture from "@/components/ScopeWorkflowArchitecture";
 import BrandManagement from "@/components/BrandManagement";
 import AccessControlModal from "@/components/Accesscontrolmodal";
-import ThreadsSection from "@/components/ThreadsSection";
 import BrandsTask from "@/components/BrandsTask";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import { apiClient } from "@/lib/axios";
@@ -66,12 +65,7 @@ interface DashboardCardProps {
   changeType: ChangeType;
 }
 
-function DashboardCard({
-  title,
-  value,
-  change,
-  changeType,
-}: DashboardCardProps) {
+function DashboardCard({ title, value, change, changeType }: DashboardCardProps) {
   const changeColor: Record<ChangeType, string> = {
     positive: "text-green-600",
     negative: "text-red-600",
@@ -81,9 +75,7 @@ function DashboardCard({
   return (
     <div className={responsive.sectionCard}>
       <h3 className="text-sm font-medium text-gray-600 mb-2">{title}</h3>
-      <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
-        {value}
-      </p>
+      <p className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">{value}</p>
       <p className={`text-sm ${changeColor[changeType]}`}>{change}</p>
     </div>
   );
@@ -94,35 +86,25 @@ export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [selectedTask, setSelectedTask] = useState<DashboardTask | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "details" | "comments" | "activity"
-  >("details");
+  const [activeTab, setActiveTab] = useState<"details" | "comments" | "activity">("details");
   const [comments, setComments] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
 
-  // Access Control Modal state
   const [isAccessControlOpen, setIsAccessControlOpen] = useState(false);
-  const [highlightUserId, setHighlightUserId] = useState<string | undefined>(
-    undefined,
-  );
+  const [highlightUserId, setHighlightUserId] = useState<string | undefined>(undefined);
 
-  // Handle role request notification click
   const handleRoleRequestClick = (userId: string) => {
     setHighlightUserId(userId);
     setIsAccessControlOpen(true);
   };
 
-  // Removed conflicting redirect logic - SessionGuard handles this
-  // Only check role and redirect if wrong role
   useEffect(() => {
     if (!authLoading && user && user.role !== "admin") {
-      console.log("⚠️ User role is not admin, redirecting to user dashboard");
       router.replace("/user/dashboard");
     }
   }, [user, authLoading, router]);
@@ -149,16 +131,9 @@ export default function AdminDashboard() {
     try {
       const data = await apiClient.get("/api/brands/all");
       setBrands(data);
-      if (data.length > 0 && !selectedBrand) {
-        setSelectedBrand(data[0]);
-      }
     } catch (error) {
       console.error("Error fetching brands:", error);
     }
-  };
-
-  const handleBrandSelect = (brand: Brand) => {
-    setSelectedBrand(brand);
   };
 
   const handleRefresh = () => {
@@ -181,28 +156,20 @@ export default function AdminDashboard() {
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !selectedTask) return;
-
     try {
-      await apiClient.post(`/api/tasks/${selectedTask._id}/comments`, {
-        text: newComment,
-      });
-
+      await apiClient.post(`/api/tasks/${selectedTask._id}/comments`, { text: newComment });
       setNewComment("");
-      const commentsData = await apiClient.get(
-        `/api/tasks/${selectedTask._id}/comments`,
-      );
+      const commentsData = await apiClient.get(`/api/tasks/${selectedTask._id}/comments`);
       setComments(commentsData);
     } catch (error) {
       console.error("Error adding comment:", error);
     }
   };
 
-  // Show loading only while checking auth or fetching initial data
   if (authLoading || (loading && user?.role === "admin")) {
     return <FitoutLoadingSpinner />;
   }
 
-  // If wrong role, show loading while redirecting
   if (user && user.role !== "admin") {
     return <FitoutLoadingSpinner />;
   }
@@ -235,30 +202,21 @@ export default function AdminDashboard() {
             <DashboardCard
               title="Total Projects"
               value={projectStats?.totalProjects || 0}
-              change={formatChange(
-                projectStats?.projectsThisMonth || 0,
-                "from last month",
-              )}
+              change={formatChange(projectStats?.projectsThisMonth || 0, "from last month")}
               changeType={getChangeType(projectStats?.projectsThisMonth || 0)}
             />
-
             <DashboardCard
               title="Active Tasks"
               value={projectStats?.activeProjects || 0}
-              change={formatChange(
-                projectStats?.activeChange || 0,
-                "from last week",
-              )}
+              change={formatChange(projectStats?.activeChange || 0, "from last week")}
               changeType={getChangeType(projectStats?.activeChange || 0)}
             />
-
             <DashboardCard
               title="Budget Used"
               value={`${projectStats?.budgetUsedPercentage || 0}%`}
               change={`${projectStats?.budgetUsedPercentage || 0}% of total budget`}
               changeType="neutral"
             />
-
             <DashboardCard
               title="Planning Projects"
               value={projectStats?.planningProjects || 0}
@@ -285,40 +243,10 @@ export default function AdminDashboard() {
             <BrandManagement
               brands={brands}
               onRefresh={fetchBrands}
-              onBrandSelect={handleBrandSelect}
-              selectedBrandId={selectedBrand?._id}
+              onBrandSelect={() => {}}
               canAddUser={true}
             />
           </div>
-
-          {selectedBrand && (
-            <div className="mb-8">
-              <ThreadsSection
-                brandId={selectedBrand._id}
-                brandName={selectedBrand.name}
-              />
-            </div>
-          )}
-
-          {!selectedBrand && brands.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 mb-2">
-                Select a brand to view threads
-              </p>
-              <p className="text-sm text-gray-400">
-                Click on a brand above to see its threads and discussions
-              </p>
-            </div>
-          )}
-
-          {!selectedBrand && brands.length === 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 mb-2">No brands available</p>
-              <p className="text-sm text-gray-400">
-                Create a brand first to start using threads
-              </p>
-            </div>
-          )}
         </main>
 
         {selectedTask && (
@@ -335,10 +263,7 @@ export default function AdminDashboard() {
             onAddComment={handleAddComment}
             onUpdate={async (updatedTask: any) => {
               try {
-                await apiClient.put(
-                  `/api/tasks/${updatedTask._id}`,
-                  updatedTask,
-                );
+                await apiClient.put(`/api/tasks/${updatedTask._id}`, updatedTask);
                 fetchDashboardStats();
               } catch (error) {
                 console.error("Error updating task:", error);
@@ -365,7 +290,6 @@ export default function AdminDashboard() {
           />
         )}
 
-        {/* Access Control Modal for role assignments from notifications */}
         {isAccessControlOpen && (
           <AccessControlModal
             isOpen={isAccessControlOpen}

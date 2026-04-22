@@ -9,6 +9,7 @@ import {
   BarChart3,
   FileText,
   MessageSquare,
+  MessageSquareText,
   Settings,
   ChevronLeft,
   Menu,
@@ -23,7 +24,6 @@ import { hasPermission } from "@/utils/permissions";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/axios";
 
-// Use inline interface definition to avoid import issues
 interface Permission {
   id: string;
   label: string;
@@ -64,23 +64,17 @@ export function AdminSidebar({
   const resolvedRole = userRole ?? "admin";
   const isUser = resolvedRole === "user";
 
-  // Effective permissions: prefer non-empty prop, otherwise use internally fetched
   const permissions =
     permissionsProp && permissionsProp.length > 0
       ? permissionsProp
       : (fetchedPermissions ?? undefined);
 
-  // Auto-fetch permissions when parent page doesn't provide real permissions
-  // Treats both undefined and empty [] as "no permissions provided"
   useEffect(() => {
     if (!isUser || permissionsProp?.length) return;
 
     const fetchPermissions = async () => {
       try {
         let roleId = user?.roleId;
-
-        // If AuthContext doesn't have roleId, re-check /api/auth/me for fresh data
-        // (handles case where admin assigned role while user is already logged in)
         if (!roleId && user) {
           try {
             const fresh = await apiClient.get<{ user: { roleId?: string } }>(
@@ -91,9 +85,7 @@ export function AdminSidebar({
             return;
           }
         }
-
         if (!roleId) return;
-
         const data = await apiClient.get<{ permissions: Permission[] }>(
           `/api/roles/${roleId}`,
         );
@@ -106,24 +98,20 @@ export function AdminSidebar({
     fetchPermissions();
   }, [isUser, permissionsProp?.length, user?.roleId]);
 
-  // Use prop pathname if provided, otherwise use Next.js pathname
   const activePath = propPathname || currentPathname;
 
   useEffect(() => {
     const savedState = localStorage.getItem("fm_sidebar_collapsed");
-    if (savedState !== null) {
-      setIsCollapsed(savedState === "true");
-    }
+    if (savedState !== null) setIsCollapsed(savedState === "true");
   }, []);
 
   useEffect(() => {
     const sidebarWidth = isCollapsed ? "5rem" : "16rem";
-    document.documentElement.style.setProperty(
-      "--fm-sidebar-width",
-      sidebarWidth,
-    );
+    document.documentElement.style.setProperty("--fm-sidebar-width", sidebarWidth);
     localStorage.setItem("fm_sidebar_collapsed", String(isCollapsed));
   }, [isCollapsed]);
+
+  // ── Menu Items ──────────────────────────────────────────────────────────────
 
   const userMenuItems: MenuItem[] = [
     {
@@ -160,43 +148,60 @@ export function AdminSidebar({
       icon: MessageSquare,
       label: "Messages",
       href: "/user/messages",
-      // Messages is a core communication feature - available to all users
-      // permissionId: "messages",
+      // No permissionId — always visible as a core comms feature
+    },
+    {
+      icon: MessageSquareText,
+      label: "Threads",
+      href: "/user/threads",
+      // Uses "threads" permission; if no permission system is configured it's visible
+      permissionId: "threads",
     },
   ];
 
   const adminMenuItems: MenuItem[] = [
-    { icon: Home, label: "Dashboard", href: "/admin/dashboard" },
-    { icon: FolderKanban, label: "Projects", href: "/admin/projects" },
-    { icon: DollarSign, label: "Finance", href: "/admin/finance" },
-    { icon: BarChart3, label: "Reports", href: "/admin/reports" },
-    { icon: FileText, label: "Documents", href: "/admin/documents" },
-    { icon: MessageSquare, label: "Messages", href: "/admin/messages" },
+    { icon: Home,               label: "Dashboard", href: "/admin/dashboard" },
+    { icon: FolderKanban,       label: "Projects",  href: "/admin/projects"  },
+    { icon: DollarSign,         label: "Finance",   href: "/admin/finance"   },
+    { icon: BarChart3,          label: "Reports",   href: "/admin/reports"   },
+    { icon: FileText,           label: "Documents", href: "/admin/documents" },
+    { icon: MessageSquare,      label: "Messages",  href: "/admin/messages"  },
+    { icon: MessageSquareText,  label: "Threads",   href: "/admin/threads"   },
   ];
 
+  /**
+   * Filter user menu items by permission.
+   * - Items with no permissionId are always shown.
+   * - Items with "threads" permissionId: shown if the "threads" permission is
+   *   set OR if any of the legacy dashboard-thread permissions are set.
+   * - All other items: standard permission check.
+   */
   const menuItems = isUser
-    ? userMenuItems.filter((item) =>
-        item.permissionId
-          ? permissions
-            ? hasPermission(item.permissionId, permissions)
-            : false
-          : true,
-      )
+    ? userMenuItems.filter((item) => {
+        if (!item.permissionId) return true;
+        if (!permissions) return false;
+
+        if (item.permissionId === "threads") {
+          return (
+            hasPermission("threads", permissions) ||
+            hasPermission("dashboard-threads", permissions) ||
+            hasPermission("dashboard-add-threads", permissions)
+          );
+        }
+
+        return hasPermission(item.permissionId, permissions);
+      })
     : adminMenuItems;
 
-  const profileHref = isUser
-    ? "/user/settings/profile"
-    : "/admin/settings/profile";
+  const profileHref = isUser ? "/user/settings/profile" : "/admin/settings/profile";
   const changePasswordHref = isUser
     ? "/user/settings/change-password"
     : "/admin/settings/change-password";
 
   const handleNavClick = (href: string) => {
-    if (setPathname) {
-      setPathname(href);
-    }
+    if (setPathname) setPathname(href);
     setIsOpen(false);
-    router.push(href); // Actually navigate to the page
+    router.push(href);
   };
 
   return (
@@ -209,7 +214,7 @@ export function AdminSidebar({
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Overlay for mobile */}
+      {/* Mobile Overlay */}
       {isOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
@@ -228,9 +233,7 @@ export function AdminSidebar({
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <div
-            className={`flex items-center ${isCollapsed ? "justify-center w-full" : ""}`}
-          >
+          <div className={`flex items-center ${isCollapsed ? "justify-center w-full" : ""}`}>
             {isCollapsed ? (
               <Image
                 src="/files/FM_ICON.svg"
@@ -251,7 +254,7 @@ export function AdminSidebar({
           </div>
         </div>
 
-        {/* Collapse Button - Hidden on mobile */}
+        {/* Collapse Button */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={`hidden lg:flex px-6 py-4 items-center text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white border-b border-gray-200 dark:border-gray-700 ${
@@ -288,7 +291,7 @@ export function AdminSidebar({
             );
           })}
 
-          {/* Admin Section */}
+          {/* Section divider */}
           {!isCollapsed && (
             <div className="mt-8 px-6 py-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
               {isUser ? "Account" : "Admin"}
@@ -310,34 +313,21 @@ export function AdminSidebar({
                   : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-white"
               }`}
             >
-              <div
-                className={`flex items-center ${isCollapsed ? "justify-center" : "space-x-3"}`}
-              >
+              <div className={`flex items-center ${isCollapsed ? "justify-center" : "space-x-3"}`}>
                 <Settings
                   size={20}
-                  className={
-                    isSettingsOpen ? "text-gray-700 dark:text-gray-100" : ""
-                  }
+                  className={isSettingsOpen ? "text-gray-700 dark:text-gray-100" : ""}
                 />
-                {!isCollapsed && (
-                  <span className="font-medium text-sm">Settings</span>
-                )}
+                {!isCollapsed && <span className="font-medium text-sm">Settings</span>}
               </div>
               {!isCollapsed &&
                 (isSettingsOpen ? (
-                  <ChevronDown
-                    size={18}
-                    className="transition-transform duration-200"
-                  />
+                  <ChevronDown size={18} className="transition-transform duration-200" />
                 ) : (
-                  <ChevronRight
-                    size={18}
-                    className="transition-transform duration-200"
-                  />
+                  <ChevronRight size={18} className="transition-transform duration-200" />
                 ))}
             </button>
 
-            {/* Settings Submenu */}
             {isSettingsOpen && !isCollapsed && (
               <div className="bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 border-t border-gray-100 dark:border-gray-700">
                 <button
