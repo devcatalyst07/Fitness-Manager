@@ -12,6 +12,7 @@ import ProjectCard from "@/components/ProjectCard";
 import CompletedAndCancelledProjects from "@/components/CompletedAndCancelledProjects";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import EditProjectModal from "@/components/EditProjectModal";
+import PendingRFIWidget from "@/components/PendingRFIWidget";
 import { apiClient } from "@/lib/axios";
 
 interface Project {
@@ -94,6 +95,22 @@ export default function ProjectsPage() {
     setIsCreateModalOpen(false);
   };
 
+  const handleRFINavigation = async (tenderId: string) => {
+    try {
+      // Fetch the tender to get its project ID
+      const tender = await apiClient.get(`/api/tenders/${tenderId}`);
+      const projectId = tender.projectId;
+      
+      // Navigate to the tender detail page with the RFI tab
+      router.push(`/admin/projects/${projectId}/tender/${tenderId}?tab=rfis`);
+    } catch (error) {
+      console.error("Error navigating to RFI:", error);
+      // Fallback: try to find the project in the current projects list
+      // This won't work perfectly but is better than nothing
+      alert("Unable to navigate to RFI. Please try accessing it from the project's tender page.");
+    }
+  };
+
   const allFiltered = projects.filter((project) => {
     const matchesSearch =
       project.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -116,6 +133,11 @@ export default function ProjectsPage() {
         <AdminHeader />
 
         <main className="lg:ml-[var(--fm-sidebar-width)] mt-16 p-4 sm:p-6 lg:p-8 transition-all duration-300">
+          {/* Pending RFI Widget - Full Width at Top */}
+          <div className="mb-8">
+            <PendingRFIWidget onNavigate={handleRFINavigation} />
+          </div>
+
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div>
