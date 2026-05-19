@@ -316,6 +316,7 @@ export default function ProjectTasksPage() {
           uploadingFiles={uploadingFiles}
           phases={phases}
           allTasks={tasks}
+          teamMembers={teamMembers} 
         />
       </main>
     </div>

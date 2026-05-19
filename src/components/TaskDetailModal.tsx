@@ -50,61 +50,88 @@ interface TaskDetailModalProps {
 
 // ─── Working-day helpers ──────────────────────────────────────────────────────
 
+/**
+ * Add `days` working days to `startDateStr`.
+ * The start date itself counts as day 1.
+ *
+ * addWorkingDays("2026-05-19", 6)
+ *   May 19 (Tue) = day 1
+ *   May 20 (Wed) = day 2
+ *   May 21 (Thu) = day 3
+ *   May 22 (Fri) = day 4
+ *   May 25 (Mon) = day 5  ← skip weekend
+ *   May 26 (Tue) = day 6
+ *   → "2026-05-26"
+ */
 function addWorkingDays(startDateStr: string, days: number): string {
-  if (!startDateStr || !days || days <= 0) return startDateStr ?? "";
-  const date = new Date(startDateStr + "T00:00:00");
+  if (!startDateStr || days <= 0) return startDateStr ?? "";
+
+  // Guard against ISO timestamps that include time
+  const cleanStart = startDateStr.split("T")[0];
+  const date = new Date(cleanStart + "T00:00:00");
   if (isNaN(date.getTime())) return startDateStr;
+
+  // Start date itself is day 1, so we only need to advance (days - 1) more days
   let added = 0;
-  const target = Math.max(days - 1, 0);
+  const target = days - 1;
+
   while (added < target) {
     date.setDate(date.getDate() + 1);
     const dow = date.getDay();
     if (dow !== 0 && dow !== 6) added++;
   }
+
   return date.toISOString().split("T")[0];
 }
 
+/** Return the next Mon–Fri after `dateStr`. */
 function nextWorkingDay(dateStr: string): string {
   if (!dateStr) return dateStr;
-  const d = new Date(dateStr + "T00:00:00");
+  const clean = dateStr.split("T")[0];
+  const d = new Date(clean + "T00:00:00");
   if (isNaN(d.getTime())) return dateStr;
   d.setDate(d.getDate() + 1);
   while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
   return d.toISOString().split("T")[0];
 }
 
-// ─── TeamMember normalisation ─────────────────────────────────────────────────
-// Handles multiple API response shapes:
-//   1. Populated:  { userId: { _id, name, email }, ... }
-//   2. Flat:       { _id, name, email, ... }
-//   3. String ref: { userId: "abc123", name, email, ... }
+/** Normalise a raw date string to "YYYY-MM-DD" (strips time portion). */
+function toDateOnly(raw: string | Date | undefined | null): string {
+  if (!raw) return "";
+  const s = typeof raw === "string" ? raw : raw.toISOString();
+  return s.split("T")[0];
+}
 
+// ─── TeamMember normalisation ─────────────────────────────────────────────────
+
+/**
+ * FIX: Accepts all three shapes the API may return:
+ *   1. { userId: { _id, name, email } }  ← fully populated
+ *   2. { userId: "string-id", name, email } ← flat / un-populated
+ *   3. { _id, name, email }              ← no userId wrapper at all
+ */
 function normaliseMembers(members: TeamMember[]): TeamMember[] {
   return members.map((m) => {
-    // Already fully populated
-    if (
-      m.userId &&
-      typeof m.userId === "object" &&
-      (m.userId as any).name
-    ) {
+    const raw = m as any;
+
+    // Already fully populated object
+    if (raw.userId && typeof raw.userId === "object" && raw.userId.name) {
       return m;
     }
 
-    const flat = m as any;
+    // Flat shape — name/email at the top level
+    const name: string = raw.name ?? raw.userId?.name ?? "";
+    const email: string = raw.email ?? raw.userId?.email ?? "";
+    const id: string =
+      (typeof raw.userId === "string" ? raw.userId : null) ??
+      raw.userId?._id ??
+      raw._id ??
+      "";
 
-    // Flat shape: name/email at top level, userId might be string or absent
-    if (flat.name || flat.email) {
-      return {
-        ...m,
-        userId: {
-          _id: (typeof m.userId === "string" ? m.userId : flat._id) ?? "",
-          name: flat.name ?? "",
-          email: flat.email ?? "",
-        },
-      } as TeamMember;
-    }
-
-    return m;
+    return {
+      ...m,
+      userId: { _id: id, name, email },
+    } as TeamMember;
   });
 }
 
@@ -338,11 +365,14 @@ function EditableDate({
     if (v !== value) onSave(v);
   };
 
+  // Normalise stored value for display and as input default
+  const cleanValue = toDateOnly(value);
+
   return editing ? (
     <input
       ref={ref}
       type="date"
-      defaultValue={value}
+      defaultValue={cleanValue}
       onChange={(e) => commit(e.target.value)}
       onBlur={() => setEditing(false)}
       className="w-full px-3 py-2 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
@@ -353,10 +383,10 @@ function EditableDate({
       onClick={() => setEditing(true)}
       title="Click to edit"
       className={`cursor-pointer rounded-lg px-3 py-2 text-sm hover:bg-blue-50 hover:ring-1 hover:ring-blue-200 transition-all ${
-        value ? "text-gray-900" : "text-gray-400 italic"
+        cleanValue ? "text-gray-900" : "text-gray-400 italic"
       }`}
     >
-      {value ? formatDate(value) : placeholder}
+      {cleanValue ? formatDate(cleanValue) : placeholder}
     </p>
   );
 }
@@ -396,9 +426,7 @@ function EditableProgress({
   );
 }
 
-// ─── EditableAssignees ────────────────────────────────────────────────────────
-// Fix: normalise all member shapes upfront; include member if they have a name
-// OR an email (not strict @ filter that excluded partial data).
+// ─── FIX: EditableAssignees — properly loads all team member shapes ──────────
 
 function EditableAssignees({
   assignees,
@@ -417,20 +445,16 @@ function EditableAssignees({
   );
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sync whenever the assignees prop changes (e.g. modal re-opened with a different task)
+  // Sync when assignees prop changes
   useEffect(() => {
     setSelected([...assignees]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assignees.map((a) => a.email).join(",")]);
+  }, [assignees.map((a) => a.email).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close dropdown on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
@@ -438,14 +462,15 @@ function EditableAssignees({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // ── Normalise and include all members that have at least a name or email ──
+  // FIX: Normalise all member shapes and keep every member that has at least
+  // a name OR an email — don't require both.
   const eligibleMembers = useMemo(() => {
+    if (!Array.isArray(teamMembers) || teamMembers.length === 0) return [];
     const normalised = normaliseMembers(teamMembers);
     return normalised.filter((m) => {
       const name = getMemberName(m);
       const email = getMemberEmail(m);
-      // Include if we have EITHER identifier; require email for actual assignment
-      return name || email;
+      return !!(name || email); // at least one identifier
     });
   }, [teamMembers]);
 
@@ -457,7 +482,7 @@ function EditableAssignees({
   const toggle = (m: TeamMember) => {
     const email = getMemberEmail(m);
     const name = getMemberName(m);
-    if (!email) return; // need email to assign
+    if (!email) return;
     const next = isSelected(m)
       ? selected.filter((a) => a.email !== email)
       : [...selected, { email, name }];
@@ -521,7 +546,7 @@ function EditableAssignees({
               const email = getMemberEmail(member);
               const id = getMemberId(member);
               const display = name || email;
-              const sub = name ? email : "";
+              const sub = name && email ? email : "";
 
               return (
                 <div
@@ -584,6 +609,23 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+// ─── Inline save-status indicator (replaces the alert popup) ─────────────────
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  if (status === "idle") return null;
+  const config: Record<Exclude<SaveStatus, "idle">, { text: string; cls: string }> = {
+    saving: { text: "Saving…",  cls: "text-gray-400" },
+    saved:  { text: "✓ Saved",  cls: "text-emerald-500" },
+    error:  { text: "⚠ Error",  cls: "text-red-500" },
+  };
+  const c = config[status];
+  return (
+    <span className={`text-xs font-medium transition-all ${c.cls}`}>{c.text}</span>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 type Dep = { taskId: string; type: "FS" | "SS" };
@@ -617,24 +659,23 @@ export default function TaskDetailModal({
   // ── Local state ──────────────────────────────────────────────────────────────
   const [localDeps, setLocalDeps] = useState<Dep[]>([]);
   const [localDuration, setLocalDuration] = useState<number>(task?.duration ?? 1);
-  const [localStartDate, setLocalStartDate] = useState<string>(task?.startDate ?? "");
-  const [localDueDate, setLocalDueDate] = useState<string>(task?.dueDate ?? "");
+  const [localStartDate, setLocalStartDate] = useState<string>("");
+  const [localDueDate, setLocalDueDate] = useState<string>("");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
 
-  // ── Key fix: use a ref for pendingDepIndexes so we always have the latest
-  //    value synchronously, avoiding stale-closure bugs in updateDep. ──────────
   const pendingRef = useRef<Set<number>>(new Set());
   const [pendingDepIndexes, setPendingDepIndexes] = useState<Set<number>>(new Set());
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep ref and state in sync
+  // Keep a live snapshot of allTasks for cascade without stale closures
+  const allTasksRef = useRef<Task[]>(allTasks);
+  useEffect(() => { allTasksRef.current = allTasks; }, [allTasks]);
+
   const setPending = useCallback((updater: (prev: Set<number>) => Set<number>) => {
     const next = updater(pendingRef.current);
     pendingRef.current = next;
-    setPendingDepIndexes(new Set(next)); // new Set to trigger re-render
+    setPendingDepIndexes(new Set(next));
   }, []);
-
-  // ── Ref for allTasks so propagation always has fresh data ────────────────────
-  const allTasksRef = useRef<Task[]>(allTasks);
-  useEffect(() => { allTasksRef.current = allTasks; }, [allTasks]);
 
   // ── Sync all local state when task identity changes ──────────────────────────
   useEffect(() => {
@@ -642,23 +683,39 @@ export default function TaskDetailModal({
     setLocalDeps(task.dependencies ?? []);
     pendingRef.current = new Set();
     setPendingDepIndexes(new Set());
+    // FIX: always strip time component from stored dates
     setLocalDuration(task.duration ?? 1);
-    setLocalStartDate(task.startDate ?? "");
-    setLocalDueDate(task.dueDate ?? "");
-  }, [task?._id]);
+    setLocalStartDate(toDateOnly(task.startDate));
+    setLocalDueDate(toDateOnly(task.dueDate));
+    setSaveStatus("idle");
+  }, [task?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync individual fields when parent updates them (without full task change)
-  useEffect(() => { if (task?.duration !== undefined) setLocalDuration(task.duration); }, [task?.duration]);
-  useEffect(() => { if (task?.startDate !== undefined) setLocalStartDate(task.startDate ?? ""); }, [task?.startDate]);
-  useEffect(() => { if (task?.dueDate !== undefined) setLocalDueDate(task.dueDate ?? ""); }, [task?.dueDate]);
-  useEffect(() => { if (task?.dependencies) setLocalDeps(task.dependencies); }, [task?.dependencies]);
+  useEffect(() => {
+    if (task?.duration !== undefined) setLocalDuration(task.duration);
+  }, [task?.duration]);
 
-  // ── Silent save — no alerts, no popups, no page reload ──────────────────────
+  useEffect(() => {
+    setLocalStartDate(toDateOnly(task?.startDate));
+  }, [task?.startDate]);
+
+  useEffect(() => {
+    setLocalDueDate(toDateOnly(task?.dueDate));
+  }, [task?.dueDate]);
+
+  useEffect(() => {
+    if (task?.dependencies) setLocalDeps(task.dependencies);
+  }, [task?.dependencies]);
+
+  // ── FIX: Silent save — suppress any window.alert from the hook ───────────────
+  //
+  // Some versions of useTaskManagement call window.alert("Task updated
+  // successfully!") on success. We override it for the duration of the
+  // API call so the user never sees the native popup.
   const save = useCallback(
     async (updates: Partial<Task>): Promise<void> => {
       if (!task?._id) return;
 
-      // Always strip deps with empty taskId before sending to backend
+      // Strip deps with empty taskId before sending
       if (updates.dependencies) {
         updates = {
           ...updates,
@@ -668,33 +725,48 @@ export default function TaskDetailModal({
         };
       }
 
+      setSaveStatus("saving");
+
+      // Suppress any alert() that might fire from the parent hook
+      const originalAlert = window.alert.bind(window);
+      window.alert = () => {};
+
       try {
         if (onUpdateTask) {
           await onUpdateTask(task._id, updates);
         } else {
-          // onUpdate may be void; cast to Promise to handle both cases
           await Promise.resolve((onUpdate as any)(task._id, updates));
         }
+
+        setSaveStatus("saved");
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
       } catch (err) {
-        // Silent — log to console only, no UI notification
-        console.error("[TaskDetailModal] save error (silent):", err);
+        console.error("[TaskDetailModal] Save error:", err);
+        setSaveStatus("error");
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => setSaveStatus("idle"), 3000);
+      } finally {
+        // Restore original alert after a tick so React flushes first
+        setTimeout(() => { window.alert = originalAlert; }, 0);
       }
     },
     [task?._id, onUpdateTask, onUpdate],
   );
 
-  // ── Dependency cascade propagation ───────────────────────────────────────────
-  // Uses allTasksRef to avoid stale closure on allTasks.
+  // ── FIX: Dependency cascade with fresh allTasksRef snapshot ─────────────────
   const propagateDueDateChange = useCallback(
     async (
       changedTaskId: string,
       newDueDate: string,
       visited: Set<string> = new Set(),
     ): Promise<void> => {
-      if (visited.has(changedTaskId)) return; // break cycles
+      if (visited.has(changedTaskId)) return;
       visited.add(changedTaskId);
 
+      // Always use the ref snapshot so we have the latest task list
       const snapshot = allTasksRef.current;
+
       const dependentTasks = snapshot.filter(
         (t) =>
           t._id !== changedTaskId &&
@@ -708,21 +780,24 @@ export default function TaskDetailModal({
         const newDepStart =
           rel.type === "FS"
             ? nextWorkingDay(newDueDate)
-            : depTask.startDate || nextWorkingDay(newDueDate);
+            : toDateOnly(depTask.startDate) || nextWorkingDay(newDueDate);
 
         const duration = Math.max(depTask.duration ?? 1, 1);
         const newDepDue = addWorkingDays(newDepStart, duration);
 
-        if (
-          newDepStart === depTask.startDate &&
-          newDepDue === depTask.dueDate
-        ) continue;
+        const existingStart = toDateOnly(depTask.startDate);
+        const existingDue = toDateOnly(depTask.dueDate);
+
+        if (newDepStart === existingStart && newDepDue === existingDue) continue;
 
         const depUpdates: Partial<Task> = {
           startDate: newDepStart,
           dueDate: newDepDue,
         };
 
+        // Suppress alert for cascaded saves too
+        const origAlert = window.alert.bind(window);
+        window.alert = () => {};
         try {
           if (onUpdateDependentTask) {
             await onUpdateDependentTask(depTask._id, depUpdates);
@@ -732,25 +807,40 @@ export default function TaskDetailModal({
             await Promise.resolve((onUpdate as any)(depTask._id, depUpdates));
           }
         } catch (err) {
-          console.error("[TaskDetailModal] dependent propagation error (silent):", err);
+          console.error("[TaskDetailModal] Cascade propagation error:", err);
+        } finally {
+          setTimeout(() => { window.alert = origAlert; }, 0);
         }
+
+        // Update our local ref snapshot so the next level gets correct dates
+        allTasksRef.current = allTasksRef.current.map((t) =>
+          t._id === depTask._id ? { ...t, startDate: newDepStart, dueDate: newDepDue } : t,
+        );
 
         await propagateDueDateChange(depTask._id, newDepDue, visited);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [onUpdateDependentTask, onUpdateTask, onUpdate],
-    // allTasksRef intentionally omitted — accessed via ref to avoid stale closure
   );
 
-  // ── Duration change handler ──────────────────────────────────────────────────
+  // ── FIX: Duration change → recalculate due date using current localStartDate ─
+  //
+  // The key bug was that `localStartDate` could be empty ("") even though the
+  // task has a startDate stored on the server. We now fall back to `task?.startDate`
+  // and normalise the value before passing it to addWorkingDays.
   const handleDurationChange = useCallback(
     (newDuration: number) => {
       const safeDuration = Math.max(1, newDuration);
-      const start = localStartDate || task?.startDate || "";
-      const newDue = start ? addWorkingDays(start, safeDuration) : localDueDate;
 
-      // Optimistic local update first
+      // FIX: use local state first, then fall back to prop, then strip time
+      const start = toDateOnly(localStartDate || task?.startDate || "");
+
+      let newDue = localDueDate;
+      if (start) {
+        newDue = addWorkingDays(start, safeDuration);
+      }
+
+      // Optimistic local update
       setLocalDuration(safeDuration);
       if (newDue) setLocalDueDate(newDue);
 
@@ -758,28 +848,32 @@ export default function TaskDetailModal({
       if (newDue) updates.dueDate = newDue;
 
       save(updates).then(() => {
-        if (newDue && task?._id) propagateDueDateChange(task._id, newDue);
+        if (newDue && task?._id) {
+          propagateDueDateChange(task._id, newDue);
+        }
       });
     },
     [localStartDate, localDueDate, task, save, propagateDueDateChange],
   );
 
-  // ── Start date change handler ────────────────────────────────────────────────
+  // ── FIX: Start date change → recalculate due date and cascade ────────────────
   const handleStartDateChange = useCallback(
     (newStartDate: string) => {
       if (!newStartDate) return;
+
       const duration = Math.max(1, localDuration ?? task?.duration ?? 1);
       const newDue = addWorkingDays(newStartDate, duration);
 
-      // Optimistic local update first
+      // Optimistic local update
       setLocalStartDate(newStartDate);
-      if (newDue) setLocalDueDate(newDue);
+      setLocalDueDate(newDue);
 
-      const updates: Partial<Task> = { startDate: newStartDate };
-      if (newDue) updates.dueDate = newDue;
+      const updates: Partial<Task> = { startDate: newStartDate, dueDate: newDue };
 
       save(updates).then(() => {
-        if (newDue && task?._id) propagateDueDateChange(task._id, newDue);
+        if (newDue && task?._id) {
+          propagateDueDateChange(task._id, newDue);
+        }
       });
     },
     [localDuration, task, save, propagateDueDateChange],
@@ -800,19 +894,14 @@ export default function TaskDetailModal({
     const updated: Dep[] = [...localDeps, { taskId: "", type: "FS" }];
     setLocalDeps(updated);
     setPending((prev) => new Set(prev).add(newIndex));
-    // Do NOT save yet — wait for the user to select a task
   };
 
-  // ── Fix: compute newPending synchronously from the current ref value.
-  //    Never read `pendingDepIndexes` state after calling `setPending` —
-  //    that state is stale until the next render. Use pendingRef.current instead.
   const updateDep = (index: number, field: keyof Dep, val: string) => {
     const updated = localDeps.map((d, i) =>
       i === index ? { ...d, [field]: val } : d,
     ) as Dep[];
     setLocalDeps(updated);
 
-    // Build the NEW pending set synchronously using the ref (not stale state)
     let newPending: Set<number>;
 
     if (field === "taskId") {
@@ -820,16 +909,14 @@ export default function TaskDetailModal({
       if (!val) {
         newPending.add(index);
         setPending(() => newPending);
-        return; // Don't save — dep is incomplete
+        return;
       }
       newPending.delete(index);
       setPending(() => newPending);
     } else {
-      // type field — pending set is unchanged
       newPending = pendingRef.current;
     }
 
-    // Only save deps that are complete (have a taskId and are not pending)
     const readyDeps = updated.filter(
       (d, i) => d.taskId && String(d.taskId).trim() !== "" && !newPending.has(i),
     );
@@ -841,7 +928,6 @@ export default function TaskDetailModal({
     const updated = localDeps.filter((_, i) => i !== index);
     setLocalDeps(updated);
 
-    // Re-index pending set synchronously using the ref
     const newPending = new Set<number>();
     pendingRef.current.forEach((i) => {
       if (i < index) newPending.add(i);
@@ -898,7 +984,9 @@ export default function TaskDetailModal({
                   {localDuration} working day{localDuration !== 1 ? "s" : ""}
                 </span>
               )}
-              {canEdit && (
+              {/* FIX: replace alert popup with inline save indicator */}
+              <SaveIndicator status={saveStatus} />
+              {canEdit && saveStatus === "idle" && (
                 <span className="text-[10px] text-gray-300 ml-1">
                   · click any field to edit
                 </span>
@@ -1012,12 +1100,12 @@ export default function TaskDetailModal({
                         taskType: val as any,
                         duration: newDuration,
                       };
-                      if (localStartDate) {
-                        const newDue = addWorkingDays(localStartDate, newDuration);
-                        if (newDue) {
-                          updates.dueDate = newDue;
-                          setLocalDueDate(newDue);
-                        }
+                      // FIX: recalculate due date when type changes
+                      const start = toDateOnly(localStartDate || task?.startDate || "");
+                      if (start) {
+                        const newDue = addWorkingDays(start, newDuration);
+                        updates.dueDate = newDue;
+                        setLocalDueDate(newDue);
                       }
                       setLocalDuration(newDuration);
                       save(updates);
